@@ -1,0 +1,113 @@
+
+> re-pass@0.0.1 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding ssr environment for production...[36m[39m
+transforming...
+3:02:25 [vite-plugin-svelte] src/routes/+page.svelte:856:18 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+854:                 <!-- 1. Segmented Control (Mode) -->
+855:                 <div class="flex-1">
+856:                   <label
+                        ^
+857:                     class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block"
+858:                     >生成モード</label
+3:02:25 [vite-plugin-svelte] src/routes/+page.svelte:905:20 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+903:                 <div class="flex-1">
+904:                   <div class="flex justify-between items-center mb-2">
+905:                     <label
+                          ^
+906:                       class="text-xs font-bold text-slate-500 uppercase tracking-wide"
+907:                       >目標文字数</label
+3:02:25 [vite-plugin-svelte] src/routes/settings/+page.svelte:209:28 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+207:                             class="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
+208:                         >
+209:                             <label
+                                  ^
+210:                                 class="w-32 text-sm font-medium text-slate-600"
+211:                                 >ニックネーム</label
+3:02:25 [vite-plugin-svelte] src/routes/settings/+page.svelte:282:24 Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events
+280:                         </div>
+281: 
+282:                         <div
+                                  ^
+283:                             class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
+284:                             onclick={handlePortal}
+3:02:25 [vite-plugin-svelte] src/routes/settings/+page.svelte:282:24 `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions
+280:                         </div>
+281: 
+282:                         <div
+                                  ^
+283:                             class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
+284:                             onclick={handlePortal}
+3:02:25 [vite-plugin-svelte] src/lib/components/Sidebar.svelte:387:24 Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events
+385:                     <!-- Using standard div instead of details for easier control -->
+386:                     <div class="group/accordion">
+387:                         <div
+                                  ^
+388:                             class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between cursor-pointer transition-colors
+389:                             {$currentBinder === subject.id
+3:02:25 [vite-plugin-svelte] src/lib/components/Sidebar.svelte:387:24 `<div>` with a dragover, drop or click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions
+385:                     <!-- Using standard div instead of details for easier control -->
+386:                     <div class="group/accordion">
+387:                         <div
+                                  ^
+388:                             class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between cursor-pointer transition-colors
+389:                             {$currentBinder === subject.id
+3:02:25 [vite-plugin-svelte] src/lib/components/Sidebar.svelte:693:20 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+691:             <div class="mb-6 space-y-4">
+692:                 <div>
+693:                     <label
+                          ^
+694:                         class="block text-xs font-bold text-slate-400 uppercase mb-2"
+695:                         >科目名</label
+3:02:25 [vite-plugin-svelte] src/lib/components/Sidebar.svelte:702:24 Avoid using autofocus
+https://svelte.dev/e/a11y_autofocus
+700:                         class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+701:                         placeholder="例：生物学 101"
+702:                         autofocus
+                                      ^
+703:                     />
+704:                 </div>
+3:02:25 [vite-plugin-svelte] src/lib/components/Sidebar.svelte:706:20 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+704:                 </div>
+705:                 <div>
+706:                     <label
+                          ^
+707:                         class="block text-xs font-bold text-slate-400 uppercase mb-2"
+708:                         >カラータグ</label
+3:02:25 [vite-plugin-svelte] src/lib/components/Sidebar.svelte:757:16 A form label must be associated with a control
+https://svelte.dev/e/a11y_label_has_associated_control
+755: 
+756:             <div class="mb-6">
+757:                 <label
+                      ^
+758:                     class="block text-xs font-bold text-slate-400 uppercase mb-2"
+759:                     >ニックネーム</label
+[33m"where" is imported from external module "firebase/firestore" but never used in "src/routes/+page.svelte".[39m
+[33m"updateEmail" is imported from external module "firebase/auth" but never used in "src/routes/settings/+page.svelte".[39m
+[33m"ref", "uploadBytes" and "getDownloadURL" are imported from external module "firebase/storage" but never used in "src/routes/+page.svelte".[39m
+[32m✓[39m 207 modules transformed.
+rendering chunks...
+
+node:internal/event_target:1122
+  process.nextTick(() => { throw err; });
+                           ^
+Error: Neither apiKey nor config.authenticator provided
+    at Stripe._setAuthenticator (file:///C:/Users/kharu/Project/Re-Pass/node_modules/stripe/esm/stripe.core.js:155:23)
+    at new Stripe (file:///C:/Users/kharu/Project/Re-Pass/node_modules/stripe/esm/stripe.core.js:93:14)
+    at file:///C:/Users/kharu/Project/Re-Pass/.svelte-kit/output/server/entries/endpoints/api/portal/_server.ts.js:4:16
+    at ModuleJob.run (node:internal/modules/esm/module_job:413:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:660:26)
+    at async analyse (file:///C:/Users/kharu/Project/Re-Pass/node_modules/@sveltejs/kit/src/core/postbuild/analyse.js:122:62)
+    at async MessagePort.<anonymous> (file:///C:/Users/kharu/Project/Re-Pass/node_modules/@sveltejs/kit/src/utils/fork.js:23:16)
+
+Node.js v24.12.0

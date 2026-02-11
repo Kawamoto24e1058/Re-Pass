@@ -1,0 +1,60 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* Custom Markdown Table Styles for "Borderless/Clean" look */
+.prose table {
+  font-size: 0.875em;
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+
+.prose thead {
+  border-bottom: 1px solid #e5e7eb;
+  /* Light gray border for header only */
+}
+
+.prose thead th {
+  font-weight: 600;
+  color: #111827;
+  padding: 0.75rem 0.5rem;
+}
+
+.prose tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.prose tbody tr:hover {
+  background-color: #f8fafc;
+  /* Subtle hover highlight */
+}
+
+.prose tbody tr:last-child {
+  border-bottom: none;
+}
+
+.prose tbody td {
+  padding: 0.75rem 0.5rem;
+  color: #374151;
+}
+
+/* Scrollbar refinement */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
