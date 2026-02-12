@@ -9,8 +9,16 @@ export const POST = async ({ request }) => {
 
   const formData = await request.formData();
   const mode = formData.get('mode') as string || "note";
+  const plan = formData.get('plan') as string || "free";
   const targetLength = parseInt(formData.get('targetLength') as string || "1000");
   let transcript = formData.get('transcript') as string || "";
+
+  // Backend Plan Check
+  if (plan === 'free') {
+    if (mode === 'thoughts' || mode === 'report') {
+      return json({ error: "この機能はプレミアム限定です" }, { status: 403 });
+    }
+  }
 
   // Handle Text File
   const txtFile = formData.get('txt') as File;
@@ -86,6 +94,7 @@ export const POST = async ({ request }) => {
   const jsonSchema = `
   出力は必ず以下のJSON形式で行ってください。
   重要：Markdownのコードブロック（\`\`\`jsonなど）は絶対に使用しないでください。純粋なJSON文字列のみを出力してください。
+  **厳守**: JSON文字列内（summaryなど）で改行が必要な場合は、必ずエスケープシーケンス（\\n）を使用し、リテラルの改行コードを含めないでください。
   {
     "title": "講義タイトル",
     "category": "科目名（例：心理学、マクロ経済学）",
@@ -180,15 +189,49 @@ ${transcript}
       const response = await result.response;
       const text = response.text();
 
-      // Clean up Markdown code blocks if present
-      const cleanedText = text.replace(/```json\n|\n```|```/g, "").trim();
+      // Better JSON extraction: Find first '{' and last '}'
+      let cleanedText = text.trim();
+      const firstCurly = cleanedText.indexOf('{');
+      const lastCurly = cleanedText.lastIndexOf('}');
 
+      if (firstCurly === -1 || lastCurly === -1) {
+        throw new Error("JSON object not found in response");
+      }
+
+      cleanedText = cleanedText.substring(firstCurly, lastCurly + 1);
+
+      // Robust parsing for AI-generated results: 
+      // Replace literal newlines and tabs within the JSON string that might be inside quotes.
+      // This is common when Gemini outputs Markdown tables or formatted summaries.
+      // Note: This regex is a safety measure to prevent "Bad control character" errors.
+      const sanitizedText = cleanedText.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+      // Wait, the above is TOO aggressive as it breaks the JSON structure itself (keys/braces).
+      // Let's use a more targeted approach: replace only literal control characters UNLESS they are between tokens.
+      // Actually, standard JSON.parse is fine with newlines BETWEEN tokens.
+      // The issue is ONLY inside strings.
+
+      // Let's try parsing directly first, if fails, try a manual sanitize
       try {
         return json({ result: JSON.parse(cleanedText) });
       } catch (e) {
-        console.error("JSON Parse Error:", e);
-        console.error("Raw Text:", text);
-        throw new Error("JSON Parse Failed");
+        console.warn("Standard JSON parse failed, attempting sanitization...", e);
+        // Targeted sanitization: replace literal newlines that are NOT followed by a JSON structural char
+        // This is a heuristic: literal newlines inside strings are the main culprits.
+        const fixControlChars = (str: string) => {
+          return str.replace(/[\x00-\x1f]/g, (match) => {
+            if (match === '\n') return '\\n';
+            if (match === '\r') return '\\r';
+            if (match === '\t') return '\\t';
+            return '\\u' + match.charCodeAt(0).toString(16).padStart(4, '0');
+          });
+        };
+        try {
+          return json({ result: JSON.parse(fixControlChars(cleanedText)) });
+        } catch (innerError) {
+          console.error("Sanitized JSON parse also failed:", innerError);
+          console.error("Raw Text:", text);
+          throw new Error("JSON Parse Failed");
+        }
       }
 
     } catch (error: any) {

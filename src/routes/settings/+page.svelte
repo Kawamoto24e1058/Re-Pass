@@ -15,7 +15,9 @@
     let user = $state<any>(null);
     let userData = $state<any>(null);
     let loading = $state(true);
+    let portalLoading = $state(false);
     let toastMessage = $state<string | null>(null);
+    let isMobileOpen = $state(false);
 
     // Form State
     let displayName = $state("");
@@ -63,21 +65,17 @@
     }
 
     async function handlePortal() {
-        if (!userData?.stripeCustomerId) {
-            if (
-                confirm(
-                    "サブスクリプション情報が見つかりません。プラン選択ページへ移動しますか？",
-                )
-            ) {
-                goto("/pricing");
-            }
-            return;
-        }
+        if (!user) return;
+
+        portalLoading = true;
         try {
+            const token = await user.getIdToken();
             const res = await fetch("/api/portal", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ customerId: userData.stripeCustomerId }),
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
             });
             const data = await res.json();
             if (data.url) {
@@ -85,9 +83,14 @@
             } else {
                 throw new Error(data.error || "Unknown error");
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("ポータルへの移動に失敗しました: " + (e as Error).message);
+            alert(
+                "ポータルへの移動に失敗しました: " +
+                    (e.message || "不明なエラー"),
+            );
+        } finally {
+            setTimeout(() => (portalLoading = false), 3000);
         }
     }
 
@@ -137,6 +140,61 @@
 <div
     class="flex h-screen overflow-hidden bg-[#F9FAFB] text-slate-800 font-sans selection:bg-indigo-100 selection:text-indigo-700 relative"
 >
+    <!-- Mobile Header -->
+    <header
+        class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
+    >
+        <button
+            onclick={() => (isMobileOpen = true)}
+            class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
+        >
+            <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                />
+            </svg>
+        </button>
+
+        <a
+            href="/"
+            class="font-bold text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent"
+            >Re-Pass</a
+        >
+
+        <div
+            class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 overflow-hidden"
+        >
+            {#if user?.photoURL}
+                <img
+                    src={user.photoURL}
+                    alt="User"
+                    class="w-full h-full object-cover"
+                />
+            {:else}
+                {userData?.nickname?.substring(0, 1).toUpperCase() || "U"}
+            {/if}
+        </div>
+    </header>
+
+    <!-- Sidebar Component & Overlay -->
+    {#if isMobileOpen}
+        <div
+            class="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
+            onclick={() => (isMobileOpen = false)}
+            onkeydown={(e) => e.key === "Escape" && (isMobileOpen = false)}
+            role="button"
+            tabindex="0"
+        ></div>
+    {/if}
+
     {#if user}
         <Sidebar
             {user}
@@ -144,14 +202,22 @@
             subjects={$subjects}
             currentLectureId={null}
             selectedSubjectId={null}
-            onLoadLecture={() => goto("/")}
-            onSelectSubject={() => goto("/")}
+            {isMobileOpen}
+            onClose={() => (isMobileOpen = false)}
+            onLoadLecture={() => {
+                goto("/");
+                isMobileOpen = false;
+            }}
+            onSelectSubject={() => {
+                goto("/");
+                isMobileOpen = false;
+            }}
             onSignOut={handleLogout}
         />
     {/if}
 
-    <div class="flex-1 relative overflow-y-auto bg-slate-50">
-        <main class="max-w-3xl mx-auto py-12 px-6 lg:px-12">
+    <div class="flex-1 relative overflow-y-auto bg-slate-50 pt-16 lg:pt-0">
+        <main class="max-w-3xl mx-auto py-8 lg:py-12 px-4 lg:px-12">
             <h1 class="text-3xl font-bold text-slate-900 mb-8 tracking-tight">
                 設定
             </h1>
@@ -207,10 +273,12 @@
                             class="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
                         >
                             <label
+                                for="nickname"
                                 class="w-32 text-sm font-medium text-slate-600"
                                 >ニックネーム</label
                             >
                             <input
+                                id="nickname"
                                 type="text"
                                 bind:value={displayName}
                                 class="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 font-medium placeholder-slate-400 p-0"
@@ -238,15 +306,16 @@
                     <div
                         class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100"
                     >
-                        <div
-                            class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                        <button
+                            class="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group"
+                            onclick={() => goto("/settings/subscription")}
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center"
+                                    class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all"
                                 >
                                     <svg
-                                        class="w-4 h-4"
+                                        class="w-5 h-5"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
@@ -258,59 +327,20 @@
                                         /></svg
                                     >
                                 </div>
-                                <div>
+                                <div class="text-left">
                                     <p class="font-bold text-slate-900">
-                                        現在のプラン
+                                        サブスクリプション管理
+                                    </p>
+                                    <p class="text-sm text-slate-500">
+                                        現在のプラン: {userData?.plan ===
+                                        "premium"
+                                            ? "PREMIUM"
+                                            : "FREE"}
                                     </p>
                                 </div>
                             </div>
-                            <div>
-                                {#if userData?.plan === "premium"}
-                                    <span
-                                        class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm"
-                                        >PREMIUM</span
-                                    >
-                                {:else}
-                                    <span
-                                        class="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full"
-                                        >FREE</span
-                                    >
-                                {/if}
-                            </div>
-                        </div>
-
-                        <div
-                            class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer"
-                            onclick={handlePortal}
-                        >
-                            <div class="flex items-center gap-4">
-                                <div
-                                    class="w-8 h-8 rounded-full bg-slate-50 text-slate-500 flex items-center justify-center"
-                                >
-                                    <svg
-                                        class="w-4 h-4"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        ><path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                                        /><path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                        /></svg
-                                    >
-                                </div>
-                                <p class="font-medium text-slate-700">
-                                    サブスクリプションを管理
-                                </p>
-                            </div>
                             <svg
-                                class="w-4 h-4 text-slate-400"
+                                class="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -321,7 +351,7 @@
                                     d="M9 5l7 7-7 7"
                                 /></svg
                             >
-                        </div>
+                        </button>
                     </div>
                 </section>
 

@@ -33,4 +33,8 @@ const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
-export { app, auth, db, storage, googleProvider };
+// Microsoft Provider (OAuth)
+import { OAuthProvider } from "firebase/auth";
+const microsoftProvider = new OAuthProvider("microsoft.com");
+
+export { app, auth, db, storage, googleProvider, microsoftProvider };

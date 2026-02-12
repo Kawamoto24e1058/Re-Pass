@@ -20,6 +20,15 @@
   import Sidebar from "$lib/components/Sidebar.svelte";
   import { signOut } from "firebase/auth";
   import { subjects, lectures, currentBinder } from "$lib/stores";
+  import {
+    isRecording,
+    transcript,
+    finalTranscript,
+    interimTranscript,
+    resetTranscript,
+  } from "$lib/stores/recordingStore";
+  import { recognitionService } from "$lib/services/recognitionService";
+  import { page } from "$app/stores";
 
   // --- State Variables (Runes) ---
   let pdfFile = $state<File | null>(null);
@@ -68,12 +77,13 @@
   // UI State
   let toastMessage = $state<string | null>(null);
   let resultContainer = $state<HTMLElement | null>(null); // For auto-scroll
+  let isMobileOpen = $state(false);
 
-  // Speech Recognition State
-  let isRecording = $state(false);
-  let transcript = $state("");
-  let finalTranscript = $state("");
-  let recognition: any;
+  // Speech Recognition State - Moved to global recordingStore
+  // let isRecording = $state(false);
+  // let transcript = $state("");
+  // let finalTranscript = $state("");
+  // let recognition: any;
 
   // Analysis Settings
   let analysisMode = $state<"note" | "thoughts" | "report">("note");
@@ -104,8 +114,8 @@
     if (imageFile) parts.push("Image");
     if (videoFile) parts.push("Video");
     if (targetUrl) parts.push("URL");
-    const transcriptLen = transcript.length;
-    if (transcriptLen > 0 && !isRecording) parts.push("Transcript");
+    const transcriptLen = $transcript.length;
+    if (transcriptLen > 0 && !$isRecording) parts.push("Transcript");
 
     if (parts.length === 0) return null;
     return parts.join(" + ");
@@ -143,6 +153,19 @@
       }
     });
 
+    // Handle Stripe Success Redirect
+    const sessionId = $page.url.searchParams.get("session_id");
+    if (sessionId) {
+      toastMessage =
+        "✨ プレミアムプランへようこそ！全ての講義を資産に変えましょう。";
+      setTimeout(() => (toastMessage = null), 6000);
+
+      // Clean up the URL parameter
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("session_id");
+      window.history.replaceState({}, "", newUrl);
+    }
+
     // ... (rest of onMount)
 
     // Global click listener to close move menus
@@ -162,38 +185,7 @@
 
   // ... (Keep existing onMount logic) ...
 
-  onMount(() => {
-    // ... SpeechRecognition setup ...
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-
-    if (SpeechRecognition) {
-      // ... (Keep existing)
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "ja-JP";
-      recognition.onresult = (event: any) => {
-        // ... (Keep existing logic)
-        let interimTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        transcript = finalTranscript + interimTranscript;
-      };
-      recognition.onerror = (event: any) => {
-        isRecording = false;
-      };
-      recognition.onend = () => {
-        if (isRecording) recognition.start();
-      };
-    }
-  });
+  // Global SpeechRecognition is managed in +layout via recognitionService
 
   // --- Functions ---
 
@@ -241,8 +233,9 @@
   }
 
   function setAnalysisMode(newMode: "note" | "thoughts" | "report") {
-    const isPremium = userData?.plan === "premium";
-    if (newMode === "report" && !isPremium) {
+    const isPremium =
+      userData?.plan === "premium" || userData?.plan === "season";
+    if ((newMode === "thoughts" || newMode === "report") && !isPremium) {
       showUpgradeModal = true;
       return;
     }
@@ -253,40 +246,21 @@
     let val = parseInt((e.target as HTMLInputElement).value);
     if (val < 100) val = 100; // Snap to 100 min
 
-    const isPremium = userData?.plan === "premium";
+    const isPremium =
+      userData?.plan === "premium" || userData?.plan === "season";
 
-    if (!isPremium && val > 1000) {
+    if (!isPremium && val > 500) {
       showUpgradeModal = true;
-      targetLength = 1000; // Force back
+      toastMessage = "フリープランは500文字までです";
+      setTimeout(() => (toastMessage = null), 3000);
+      targetLength = 500; // Force back
       return;
     }
     targetLength = val;
   }
 
   function toggleRecording() {
-    if (!recognition) {
-      alert("このブラウザは音声認識をサポートしていません。");
-      return;
-    }
-
-    if (isRecording) {
-      // Stop Recording
-      recognition.stop();
-      isRecording = false;
-      // Optimization: Do NOT auto-analyze. User must click "Analyze".
-    } else {
-      // Start Recording - Check Limits
-      const isPremium = userData?.plan === "premium";
-      const usageCount = $lectures.length;
-
-      if (!isPremium && usageCount >= 1) {
-        showUpgradeModal = true;
-        return;
-      }
-
-      recognition.start();
-      isRecording = true;
-    }
+    recognitionService.toggle();
   }
 
   function handleFileChange(
@@ -311,10 +285,31 @@
       !imageFile &&
       !videoFile &&
       !targetUrl &&
-      !transcript
+      !$transcript
     ) {
       alert("学習素材（ファイル、URL、音声）を入力してください。");
       return;
+    }
+
+    // Usage Quota Check
+    const isPremium =
+      userData?.plan === "premium" || userData?.plan === "season";
+    const usageCount = userData?.usageCount || 0;
+
+    if (!isPremium && usageCount >= 5) {
+      showUpgradeModal = true;
+      toastMessage = "今月の制限に達しました";
+      setTimeout(() => (toastMessage = null), 4000);
+      return;
+    }
+
+    // Feature Gating: Relaxed PDF analysis (2 trials)
+    if (pdfFile && !isPremium) {
+      const pdfUsage = $lectures.filter((l: any) => l.hasPdf).length;
+      if (pdfUsage >= 2) {
+        showUpgradeModal = true;
+        return;
+      }
     }
 
     analyzing = true;
@@ -326,15 +321,16 @@
       console.log("Starting analysis...");
 
       const formData = new FormData();
-      if (pdfFile) formData.append("pdf", pdfFile);
-      if (txtFile) formData.append("txt", txtFile);
-      if (audioFile) formData.append("audio", audioFile);
-      if (imageFile) formData.append("image", imageFile);
-      if (videoFile) formData.append("video", videoFile);
+      if (pdfFile) formData.append("pdf", pdfFile as Blob);
+      if (txtFile) formData.append("txt", txtFile as Blob);
+      if (audioFile) formData.append("audio", audioFile as Blob);
+      if (imageFile) formData.append("image", imageFile as Blob);
+      if (videoFile) formData.append("video", videoFile as Blob);
       if (targetUrl) formData.append("url", targetUrl);
 
-      formData.append("transcript", transcript);
+      formData.append("transcript", $transcript);
       formData.append("mode", analysisMode); // Send specific mode
+      formData.append("plan", userData?.plan || "free");
       formData.append("targetLength", targetLength.toString());
 
       console.log("Analyzing...");
@@ -366,8 +362,8 @@
           analyzedCategory = category;
           const matchedSubject = $subjects.find(
             (s: any) =>
-              s.name.toLowerCase().includes(category.toLowerCase()) ||
-              category.toLowerCase().includes(s.name.toLowerCase()),
+              s.name.toLowerCase().includes(analyzedCategory.toLowerCase()) ||
+              analyzedCategory.toLowerCase().includes(s.name.toLowerCase()),
           );
 
           if (matchedSubject) {
@@ -422,11 +418,13 @@
         const matchedSubject = $subjects.find(
           (s: any) =>
             s.name.toLowerCase().includes(analyzedCategory.toLowerCase()) ||
-            analyzedCategory.toLowerCase().includes(s.name.toLowerCase()),
+            analyzedCategory
+              .toLowerCase()
+              .includes(analyzedCategory.toLowerCase()),
         );
         if (matchedSubject && savedLectureId) {
           analysisProposal = {
-            lectureId: savedLectureId,
+            lectureId: savedLectureId as string,
             subjectId: matchedSubject.id,
             subjectName: matchedSubject.name,
           };
@@ -441,7 +439,16 @@
 
       await tick();
       if (resultContainer) {
-        resultContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+        (resultContainer as HTMLElement).scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+
+      // Increment Usage Count (Free tier)
+      if (!isPremium && user) {
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(userRef, { usageCount: usageCount + 1 }, { merge: true });
       }
     } catch (e) {
       console.error(e);
@@ -487,7 +494,7 @@
 
     const lectureData = {
       title: lectureTitle || `講義 ${new Date().toLocaleString()}`,
-      content: transcript,
+      content: $transcript,
       analysis: result,
       analysisMode: analysisMode,
       targetLength: targetLength,
@@ -586,13 +593,14 @@
   }
 
   async function loadLecture(lecture: any) {
-    if (isRecording) toggleRecording();
+    if ($isRecording) recognitionService.stop();
 
     currentLectureId = lecture.id;
     // Don't auto-deselect subject, keep context
     lectureTitle = lecture.title;
-    transcript = lecture.content || "";
-    finalTranscript = lecture.content || "";
+    // Update global transcript store when loading a lecture
+    resetTranscript();
+    finalTranscript.set(lecture.content || "");
 
     // Restore settings with defaults
     const modeMap: Record<string, "note" | "thoughts" | "report"> = {
@@ -608,7 +616,7 @@
     result = lecture.analysis || "";
     isEditing = false; // Switch to View Mode
 
-    localStorage.setItem("transcript", transcript);
+    localStorage.setItem("transcript", $transcript);
 
     // Auto-scroll to top of main content area
     await tick();
@@ -619,7 +627,7 @@
   }
 
   function handleSelectSubject(subjectId: string | null) {
-    if (isRecording) toggleRecording();
+    if ($isRecording) recognitionService.stop();
     currentBinder.set(subjectId);
     currentLectureId = null; // Clear lecture selection
 
@@ -628,8 +636,7 @@
 
     // Reset editor state
     lectureTitle = "";
-    transcript = "";
-    finalTranscript = "";
+    resetTranscript();
     result = "";
     pdfFile = null;
     txtFile = null;
@@ -641,13 +648,12 @@
   }
 
   function startNewLecture() {
-    if (isRecording) toggleRecording();
+    if ($isRecording) recognitionService.stop();
 
     currentLectureId = null;
     currentBinder.set(null); // Clear subject selection
     lectureTitle = "";
-    transcript = "";
-    finalTranscript = "";
+    resetTranscript();
     result = "";
     pdfFile = null;
     txtFile = null;
@@ -1101,7 +1107,63 @@
     {/if}
   {/snippet}
 
-  <!-- Sidebar Component -->
+  <!-- Mobile Header -->
+  <header
+    class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
+  >
+    <button
+      onclick={() => (isMobileOpen = true)}
+      class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
+      aria-label="メニューを開く"
+    >
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16"
+        />
+      </svg>
+    </button>
+
+    <a
+      href="/"
+      class="font-bold text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent"
+      >Re-Pass</a
+    >
+
+    <a href="/settings" class="p-1">
+      <div
+        class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 overflow-hidden"
+      >
+        {#if user?.photoURL}
+          <img
+            src={user.photoURL}
+            alt="User"
+            class="w-full h-full object-cover"
+          />
+        {:else}
+          {userData?.nickname?.substring(0, 1).toUpperCase() || "U"}
+        {/if}
+      </div>
+    </a>
+  </header>
+
+  <!-- Sidebar Component & Overlay -->
+  {#if isMobileOpen}
+    <div
+      class="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
+      onclick={() => (isMobileOpen = false)}
+      onkeydown={(e) => e.key === "Escape" && (isMobileOpen = false)}
+      role="button"
+      tabindex="0"
+    ></div>
+  {/if}
 
   {#if user}
     <Sidebar
@@ -1110,8 +1172,16 @@
       subjects={$subjects}
       {currentLectureId}
       {selectedSubjectId}
-      onLoadLecture={loadLecture}
-      onSelectSubject={handleSelectSubject}
+      {isMobileOpen}
+      onClose={() => (isMobileOpen = false)}
+      onLoadLecture={(lecture) => {
+        loadLecture(lecture);
+        isMobileOpen = false;
+      }}
+      onSelectSubject={(id) => {
+        handleSelectSubject(id);
+        isMobileOpen = false;
+      }}
       onSignOut={() => signOut(auth)}
       onDragStart={(id: string) => (draggingLectureId = id)}
       onDragEnd={handleDragEnd}
@@ -1121,10 +1191,10 @@
 
   <!-- Main Content -->
   <div
-    class="flex-1 relative overflow-y-auto relative h-full bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:20px_20px]"
+    class="flex-1 relative overflow-y-auto h-full bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:20px_20px] pt-16 lg:pt-0"
   >
     <main
-      class="max-w-5xl mx-auto py-12 px-8 lg:px-16 pb-32 animate-in fade-in duration-700 slide-in-from-bottom-4"
+      class="max-w-5xl mx-auto py-8 lg:py-12 px-4 lg:px-16 pb-32 animate-in fade-in duration-700 slide-in-from-bottom-4"
     >
       {#if currentLectureId && !isEditing}
         <!-- Viewing Result Mode -->
@@ -1399,9 +1469,9 @@
           </div>
 
           <!-- Waveform Animation (Visible only when Recording) -->
-          {#if isRecording}
+          {#if $isRecording}
             <div
-              class="flex items-center justify-center gap-1.5 h-12 mb-6 animate-in fade-in duration-500"
+              class="flex items-center justify-center gap-1.5 h-12 mb-4 animate-in fade-in duration-500"
             >
               <div
                 class="w-1.5 bg-red-500 rounded-full animate-waveform-1 h-3"
@@ -1423,7 +1493,7 @@
               ></div>
             </div>
             <p
-              class="text-center text-red-500 font-bold text-sm tracking-widest uppercase animate-pulse mb-8"
+              class="text-center text-red-500 font-bold text-[10px] tracking-widest uppercase animate-pulse mb-6"
             >
               Recording...
             </p>
@@ -1459,9 +1529,20 @@
                         ? 'bg-white text-indigo-900 shadow-sm'
                         : 'text-slate-500 hover:text-indigo-600'}"
                     >
-                      感想 <span class="text-[10px] text-amber-500 ml-1"
-                        >★Pro</span
-                      >
+                      感想
+                      {#if userData?.plan === "free"}
+                        <svg
+                          class="w-3 h-3 text-amber-500 inline-block ml-1 mb-0.5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      {/if}
                     </button>
                     <button
                       onclick={() => setAnalysisMode("report")}
@@ -1470,9 +1551,20 @@
                         ? 'bg-white text-indigo-900 shadow-sm'
                         : 'text-slate-500 hover:text-indigo-600'}"
                     >
-                      レポート <span class="text-[10px] text-amber-500 ml-1"
-                        >★Pro</span
-                      >
+                      レポート
+                      {#if userData?.plan === "free"}
+                        <svg
+                          class="w-3 h-3 text-amber-500 inline-block ml-1 mb-0.5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      {/if}
                     </button>
                   </div>
                   {#if analysisMode === "report"}
@@ -1529,16 +1621,41 @@
                       >
                       <span
                         class="absolute -translate-x-1/2 text-[10px] text-slate-400 whitespace-nowrap"
-                        style="left: 25%"
+                        style="left: 12.5%"
                       >
-                        1000 <span class="text-amber-500 font-bold">★Pro ></span
-                        >
+                        500
+                        {#if userData?.plan === "free"}
+                          <svg
+                            class="w-2.5 h-2.5 text-amber-500 inline-block ml-1 mb-0.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        {/if}
                       </span>
                       <span
                         class="absolute -translate-x-1/2 text-[10px] font-bold text-indigo-500 whitespace-nowrap"
                         style="left: 50%"
                       >
                         2000
+                        {#if userData?.plan === "free"}
+                          <svg
+                            class="w-2.5 h-2.5 text-amber-500 inline-block ml-0.5 mb-0.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        {/if}
                       </span>
                       <span class="absolute right-0 text-[10px] text-slate-400"
                         >4000</span
@@ -1867,7 +1984,7 @@
         </div>
 
         <!-- Transcript Preview -->
-        {#if transcript || isRecording}
+        {#if $transcript || $isRecording}
           <div class="mb-8 animate-in fade-in slide-in-from-bottom-2">
             <div
               class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group"
@@ -1882,7 +1999,7 @@
                 <p
                   class="text-sm text-slate-600 font-mono leading-relaxed line-clamp-3 hover:line-clamp-none transition-all"
                 >
-                  {transcript}
+                  {$transcript}
                 </p>
               </div>
             </div>
@@ -1897,78 +2014,131 @@
     </main>
   </div>
 
-  <!-- FAB: Recording Button (Bottom Right) -->
+  <!-- FAB: Recording & Analysis Buttons (Bottom Right) -->
   {#if user}
-    <button
-      onclick={toggleRecording}
-      class="fixed bottom-8 right-8 w-16 h-16 rounded-full bg-white shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95 group hover:shadow-2xl border border-slate-100"
-      title={isRecording ? "Stop Recording" : "Start Recording"}
-    >
-      {#if isRecording}
-        <!-- Stop Icon -->
-        <div class="w-6 h-6 bg-red-500 rounded-md animate-pulse"></div>
-      {:else}
-        <!-- Mic Icon -->
-        <svg
-          class="w-8 h-8 text-red-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+    <div class="fixed bottom-8 right-8 flex flex-col items-end gap-4 z-50">
+      <!-- Analysis FAB (Only if inputs exist and not already analyzing) -->
+      {#if selectedSummary && !analyzing && isEditing}
+        <button
+          onclick={handleAnalyze}
+          class="flex items-center gap-3 bg-slate-900 text-white pl-6 pr-4 py-4 rounded-full shadow-2xl hover:shadow-indigo-200/50 hover:-translate-y-1 transition-all active:scale-95 group border border-white/10"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-          />
-        </svg>
+          <div class="flex flex-col items-end">
+            <span
+              class="text-[10px] font-black uppercase tracking-widest opacity-60"
+              >Analyze</span
+            >
+            <span class="text-xs font-bold">{selectedSummary}</span>
+          </div>
+          <div
+            class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center shadow-inner"
+          >
+            <svg
+              class="w-5 h-5 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="3"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
+            </svg>
+          </div>
+        </button>
       {/if}
-    </button>
+
+      <!-- Recording FAB -->
+      <button
+        onclick={toggleRecording}
+        class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-95 group border border-white/10
+        {$isRecording
+          ? 'bg-red-500 text-white ring-4 ring-red-500/20'
+          : 'bg-white text-red-500 hover:bg-slate-50'}"
+        title={$isRecording ? "Stop Recording" : "Start Recording"}
+      >
+        {#if $isRecording}
+          <div class="w-6 h-6 bg-white rounded-md animate-pulse"></div>
+        {:else}
+          <div class="relative">
+            <svg
+              class="w-8 h-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2.5"
+                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+              />
+            </svg>
+            {#if !selectedSummary && !$isRecording}
+              <div
+                class="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full border-2 border-white animate-bounce"
+              ></div>
+            {/if}
+          </div>
+        {/if}
+      </button>
+    </div>
   {/if}
 
   <!-- Upgrade Modal (Triggered by Limit) -->
   {#if showUpgradeModal}
     <div
-      class="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center animate-in fade-in"
+      class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-300 px-6"
     >
       <div
-        class="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center border border-white/50 animate-in zoom-in-95"
+        class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-sm w-full text-center border border-white/50 animate-in zoom-in-95 duration-500 relative overflow-hidden"
       >
+        <!-- Decor -->
         <div
-          class="w-14 h-14 bg-indigo-100 rounded-full mx-auto mb-4 flex items-center justify-center text-indigo-600"
+          class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-50"
+        ></div>
+        <div
+          class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-50 rounded-full blur-3xl opacity-50"
+        ></div>
+
+        <div
+          class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl mx-auto mb-8 flex items-center justify-center text-white shadow-xl shadow-indigo-200 rotate-3"
         >
           <svg
-            class="w-7 h-7"
+            class="w-10 h-10"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             ><path
               stroke-linecap="round"
               stroke-linejoin="round"
-              stroke-width="2"
+              stroke-width="2.5"
               d="M13 10V3L4 14h7v7l9-11h-7z"
             /></svg
           >
         </div>
-        <h2 class="text-xl font-bold text-slate-900 mb-2">
-          Free Plan Limit Reached
+
+        <h2 class="text-2xl font-black text-slate-900 mb-4 tracking-tight">
+          制限なしで学び放題に
         </h2>
-        <p class="text-sm text-slate-500 mb-6">
-          Upgrade to Pro to access Report modes and generate longer documents.
+        <p class="text-sm text-slate-500 mb-8 leading-relaxed">
+          スタバ1杯分（¥480）で、月間無制限の講義解析、PDF読み込み、高度なレポート作成が使い放題になります。
         </p>
 
-        <div class="space-y-3">
+        <div class="space-y-4">
           <button
             onclick={() => goto("/pricing")}
-            class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-slate-900/20"
+            class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-slate-200 hover:-translate-y-0.5 active:scale-95"
           >
-            Upgrade to Pro
+            学割プラン ¥480 で始める
           </button>
           <button
             onclick={() => (showUpgradeModal = false)}
-            class="w-full text-slate-400 hover:text-slate-600 text-sm font-medium py-2"
+            class="w-full text-slate-400 hover:text-slate-600 text-sm font-bold py-2 tracking-wide"
           >
-            Cancel
+            後で検討する
           </button>
         </div>
       </div>

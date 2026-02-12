@@ -14,6 +14,13 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/stores";
 	import { subjects, lectures } from "$lib/stores";
+	import {
+		user as userStore,
+		userProfile,
+		authLoading,
+	} from "$lib/userStore";
+	import { isRecording, transcript } from "$lib/stores/recordingStore";
+	import { recognitionService } from "$lib/services/recognitionService";
 
 	let { children } = $props();
 	let loading = $state(true); // Splash screen state
@@ -89,6 +96,7 @@
 
 		const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
 			user = currentUser;
+			userStore.set(currentUser);
 			// Small delay to ensure minimum splash time for branding feel
 			await new Promise((r) => setTimeout(r, 1500));
 
@@ -96,7 +104,19 @@
 
 			if (!currentUser) {
 				subjects.set([]); // Clear subjects
-				if (path !== "/auth") await goto("/auth");
+				userProfile.set(null);
+				authLoading.set(false);
+
+				// Allow public access to legal pages
+				const publicRoutes = [
+					"/login",
+					"/terms",
+					"/privacy",
+					"/legal/notation",
+				];
+				if (!publicRoutes.includes(path)) {
+					await goto("/login");
+				}
 			} else {
 				// User is logged in, check if they have a profile doc (onboarded)
 				try {
@@ -105,9 +125,13 @@
 					);
 
 					if (!userDoc.exists()) {
-						if (path !== "/pricing") await goto("/pricing");
+						userProfile.set(null);
+						if (path !== "/pricing" && path !== "/login")
+							await goto("/pricing");
 					} else {
-						if (path === "/auth" || path === "/pricing")
+						const profile = userDoc.data() as any;
+						userProfile.set(profile);
+						if (path === "/login" || path === "/pricing")
 							await goto("/");
 					}
 
@@ -125,6 +149,8 @@
 					});
 				} catch (e) {
 					console.error("Error fetching user profile", e);
+				} finally {
+					authLoading.set(false);
 				}
 			}
 
@@ -165,6 +191,44 @@
 					class="h-full bg-indigo-500 w-full animate-progress-indeterminate"
 				></div>
 			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Global Recording Indicator -->
+{#if $isRecording}
+	<div
+		class="fixed top-6 left-1/2 -translate-x-1/2 z-[50] animate-in fade-in slide-in-from-top-4 duration-500"
+	>
+		<div
+			class="bg-slate-900/90 backdrop-blur-md border border-white/10 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-4 text-white hover:bg-slate-800 transition-all group"
+		>
+			<div class="flex items-center gap-2">
+				<div class="relative w-3 h-3">
+					<div
+						class="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"
+					></div>
+					<div class="relative w-3 h-3 bg-red-500 rounded-full"></div>
+				</div>
+				<span class="text-xs font-black tracking-widest uppercase"
+					>Recording</span
+				>
+			</div>
+
+			<div class="h-4 w-px bg-white/20"></div>
+
+			<p
+				class="text-[10px] text-slate-300 font-medium truncate max-w-[200px] italic"
+			>
+				{$transcript || "音声を待機中..."}
+			</p>
+
+			<button
+				onclick={() => recognitionService.stop()}
+				class="bg-white/10 hover:bg-red-500 text-white px-3 py-1.5 rounded-xl text-[10px] font-black transition-all"
+			>
+				STOP
+			</button>
 		</div>
 	</div>
 {/if}

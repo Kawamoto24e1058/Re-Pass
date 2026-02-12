@@ -29,6 +29,8 @@
         onDragStart?: (lectureId: string) => void;
         onDragEnd?: () => void;
         draggingLectureId?: string | null;
+        isMobileOpen?: boolean;
+        onClose?: () => void;
     }>();
 
     // Local State
@@ -352,14 +354,40 @@
 
 <!-- Sidebar -->
 <aside
-    class="w-72 bg-white/70 backdrop-blur-md border-r border-slate-200/50 flex flex-col h-full z-20 flex-shrink-0 animate-in slide-in-from-left-4 duration-500 font-sans"
+    class="fixed inset-y-0 left-0 w-72 bg-white/70 backdrop-blur-md border-r border-slate-200/50 flex flex-col h-full z-[100] transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-20 {props.isMobileOpen
+        ? 'translate-x-0 shadow-2xl'
+        : '-translate-x-full lg:translate-x-0'} font-sans"
 >
+    <!-- Mobile Close Button -->
+    {#if props.isMobileOpen}
+        <button
+            onclick={props.onClose}
+            class="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-indigo-600 transition-colors"
+            aria-label="サイドバーを閉じる"
+        >
+            <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                />
+            </svg>
+        </button>
+    {/if}
+
     <!-- Sidebar Header -->
     <div class="p-6 pb-2">
         <div class="flex items-center justify-between mb-6">
-            <span
-                class="font-bold text-slate-900 tracking-tight text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent"
-                >Re-Pass</span
+            <a
+                href="/"
+                class="font-bold text-slate-900 tracking-tight text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity no-underline"
+                >Re-Pass</a
             >
         </div>
     </div>
@@ -693,12 +721,33 @@
                     style="width: {usagePercent}%"
                 ></div>
             </div>
-            {#if userData?.plan !== "premium"}
-                <button
-                    class="w-full mt-3 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 py-1.5 rounded-lg transition-colors"
+            {#if userData?.plan === "premium" || userData?.plan === "season"}
+                <a
+                    href="/settings/subscription"
+                    class="w-full mt-3 text-[10px] font-bold text-center text-slate-600 bg-slate-50 hover:bg-slate-100 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
+                >
+                    <svg
+                        class="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        />
+                    </svg>
+                    プラン管理
+                </a>
+            {:else}
+                <a
+                    href="/pricing"
+                    class="w-full mt-3 text-[10px] font-bold text-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 py-1.5 rounded-lg transition-colors block"
                 >
                     プロにアップグレード
-                </button>
+                </a>
             {/if}
         </div>
 
@@ -842,22 +891,24 @@
             <div class="mb-6 space-y-4">
                 <div>
                     <label
+                        for="subject-name"
                         class="block text-xs font-bold text-slate-400 uppercase mb-2"
                         >科目名</label
                     >
                     <input
+                        id="subject-name"
                         type="text"
                         bind:value={newSubjectName}
                         class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                         placeholder="例：生物学 101"
-                        autofocus
                     />
                 </div>
                 <div>
-                    <label
+                    <p
                         class="block text-xs font-bold text-slate-400 uppercase mb-2"
-                        >カラータグ</label
                     >
+                        カラータグ
+                    </p>
                     <div class="flex flex-wrap gap-2">
                         {#each subjectColors as color}
                             <button
@@ -906,10 +957,12 @@
 
             <div class="mb-6">
                 <label
+                    for="edit-nickname"
                     class="block text-xs font-bold text-slate-400 uppercase mb-2"
                     >ニックネーム</label
                 >
                 <input
+                    id="edit-nickname"
                     type="text"
                     bind:value={editNicknameValue}
                     class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
