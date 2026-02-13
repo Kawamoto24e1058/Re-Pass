@@ -230,6 +230,7 @@
 			>
 				STOP
 			</button>
+		</div>
 	</div>
 {/if}
 
