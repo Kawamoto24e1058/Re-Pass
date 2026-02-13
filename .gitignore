@@ -21,3 +21,7 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Firebase Service Account
+service-account.json
+src/lib/server/service-account.json

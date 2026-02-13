@@ -22,10 +22,10 @@
 	import { isRecording, transcript } from "$lib/stores/recordingStore";
 	import { recognitionService } from "$lib/services/recognitionService";
 	import PwaInstallPrompt from "$lib/components/PwaInstallPrompt.svelte";
+	import LoadingScreen from "$lib/components/LoadingScreen.svelte";
 
 	let { children } = $props<{ children: any }>();
-	let loading = $state(true); // Splash screen state
-	let showSplash = $state(true); // For fade-out animation
+	let loading = $state(true); // App state
 	let user = $state<any>(null);
 	let lectureUnsubscribes: (() => void)[] = [];
 	let lecturesMap = $state<Record<string, any[]>>({});
@@ -155,9 +155,7 @@
 				}
 			}
 
-			// Hide Splash
-			showSplash = false;
-			setTimeout(() => (loading = false), 500); // Wait for fade out
+			// Transition handled by LoadingScreen
 		});
 
 		return () => {
@@ -174,26 +172,7 @@
 
 <!-- Splash Screen -->
 {#if loading}
-	<div
-		class="fixed inset-0 z-[9999] bg-[#F9FAFB] flex items-center justify-center transition-opacity duration-500 {showSplash
-			? 'opacity-100'
-			: 'opacity-0 pointer-events-none'}"
-	>
-		<div class="text-center animate-in fade-in zoom-in-95 duration-1000">
-			<h1
-				class="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-pink-500 bg-clip-text text-transparent tracking-tighter mb-2"
-			>
-				Re-Pass
-			</h1>
-			<div
-				class="h-1 w-12 bg-slate-200 mx-auto rounded-full overflow-hidden"
-			>
-				<div
-					class="h-full bg-indigo-500 w-full animate-progress-indeterminate"
-				></div>
-			</div>
-		</div>
-	</div>
+	<LoadingScreen onComplete={() => (loading = false)} />
 {/if}
 
 <!-- Global Recording Indicator -->
@@ -237,20 +216,3 @@
 <PwaInstallPrompt />
 
 {@render children()}
-
-<style>
-	@keyframes progress-indeterminate {
-		0% {
-			transform: translateX(-100%);
-		}
-		50% {
-			transform: translateX(0);
-		}
-		100% {
-			transform: translateX(100%);
-		}
-	}
-	.animate-progress-indeterminate {
-		animation: progress-indeterminate 1.5s infinite linear;
-	}
-</style>

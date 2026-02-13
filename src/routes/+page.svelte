@@ -77,6 +77,8 @@
   // UI State
   let toastMessage = $state<string | null>(null);
   let resultContainer = $state<HTMLElement | null>(null); // For auto-scroll
+  let resultTextContainer = $state<HTMLElement | null>(null); // For individual copy
+  let finalResultContainer = $state<HTMLElement | null>(null); // For final copy
   let isMobileOpen = $state(false);
 
   // Speech Recognition State - Moved to global recordingStore
@@ -101,10 +103,74 @@
   let progressValue = $state(0);
   let progressStatus = $state("準備中...");
   let progressInterval: any;
+  let customAnalysisInstructions = $state("");
+  let analyzingFinal = $state(false);
+  let finalExamView = $state(false); // Toggle between lecture list and final exam
+  let finalExamResult = $state(""); // Store AI-generated final exam summary
+  let isCopied = $state(false); // Feedback state for summary copy
+  let isResultCopied = $state(false); // Feedback state for individual results
+
+  // Copy result to clipboard
+  function copyToClipboard() {
+    if (!finalResultContainer) return;
+
+    // Use innerText to get the rendered, clean text (strips Markdown symbols)
+    const rawText = finalResultContainer.innerText;
+
+    // Basic cleaning: remove excessive vertical spacing and trim each line
+    const cleanText = rawText
+      .split("\n")
+      .map((line) => line.trim())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    navigator.clipboard.writeText(cleanText).then(() => {
+      isCopied = true;
+      setTimeout(() => (isCopied = false), 2000);
+    });
+  }
+
+  // Copy individual lecture note to clipboard
+  function copyResultToClipboard() {
+    if (!resultTextContainer) return;
+
+    // Use innerText to get the rendered, clean text
+    const rawText = resultTextContainer.innerText;
+
+    const cleanText = rawText
+      .split("\n")
+      .map((line) => line.trim())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    navigator.clipboard.writeText(cleanText).then(() => {
+      isResultCopied = true;
+      setTimeout(() => (isResultCopied = false), 2000);
+    });
+  }
 
   // --- Derived State for UI ---
   let manuscriptPages = $derived(Math.ceil(targetLength / 400));
   let thumbPosition = $derived((targetLength / 4000) * 100);
+
+  let dailyRemaining = $derived.by(() => {
+    if (
+      userData?.plan === "premium" ||
+      userData?.plan === "season" ||
+      userData?.isPro === true
+    ) {
+      return Infinity;
+    }
+    const today = new Date().toISOString().split("T")[0];
+    const dailyUsage = userData?.dailyUsage || {
+      count: 0,
+      lastResetDate: today,
+    };
+    if (dailyUsage.lastResetDate !== today) return 3;
+    return Math.max(0, 3 - dailyUsage.count);
+  });
 
   let selectedSummary = $derived.by(() => {
     const parts = [];
@@ -334,10 +400,22 @@
       formData.append("targetLength", targetLength.toString());
 
       console.log("Analyzing...");
+      const idToken = await user.getIdToken();
       const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
       });
+
+      if (response.status === 403) {
+        const errorData = await response.json();
+        showUpgradeModal = true;
+        toastMessage = errorData.error || "本日の上限に達しました";
+        setTimeout(() => (toastMessage = null), 5000);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Analysis failed");
@@ -568,17 +646,31 @@
       const response = await fetch("/api/analyze-series", {
         method: "POST",
         body: JSON.stringify({
+          uid: user.uid,
+          subjectId: selectedSubjectId,
           subjectName: subject?.name || "Unknown Subject",
+          customInstructions: customAnalysisInstructions, // Pass custom instructions
           lectures: subjectLectures.map((l) => ({
+            id: l.id,
             title: l.title,
             date: l.createdAt
               ? new Date(l.createdAt.toDate()).toLocaleDateString()
               : "Unknown Date",
-            content: l.content, // or l.analysis if content is missing
+            content: l.content,
           })),
         }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
       });
+
+      if (response.status === 403) {
+        showUpgradeModal = true;
+        toastMessage = "本日の解析上限に達しました";
+        setTimeout(() => (toastMessage = null), 5000);
+        return;
+      }
 
       if (!response.ok) throw new Error("Failed to generate summary");
 
@@ -589,6 +681,58 @@
       alert("Failed to generate series summary.");
     } finally {
       analyzingSeries = false;
+    }
+  }
+
+  async function generateFinalSummary() {
+    if (!selectedSubjectId || analyzingFinal) return;
+
+    try {
+      analyzingFinal = true;
+      const subject = $subjects.find((s) => s.id === selectedSubjectId);
+      const subjectLectures = $lectures.filter(
+        (l) => l.subjectId === selectedSubjectId && l.analysis,
+      );
+
+      if (subjectLectures.length === 0) {
+        alert("要約済みの講義がありません。まずは各講義を解析してください。");
+        return;
+      }
+
+      const response = await fetch("/api/analyze-final", {
+        method: "POST",
+        body: JSON.stringify({
+          subjectName: subject?.name || "Unknown Subject",
+          customInstructions: customAnalysisInstructions,
+          analyses: subjectLectures.map((l) => ({
+            title: l.title,
+            analysis: l.analysis,
+          })),
+        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
+      });
+
+      if (response.status === 403) {
+        showUpgradeModal = true;
+        toastMessage = "本日の解析上限に達しました";
+        setTimeout(() => (toastMessage = null), 5000);
+        return;
+      }
+
+      if (!response.ok) throw new Error("まとめの生成に失敗しました");
+      const data = await response.json();
+
+      // Store result and switch to final exam view
+      finalExamResult = data.result;
+      finalExamView = true;
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message);
+    } finally {
+      analyzingFinal = false;
     }
   }
 
@@ -1083,7 +1227,24 @@
           ? 'bg-graph-paper'
           : ''}"
       >
-        <div class="absolute top-0 right-0 p-4 z-20">
+        <div class="absolute top-8 right-8 flex items-center gap-4 z-20">
+          {#if result}
+            <button
+              onclick={copyResultToClipboard}
+              class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200 text-slate-500 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm active:scale-95"
+            >
+              {#if isResultCopied}
+                <span class="text-[10px] font-bold text-emerald-600"
+                  >✅ コピー完了</span
+                >
+              {:else}
+                <span class="text-xs">📋</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider"
+                  >コピー</span
+                >
+              {/if}
+            </button>
+          {/if}
           <span
             class="text-[10px] font-bold text-slate-300 uppercase tracking-widest"
             >{analysisMode}</span
@@ -1091,6 +1252,7 @@
         </div>
 
         <article
+          bind:this={resultTextContainer}
           class="relative z-10 prose prose-slate prose-lg max-w-none
           prose-headings:font-bold prose-headings:tracking-tight
           prose-h1:text-3xl prose-h1:mb-6 prose-h1:bg-gradient-to-r prose-h1:from-indigo-700 prose-h1:to-pink-600 prose-h1:bg-clip-text prose-h1:text-transparent
@@ -1237,169 +1399,221 @@
               講義がこの科目にあります
             </p>
 
-            <!-- Series Summary Button (Premium Feature) -->
-            <div
-              class="mt-8 bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl"
-            >
-              <div
-                class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+            <!-- Tab Switcher -->
+            <div class="mt-8 flex gap-2 border-b border-slate-200">
+              <button
+                onclick={() => {
+                  finalExamView = false;
+                }}
+                class="px-6 py-3 font-bold transition-all relative {!finalExamView
+                  ? 'text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-slate-400 hover:text-slate-600'}"
               >
-                <div>
-                  <div class="flex items-center gap-2 mb-2">
-                    <span
-                      class="text-amber-400 text-xs font-bold uppercase tracking-wider"
-                      >Premium Feature</span
-                    >
-                  </div>
-                  <h2 class="text-2xl font-bold mb-2">Series Analysis</h2>
-                  <p class="text-slate-300 text-sm max-w-lg">
-                    Generate a comprehensive summary of all lectures in this
-                    series, including "Story so far", "Unresolved issues", and
-                    "Exam predictions".
-                  </p>
-                </div>
-                <button
-                  onclick={handleGenerateSeriesSummary}
-                  disabled={analyzingSeries}
-                  class="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold hover:bg-slate-100 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                📚 講義一覧
+              </button>
+              <button
+                onclick={() => {
+                  finalExamView = true;
+                }}
+                class="px-6 py-3 font-bold transition-all relative flex items-center gap-2 {finalExamView
+                  ? 'text-indigo-600 border-b-2 border-indigo-600'
+                  : 'text-slate-400 hover:text-slate-600'}"
+              >
+                🔥 期末試験対策
+                {#if analyzingFinal}
+                  <svg
+                    class="animate-spin h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                {/if}
+              </button>
+            </div>
+
+            {#if finalExamView}
+              <!-- Final Exam Summary Section -->
+              <div class="mt-8 animate-in fade-in slide-in-from-bottom-4">
+                <!-- Regenerate Section -->
+                <div
+                  class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl p-6 mb-8 border border-indigo-100"
                 >
-                  {#if analyzingSeries}
+                  <div class="flex items-start justify-between gap-6">
+                    <div class="flex-1">
+                      <h3 class="text-lg font-bold text-slate-900 mb-2">
+                        🎓 試験対策ノート生成
+                      </h3>
+                      <p class="text-sm text-slate-600 mb-4">
+                        各講義の要約を統合して、最短で試験準備が完了できる対策ノートを生成します。
+                      </p>
+
+                      <!-- Custom Instructions -->
+                      <div class="mb-4">
+                        <label
+                          for="final-exam-instructions"
+                          class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2"
+                          >AIへの追加指示（オプション）</label
+                        >
+                        <textarea
+                          id="final-exam-instructions"
+                          bind:value={customAnalysisInstructions}
+                          placeholder="例：○○的な視点を重視して、××の用語を多めに..."
+                          class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all resize-none"
+                          rows="2"
+                        ></textarea>
+                      </div>
+
+                      <button
+                        onclick={generateFinalSummary}
+                        disabled={analyzingFinal}
+                        class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {#if analyzingFinal}
+                          <svg
+                            class="animate-spin h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              class="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              stroke-width="4"
+                            ></circle>
+                            <path
+                              class="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          AIが対策ノートを編集中...
+                        {:else}
+                          {finalExamResult
+                            ? "🔄 再生成する"
+                            : "✨ 対策ノートを生成する"}
+                        {/if}
+                      </button>
+
+                      {#if dailyRemaining !== Infinity}
+                        <div class="mt-4 flex items-center gap-2">
+                          <span
+                            class="text-[10px] font-bold px-2 py-0.5 rounded-full {dailyRemaining >
+                            0
+                              ? 'bg-indigo-100 text-indigo-600'
+                              : 'bg-rose-100 text-rose-600'}"
+                          >
+                            本日あと {dailyRemaining} 回
+                          </span>
+                          <span class="text-[10px] text-slate-400">
+                            （無料枠 上限 3回/日）
+                          </span>
+                        </div>
+                      {/if}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Final Exam Result Display -->
+                {#if finalExamResult}
+                  <div class="flex justify-end mb-3 mt-4">
+                    <button
+                      onclick={copyToClipboard}
+                      class="flex items-center gap-2 px-4 py-2 rounded-xl {isCopied
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-800 text-white hover:bg-slate-700'} transition-all shadow-md active:scale-95 font-bold"
+                    >
+                      {#if isCopied}
+                        ✅ コピーしました！
+                      {:else}
+                        📋 対策ノートをコピー
+                      {/if}
+                    </button>
+                  </div>
+
+                  <div
+                    class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm"
+                  >
+                    <div
+                      bind:this={finalResultContainer}
+                      class="prose prose-slate prose-headings:text-slate-900 prose-headings:font-bold prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900 max-w-none"
+                    >
+                      {@html marked.parse(finalExamResult)}
+                    </div>
+                  </div>
+                {:else if !analyzingFinal}
+                  <div
+                    class="text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl"
+                  >
+                    <p class="text-lg font-bold mb-2">
+                      試験対策ノートがまだ生成されていません
+                    </p>
+                    <p class="text-sm">
+                      上のボタンをクリックして生成してください
+                    </p>
+                  </div>
+                {/if}
+              </div>
+            {:else}
+              <!-- Lecture Grid -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
+                {#each $lectures.filter((l: any) => l.subjectId === selectedSubjectId) as lecture (lecture.id)}
+                  {@render LectureItem(lecture)}
+                {/each}
+                {#if $lectures.filter((l) => l.subjectId === selectedSubjectId).length === 0}
+                  <div
+                    ondragover={handleMainTargetDragOver}
+                    ondragleave={handleMainTargetDragLeave}
+                    ondrop={handleMainTargetDrop}
+                    role="region"
+                    aria-label="講義のドロップエリア"
+                    class="col-span-full text-center py-12 text-slate-400 border-2 border-dashed rounded-3xl transition-all duration-300
+                  {isDragOverMainTarget
+                      ? 'bg-indigo-50 border-indigo-400 scale-[1.01] text-indigo-500 ring-4 ring-indigo-500/10'
+                      : 'border-slate-200'}"
+                  >
+                    この科目にはまだ講義がありません。<br />
+                    サイドバーから講義をドラッグして追加してください。
+                  </div>
+
+                  <button
+                    onclick={() => (isEditing = true)}
+                    class="col-span-full mt-4 w-full py-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all flex items-center justify-center gap-2"
+                  >
                     <svg
-                      class="animate-spin h-5 w-5 text-slate-900"
-                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-5 h-5"
                       fill="none"
                       viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
-                      <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                      ></circle>
                       <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 4v16m8-8H4"
+                      />
                     </svg>
-                    Generating...
-                  {:else}
-                    Generate Summary
-                  {/if}
-                </button>
-              </div>
-              <!-- Decorative Background -->
-              <div
-                class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
-              ></div>
-            </div>
-
-            <!-- Series Summary Result -->
-            {#if seriesSummary}
-              <div
-                class="mt-8 grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-bottom-4"
-              >
-                <!-- Story So Far -->
-                <div
-                  class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm"
-                >
-                  <h3
-                    class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"
-                  >
-                    <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-lg"
-                      >📖</span
-                    >
-                    Story So Far
-                  </h3>
-                  <div class="prose prose-sm prose-slate max-w-none">
-                    {@html marked.parse(seriesSummary.story)}
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <!-- Unresolved Issues -->
-                  <div
-                    class="bg-amber-50 rounded-2xl p-6 border border-amber-100 shadow-sm"
-                  >
-                    <h3
-                      class="font-bold text-lg text-amber-900 mb-4 flex items-center gap-2"
-                    >
-                      <span
-                        class="bg-white text-amber-600 p-1.5 rounded-lg shadow-sm"
-                        >🧩</span
-                      >
-                      Unresolved Issues
-                    </h3>
-                    <div class="prose prose-sm prose-amber max-w-none">
-                      {@html marked.parse(seriesSummary.unresolved)}
-                    </div>
-                  </div>
-
-                  <!-- Exam Questions -->
-                  <div
-                    class="bg-slate-50 rounded-2xl p-6 border border-slate-200 shadow-sm"
-                  >
-                    <h3
-                      class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"
-                    >
-                      <span
-                        class="bg-white text-slate-600 p-1.5 rounded-lg shadow-sm"
-                        >📝</span
-                      >
-                      Exam Predictions
-                    </h3>
-                    <div class="prose prose-sm prose-slate max-w-none">
-                      {@html marked.parse(seriesSummary.exam)}
-                    </div>
-                  </div>
-                </div>
+                    この科目に新しい講義を追加
+                  </button>
+                {/if}
               </div>
             {/if}
-
-            <!-- Lecture Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
-              {#each $lectures.filter((l: any) => l.subjectId === selectedSubjectId) as lecture (lecture.id)}
-                {@render LectureItem(lecture)}
-              {/each}
-              {#if $lectures.filter((l) => l.subjectId === selectedSubjectId).length === 0}
-                <div
-                  ondragover={handleMainTargetDragOver}
-                  ondragleave={handleMainTargetDragLeave}
-                  ondrop={handleMainTargetDrop}
-                  role="region"
-                  aria-label="講義のドロップエリア"
-                  class="col-span-full text-center py-12 text-slate-400 border-2 border-dashed rounded-3xl transition-all duration-300
-                  {isDragOverMainTarget
-                    ? 'bg-indigo-50 border-indigo-400 scale-[1.01] text-indigo-500 ring-4 ring-indigo-500/10'
-                    : 'border-slate-200'}"
-                >
-                  この科目にはまだ講義がありません。<br />
-                  サイドバーから講義をドラッグして追加してください。
-                </div>
-              {/if}
-            </div>
-
-            <button
-              onclick={() => (isEditing = true)}
-              class="mt-10 w-full py-4 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 font-bold hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all flex items-center justify-center gap-2"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              この科目に新しい講義を追加
-            </button>
           </div>
         {/if}
       {:else if !selectedSubjectId && !isEditing}
@@ -1508,9 +1722,9 @@
               <div class="flex flex-col md:flex-row gap-6 mb-6">
                 <!-- 1. Segmented Control (Mode) -->
                 <div class="flex-1">
-                  <label
-                    class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block"
-                    >生成モード</label
+                  <span
+                    class="role-label text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block"
+                    >生成モード</span
                   >
                   <div class="bg-indigo-50/50 p-1 rounded-xl flex shadow-inner">
                     <button
@@ -1580,6 +1794,7 @@
                 <div class="flex-1">
                   <div class="flex justify-between items-center mb-2">
                     <label
+                      for="target-length-slider"
                       class="text-xs font-bold text-slate-500 uppercase tracking-wide"
                       >目標文字数</label
                     >
@@ -1604,6 +1819,7 @@
                     </div>
 
                     <input
+                      id="target-length-slider"
                       type="range"
                       min="0"
                       max="4000"
@@ -2021,15 +2237,16 @@
       {#if selectedSummary && !analyzing && isEditing}
         <button
           onclick={handleAnalyze}
-          class="flex items-center gap-3 bg-slate-900 text-white pl-6 pr-4 py-4 rounded-full shadow-2xl hover:shadow-indigo-200/50 hover:-translate-y-1 transition-all active:scale-95 group border border-white/10"
+          class="flex items-center gap-3 bg-slate-900 text-white pl-6 pr-4 py-4 rounded-full shadow-2xl hover:shadow-indigo-200/50 hover:-translate-y-1 transition-all active:scale-95 group border border-white/10 relative overflow-hidden"
         >
-          <div class="flex flex-col items-end">
-            <span
-              class="text-[10px] font-black uppercase tracking-widest opacity-60"
-              >Analyze</span
+          {#if dailyRemaining !== Infinity}
+            <div
+              class="absolute top-0 right-0 bg-indigo-500/50 px-2 py-0.5 text-[8px] font-bold rounded-bl-lg"
             >
-            <span class="text-xs font-bold">{selectedSummary}</span>
-          </div>
+              残り {dailyRemaining}
+            </div>
+          {/if}
+          <span class="text-sm font-bold tracking-tight">解析して保存</span>
           <div
             class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center shadow-inner"
           >
