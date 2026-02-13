@@ -63,13 +63,20 @@
         try {
             loading = true;
             error = "";
-            // Use signInWithRedirect for better mobile support and Capacitor compatibility
-            await signInWithRedirect(auth, provider);
-            // execution stops here as page redirects
+            const result = await signInWithPopup(auth, provider);
+            if (result.user) {
+                await checkAndCreateUser(result.user);
+                await goto("/");
+            }
         } catch (e: any) {
             console.error(e);
             loading = false;
-            if (e.code === "auth/account-exists-with-different-credential") {
+            // Handle cross-origin issues or closed popups
+            if (e.code === "auth/popup-closed-by-user") {
+                error = "ログインがキャンセルされました。";
+            } else if (
+                e.code === "auth/account-exists-with-different-credential"
+            ) {
                 error = "このメールアドレスは既に他の方法で登録されています。";
             } else {
                 error = "ログインに失敗しました。";
