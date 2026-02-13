@@ -13,7 +13,7 @@ import {
 
 const firebaseConfig = {
     apiKey: PUBLIC_FIREBASE_API_KEY,
-    authDomain: PUBLIC_FIREBASE_AUTH_DOMAIN,
+    authDomain: PUBLIC_FIREBASE_AUTH_DOMAIN || "re-pass.firebaseapp.com",
     projectId: PUBLIC_FIREBASE_PROJECT_ID,
     storageBucket: PUBLIC_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: PUBLIC_FIREBASE_MESSAGING_SENDER_ID,

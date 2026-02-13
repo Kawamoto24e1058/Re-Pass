@@ -82,6 +82,9 @@
         }, 8000);
     }
 
+    import { Browser } from "@capacitor/browser";
+    import { Capacitor } from "@capacitor/core";
+
     async function handlePortal() {
         if (!authUser) return;
         portalLoading = true;
@@ -96,7 +99,11 @@
             });
             const data = await res.json();
             if (data.url) {
-                window.location.href = data.url;
+                if (Capacitor.isNativePlatform()) {
+                    await Browser.open({ url: data.url });
+                } else {
+                    window.location.href = data.url;
+                }
             } else {
                 throw new Error(data.error || "Unknown error");
             }

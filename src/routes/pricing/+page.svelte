@@ -20,6 +20,9 @@
         }
     });
 
+    import { Browser } from "@capacitor/browser";
+    import { Capacitor } from "@capacitor/core";
+
     async function handlePurchase(priceId: string, planName: string) {
         const user = auth.currentUser;
         if (!user) {
@@ -42,7 +45,11 @@
 
             const data = await response.json();
             if (data.url) {
-                window.location.href = data.url;
+                if (Capacitor.isNativePlatform()) {
+                    await Browser.open({ url: data.url });
+                } else {
+                    window.location.href = data.url;
+                }
             } else {
                 throw new Error(data.error || "Checkout failed");
             }

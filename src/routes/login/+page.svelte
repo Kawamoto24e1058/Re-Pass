@@ -2,6 +2,8 @@
     import { auth, db, googleProvider, microsoftProvider } from "$lib/firebase";
     import {
         signInWithPopup,
+        signInWithRedirect,
+        getRedirectResult,
         signInWithEmailAndPassword,
         createUserWithEmailAndPassword,
         RecaptchaVerifier,
@@ -61,18 +63,17 @@
         try {
             loading = true;
             error = "";
-            const result = await signInWithPopup(auth, provider);
-            await checkAndCreateUser(result.user);
-            goto("/");
+            // Use signInWithRedirect for better mobile support and Capacitor compatibility
+            await signInWithRedirect(auth, provider);
+            // execution stops here as page redirects
         } catch (e: any) {
             console.error(e);
+            loading = false;
             if (e.code === "auth/account-exists-with-different-credential") {
                 error = "このメールアドレスは既に他の方法で登録されています。";
             } else {
                 error = "ログインに失敗しました。";
             }
-        } finally {
-            loading = false;
         }
     }
 
@@ -111,7 +112,24 @@
         }
     }
 
-    onMount(() => {
+    onMount(async () => {
+        // Handle redirect result from Google/Social login
+        try {
+            const result = await getRedirectResult(auth);
+            if (result) {
+                await checkAndCreateUser(result.user);
+                goto("/");
+                return;
+            }
+        } catch (e: any) {
+            console.error("Redirect login error:", e);
+            if (e.code === "auth/account-exists-with-different-credential") {
+                error = "このメールアドレスは既に他の方法で登録されています。";
+            } else {
+                error = "ログインに失敗しました。";
+            }
+        }
+
         // Initial check: if already logged in, redirect
         if (auth.currentUser) {
             goto("/");

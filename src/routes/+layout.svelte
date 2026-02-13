@@ -21,8 +21,9 @@
 	} from "$lib/userStore";
 	import { isRecording, transcript } from "$lib/stores/recordingStore";
 	import { recognitionService } from "$lib/services/recognitionService";
+	import PwaInstallPrompt from "$lib/components/PwaInstallPrompt.svelte";
 
-	let { children } = $props();
+	let { children } = $props<{ children: any }>();
 	let loading = $state(true); // Splash screen state
 	let showSplash = $state(true); // For fade-out animation
 	let user = $state<any>(null);
@@ -229,9 +230,10 @@
 			>
 				STOP
 			</button>
-		</div>
 	</div>
 {/if}
+
+<PwaInstallPrompt />
 
 {@render children()}
 

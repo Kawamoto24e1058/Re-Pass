@@ -2,7 +2,10 @@
 import { json } from '@sveltejs/kit';
 import Stripe from 'stripe';
 import { env } from '$env/dynamic/private';
-import { PUBLIC_STRIPE_PRICE_SEASON } from '$env/static/public';
+import {
+    PUBLIC_STRIPE_PRICE_SEASON,
+    PUBLIC_BASE_URL
+} from "$env/static/public";
 
 export async function POST({ request, url }) {
     // Check for Secret Key
@@ -17,6 +20,7 @@ export async function POST({ request, url }) {
 
     try {
         const { priceId, userId, email } = await request.json();
+        const baseUrl = PUBLIC_BASE_URL || url.origin;
 
         if (!priceId || !userId) {
             return json({ error: 'Missing required parameters' }, { status: 400 });
@@ -49,8 +53,8 @@ export async function POST({ request, url }) {
                     },
             ],
             mode: mode as any,
-            success_url: `${url.origin}/settings/subscription?success=true`,
-            cancel_url: `${url.origin}/pricing`,
+            success_url: `${baseUrl}/settings/subscription?success=true`,
+            cancel_url: `${baseUrl}/pricing`,
             customer_email: email,
             client_reference_id: userId,
             metadata: {

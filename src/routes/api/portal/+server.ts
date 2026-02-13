@@ -2,6 +2,7 @@
 import { json } from '@sveltejs/kit';
 import Stripe from 'stripe';
 import { env } from '$env/dynamic/private';
+import { PUBLIC_BASE_URL } from '$env/static/public';
 import { adminAuth, adminDb } from '$lib/server/firebase-admin';
 
 export async function POST({ request, url }) {
@@ -49,10 +50,12 @@ export async function POST({ request, url }) {
             console.log(`Successfully created and saved Stripe customer ${customerId} for user ${uid}`);
         }
 
+        const baseUrl = PUBLIC_BASE_URL || url.origin;
+
         // Create a billing portal session
         const session = await stripe.billingPortal.sessions.create({
             customer: customerId,
-            return_url: `${url.origin}/settings/subscription`, // Return to subscription management page
+            return_url: `${baseUrl}/settings/subscription`, // Return to subscription management page
         });
 
         return json({ url: session.url });
