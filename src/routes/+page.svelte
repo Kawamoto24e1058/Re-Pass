@@ -2377,8 +2377,25 @@
               {/if}
 
               {#if analyzing}
-                <div class="p-8 text-center animate-in fade-in">
-                  <div class="mb-4">
+                <div
+                  class="p-8 text-center animate-in fade-in flex flex-col items-center"
+                >
+                  <!-- App Icon with Pulse Animation -->
+                  <div class="mb-6 relative">
+                    <img
+                      src="/icon-512.png"
+                      alt="解析中"
+                      class="w-16 h-16 rounded-2xl shadow-xl"
+                      style="animation: gentlePulse 2s ease-in-out infinite;"
+                    />
+                    <!-- Decorative Glow -->
+                    <div
+                      class="absolute -inset-4 bg-indigo-400/30 blur-2xl rounded-full -z-10"
+                      style="animation: glowPulse 2s ease-in-out infinite;"
+                    ></div>
+                  </div>
+
+                  <div class="w-full max-w-md mb-4">
                     <div
                       class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"
                     >
@@ -2611,6 +2628,32 @@
         linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
       background-size: 20px 20px;
       background-position: center top;
+    }
+
+    /* Gentle Pulse Animation for Loading Icon */
+    @keyframes gentlePulse {
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.05);
+        opacity: 0.95;
+      }
+    }
+
+    /* Glow Pulse Animation */
+    @keyframes glowPulse {
+      0%,
+      100% {
+        opacity: 0.3;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+      }
     }
   </style>
 </div>

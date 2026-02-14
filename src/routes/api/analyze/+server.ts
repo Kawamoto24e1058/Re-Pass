@@ -357,10 +357,11 @@ ${systemPrompt}
 ${transcript}
 `;
 
-    // Retry Logic
+    // Retry Logic with Model Fallback
     const maxRetries = 3;
     let retryCount = 0;
-    let currentModelName = "gemini-2.0-flash-exp"; // Use experimental Flash for best cost/performance
+    let currentModelName = "gemini-2.0-flash"; // Stable 2.0 Flash model
+    let hasTriedFallback = false; // Track if we've tried 1.5 fallback
 
     // Dynamic Token Calculation for Cost Optimization
     // Japanese: ~2-3 tokens per character (including JSON structure overhead)
@@ -373,6 +374,8 @@ ${transcript}
 
     while (retryCount < maxRetries) {
       try {
+        console.log(`🤖 Attempting with model: ${currentModelName} (retry ${retryCount + 1}/${maxRetries})`);
+
         const model = genAI.getGenerativeModel(
           {
             model: currentModelName,
@@ -454,12 +457,31 @@ ${transcript}
         }
 
       } catch (error: any) {
-        console.error(`Attempt ${retryCount + 1} failed:`, error.message);
+        console.error(`Attempt ${retryCount + 1} failed with ${currentModelName}:`, error.message);
+
+        // Rate limit or server errors - retry with same model
         if (error.status === 429 || error.status === 503 || error.message?.includes("429")) {
           retryCount++;
           await new Promise(r => setTimeout(r, 5000));
           continue;
         }
+
+        // Model-specific errors - try fallback to 1.5-flash
+        if (!hasTriedFallback && (
+          error.message?.includes("2.0") ||
+          error.message?.includes("not found") ||
+          error.message?.includes("unavailable") ||
+          error.status === 404
+        )) {
+          console.warn(`⚠️ Falling back to gemini-1.5-flash due to: ${error.message}`);
+          currentModelName = "gemini-1.5-flash";
+          hasTriedFallback = true;
+          retryCount++; // Increment retry but continue with fallback model
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+
+        // All other errors - return immediately
         return json({ error: "解析サーバーエラー: " + error.message }, { status: 500 });
       }
     }

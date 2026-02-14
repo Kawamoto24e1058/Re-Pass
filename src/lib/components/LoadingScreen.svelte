@@ -28,32 +28,19 @@
     class="fixed inset-0 z-[10000] bg-[#F9FAFB] flex flex-col items-center justify-center p-6 selection:bg-indigo-100"
     transition:fade={{ duration: 500 }}
 >
-    <!-- Brand Logo/Symbol -->
+    <!-- Brand Logo/Icon with Pulse Animation -->
     <div class="mb-12 relative animate-in zoom-in duration-700">
-        <div
-            class="w-20 h-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-indigo-200 rotate-6"
-        >
-            <svg class="w-12 h-12" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" />
-                <path
-                    d="M2 17L12 22L22 17"
-                    stroke="white"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-                <path
-                    d="M2 12L12 17L22 12"
-                    stroke="white"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-            </svg>
-        </div>
+        <!-- App Icon with Pulse Animation -->
+        <img
+            src="/icon-512.png"
+            alt="Re-Pass"
+            class="w-24 h-24 rounded-3xl shadow-2xl animate-pulse"
+            style="animation: gentlePulse 2s ease-in-out infinite;"
+        />
         <!-- Decorative Glow -->
         <div
-            class="absolute -inset-4 bg-indigo-400/20 blur-2xl rounded-full -z-10 animate-pulse"
+            class="absolute -inset-6 bg-indigo-400/30 blur-3xl rounded-full -z-10"
+            style="animation: glowPulse 2s ease-in-out infinite;"
         ></div>
     </div>
 
@@ -108,5 +95,31 @@
     /* Prevent scrolling or interactions while loading */
     :global(body) {
         overflow: hidden;
+    }
+
+    /* Gentle Pulse Animation for Icon */
+    @keyframes gentlePulse {
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.05);
+            opacity: 0.95;
+        }
+    }
+
+    /* Glow Pulse Animation */
+    @keyframes glowPulse {
+        0%,
+        100% {
+            opacity: 0.3;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.5;
+            transform: scale(1.1);
+        }
     }
 </style>

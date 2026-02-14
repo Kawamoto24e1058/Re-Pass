@@ -14,6 +14,7 @@
         serverTimestamp,
     } from "firebase/firestore";
     import { onMount, onDestroy } from "svelte";
+    import { goto } from "$app/navigation";
     import { currentBinder, expandedSubjects } from "$lib/stores";
 
     // Props
@@ -57,6 +58,16 @@
             }
             return newSet;
         });
+    }
+
+    // Logo Click Handler: Force Home Navigation and Reset State
+    function handleLogoClick() {
+        // Clear sidebar selection
+        currentBinder.set(null);
+        props.onSelectSubject(null);
+
+        // Force navigate to home with full invalidation
+        goto("/", { invalidateAll: true });
     }
 
     const subjectColors = [
@@ -398,10 +409,10 @@
     <!-- Sidebar Header -->
     <div class="p-6 pb-2">
         <div class="flex items-center justify-between mb-6">
-            <a
-                href="/"
-                class="font-bold text-slate-900 tracking-tight text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity no-underline"
-                >Re-Pass</a
+            <button
+                onclick={handleLogoClick}
+                class="font-bold text-slate-900 tracking-tight text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none p-0"
+                title="ホームに戻る">Re-Pass</button
             >
         </div>
     </div>
