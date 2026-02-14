@@ -134,10 +134,15 @@ export const POST = async ({ request }) => {
       try {
         console.log(`🔗 Scraping URL: ${targetUrl}`);
         if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
-          // YouTube Transcript extraction
+          // YouTube Transcript extraction (MANDATORY)
           try {
             const { YoutubeTranscript } = await import('youtube-transcript');
             const transcripts = await YoutubeTranscript.fetchTranscript(targetUrl);
+
+            if (!transcripts || transcripts.length === 0) {
+              throw new Error('Transcript is empty');
+            }
+
             let fullTranscript = transcripts.map(t => t.text).join(' ');
 
             // Intelligent Truncation if too long
@@ -150,8 +155,10 @@ export const POST = async ({ request }) => {
 
             transcript += `\n\n【YouTube動画内容（字幕）】\n${fullTranscript}`;
           } catch (ytError) {
-            console.warn('YouTube transcript fetch failed, falling back to basic URL info', ytError);
-            transcript += `\n\n【参照URL（動画のみ）】\n${targetUrl}\n(動画の字幕を取得できませんでした。タイトル等の基本情報と既知の知識のみで解析してください。内容が不明な場合は推測せず「解析できませんでした」と出力してください)`;
+            console.error('YouTube transcript fetch failed:', ytError);
+            return json({
+              error: '字幕が取得できなかったため詳細な解析ができません。この動画には字幕が設定されていない可能性があります。'
+            }, { status: 400 });
           }
         } else {
           // Generic Web Scraping with cheerio
@@ -214,6 +221,11 @@ export const POST = async ({ request }) => {
         console.log(`Generating prompt for THOUGHTS mode`);
         systemPrompt = `あなたは講義を受講した「熱心な学生」です。丁寧語（です・ます調）でリアクションペーパーを作成します。
       ${jsonSchema}
+      **【最重要原則】**:
+      - **提供されたテキストの内容のみに基づいて解析すること。**
+      - **一般的な知識や推測で補完することは厳禁。**
+      - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
+
       **自動分類の指示**:
       - 入力された資料から『科目名』を特定し category にセット。
       - 講義タイトルを生成し title にセット。
@@ -236,6 +248,11 @@ export const POST = async ({ request }) => {
         console.log(`Generating prompt for REPORT mode`);
         systemPrompt = `あなたは「論理的批評家」です。常体（だ・である調）で学術レポートを作成します。
       ${jsonSchema}
+      **【最重要原則】**:
+      - **提供されたテキストの内容のみに基づいて解析すること。**
+      - **一般的な知識や推測で補完することは厳禁。**
+      - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
+
       **自動分類の指示**:
       - 入力された資料から『科目名』を特定し category にセット。
       - 講義タイトルを生成し title にセット。
@@ -259,6 +276,11 @@ export const POST = async ({ request }) => {
         console.log(`Generating prompt for NOTE mode`);
         systemPrompt = `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を構造化します。
       ${jsonSchema}
+      **【最重要原則】**:
+      - **提供されたテキストの内容のみに基づいて解析すること。**
+      - **一般的な知識や推測で補完することは厳禁。**
+      - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
+
       **自動分類の指示**:
       - 入力された資料から『科目名』を特定し category にセット。
       - 講義タイトルを生成し title にセット。
