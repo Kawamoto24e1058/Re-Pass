@@ -7,49 +7,63 @@ import path from 'path';
 
 function initializeAdmin() {
     const apps = getApps();
-    if (apps.length > 0) {
-        return getApp();
-    }
+    if (apps.length > 0) return getApp();
 
-    // Try Environment Variables First (Dynamic to avoid build-time issues)
-    const projectId = env.FB_PROJECT_ID || env.FIREBASE_PROJECT_ID;
-    const clientEmail = env.FB_CLIENT_EMAIL || env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = (env.FB_PRIVATE_KEY || env.FIREBASE_PRIVATE_KEY)?.replace(/\\n/g, '\n').replace(/^"|"$/g, '');
-
-    if (projectId && clientEmail && privateKey) {
-        console.log("🔥 Initializing Firebase Admin with Environment Variables...");
-        return initializeApp({
-            credential: cert({
-                projectId,
-                clientEmail,
-                privateKey
-            }),
-        });
-    }
-
-    // Fallback: Dynamic File Loading (Avoids build-time resolution by static analyzers)
-    // We use path.resolve with process.cwd() or similar relative to the runtime env
-    const jsonPath = path.join(process.cwd(), 'src/lib/server/service-account.json');
-    if (fs.existsSync(jsonPath)) {
-        console.log("🔥 Initializing Firebase Admin with Local JSON file (dynamic)...");
-        try {
+    // 1. Try local JSON file first (most reliable)
+    try {
+        const jsonPath = path.join(process.cwd(), 'src/lib/server/service-account.json');
+        if (fs.existsSync(jsonPath)) {
+            console.log("🏠 Firebase Admin: Using local service-account.json");
             const serviceAccount = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
             return initializeApp({
                 credential: cert(serviceAccount),
             });
-        } catch (e) {
-            console.error("❌ Failed to parse service-account.json dynamically:", e);
+        }
+    } catch (error) {
+        console.warn("⚠️ Failed to load local JSON file, trying environment variables...");
+    }
+
+    // 2. Fall back to environment variables
+    const pKey = env.FIREBASE_PRIVATE_KEY || env.FB_PRIVATE_KEY;
+    const pId = env.FIREBASE_PROJECT_ID || env.FB_PROJECT_ID;
+    const cEmail = env.FIREBASE_CLIENT_EMAIL || env.FB_CLIENT_EMAIL;
+
+    if (pKey && pKey.includes('BEGIN PRIVATE KEY') && pId && cEmail) {
+        try {
+            console.log("🚀 Firebase Admin: Using Environment Variables");
+
+            // Strip surrounding quotes and replace escaped newlines with actual newlines
+            let cleanedKey = pKey.trim();
+
+            // Remove quotes from both ends if present
+            if ((cleanedKey.startsWith('"') && cleanedKey.endsWith('"')) ||
+                (cleanedKey.startsWith("'") && cleanedKey.endsWith("'"))) {
+                cleanedKey = cleanedKey.slice(1, -1);
+            }
+            // Replace literal \n with actual newline characters
+            cleanedKey = cleanedKey.replace(/\\n/g, '\n');
+
+            return initializeApp({
+                credential: cert({
+                    projectId: pId,
+                    clientEmail: cEmail,
+                    privateKey: cleanedKey,
+                }),
+            });
+        } catch (error) {
+            console.error("❌ Firebase Admin: Failed to initialize with environment variables:", error);
+            throw error;
         }
     }
 
-    console.error("❌ Firebase Admin credentials NOT found in environment or local file.");
-    throw new Error("Unable to initialize Firebase Admin SDK. Please check your environment variables or local service-account.json file.");
+    console.error("❌ Firebase Admin credentials not found in JSON file or Environment Variables.");
+    throw new Error("No Firebase credentials available");
 }
 
 const app = initializeAdmin();
 
 // プロジェクト全体で使用されているサービスをエクスポート
-export const adminAuth = getAuth(app);
-export const adminDb = getFirestore(app);
+export const adminAuth = app ? getAuth(app) : ({} as any);
+export const adminDb = app ? getFirestore(app) : ({} as any);
 
 export default app;

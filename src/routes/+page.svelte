@@ -164,6 +164,7 @@
 
   let dailyRemaining = $derived.by(() => {
     if (
+      userData?.plan === "pro" ||
       userData?.plan === "premium" ||
       userData?.plan === "season" ||
       userData?.isPro === true
@@ -307,7 +308,9 @@
 
   function setAnalysisMode(newMode: "note" | "thoughts" | "report") {
     const isPremium =
-      userData?.plan === "premium" || userData?.plan === "season";
+      userData?.plan === "pro" ||
+      userData?.plan === "premium" ||
+      userData?.plan === "season";
     if ((newMode === "thoughts" || newMode === "report") && !isPremium) {
       showUpgradeModal = true;
       return;
@@ -320,7 +323,9 @@
     if (val < 100) val = 100; // Snap to 100 min
 
     const isPremium =
-      userData?.plan === "premium" || userData?.plan === "season";
+      userData?.plan === "pro" ||
+      userData?.plan === "premium" ||
+      userData?.plan === "season";
 
     if (!isPremium && val > 500) {
       showUpgradeModal = true;
@@ -409,13 +414,21 @@
 
       console.log("Analyzing...");
       const idToken = await user.getIdToken();
+
+      // Implement AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 55000); // 55 second timeout
+
       const response = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.status === 403) {
         const errorData = await response.json();
@@ -538,12 +551,18 @@
         const userRef = doc(db, "users", user.uid);
         await setDoc(userRef, { usageCount: usageCount + 1 }, { merge: true });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("解析エラーが発生しました: " + (e as Error).message);
+      if (e.name === "AbortError") {
+        toastMessage =
+          "⌛ 解析に時間がかかっています。ネットワーク状況を確認するか、しばらく経ってから再度お試しください。";
+      } else {
+        alert("解析エラーが発生しました: " + (e as Error).message);
+      }
     } finally {
       await stopProgress();
       analyzing = false;
+      setTimeout(() => (toastMessage = null), 6000);
     }
   }
 
@@ -564,6 +583,10 @@
     analysisMode = targetMode;
     startProgress();
 
+    // Implement AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55 second timeout
+
     try {
       const idToken = await user.getIdToken();
       const response = await fetch("/api/analyze-derivative", {
@@ -577,7 +600,10 @@
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error("Derivative generation failed");
 
@@ -593,12 +619,18 @@
 
       toastMessage = "新しい形式を生成しました";
       setTimeout(() => (toastMessage = null), 3000);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("追加生成エラー: " + (e as Error).message);
+      if (e.name === "AbortError") {
+        toastMessage =
+          "⌛ 派生データの生成に時間がかかっています。しばらく経ってから再度お試しください。";
+      } else {
+        alert("追加生成エラー: " + (e as Error).message);
+      }
     } finally {
       await stopProgress();
       derivativeAnalyzing = false;
+      setTimeout(() => (toastMessage = null), 6000);
     }
   }
 
@@ -688,7 +720,10 @@
   }
 
   async function handleGenerateSeriesSummary() {
-    const isPremium = userData?.plan === "premium";
+    const isPremium =
+      userData?.plan === "pro" ||
+      userData?.plan === "premium" ||
+      userData?.plan === "season";
     if (!isPremium) {
       showUpgradeModal = true;
       return;
@@ -706,6 +741,10 @@
 
     analyzingSeries = true;
     seriesSummary = null;
+
+    // Implement AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55 second timeout
 
     try {
       const subject = $subjects.find((s) => s.id === selectedSubjectId);
@@ -729,7 +768,10 @@
           "Content-Type": "application/json",
           Authorization: `Bearer ${await user.getIdToken()}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.status === 403) {
         showUpgradeModal = true;
@@ -742,11 +784,17 @@
 
       const data = await response.json();
       seriesSummary = data;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to generate series summary.");
+      if (e.name === "AbortError") {
+        toastMessage =
+          "⌛ まとめ解析に時間がかかっています。しばらく経ってから再度お試しください。";
+      } else {
+        alert("Failed to generate series summary.");
+      }
     } finally {
       analyzingSeries = false;
+      setTimeout(() => (toastMessage = null), 6000);
     }
   }
 
@@ -765,6 +813,10 @@
         return;
       }
 
+      // Implement AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 55000); // 55 second timeout
+
       const response = await fetch("/api/analyze-final", {
         method: "POST",
         body: JSON.stringify({
@@ -779,7 +831,10 @@
           "Content-Type": "application/json",
           Authorization: `Bearer ${await user.getIdToken()}`,
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.status === 403) {
         showUpgradeModal = true;
@@ -796,9 +851,15 @@
       finalExamView = true;
     } catch (e: any) {
       console.error(e);
-      alert(e.message);
+      if (e.name === "AbortError") {
+        toastMessage =
+          "⌛ 試験対策ノートの生成に時間がかかっています。しばらく経ってから再度お試しください。";
+      } else {
+        alert(e.message);
+      }
     } finally {
       analyzingFinal = false;
+      setTimeout(() => (toastMessage = null), 6000);
     }
   }
 
@@ -2441,7 +2502,7 @@
       class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-300 px-6"
     >
       <div
-        class="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-sm w-full text-center border border-white/50 animate-in zoom-in-95 duration-500 relative overflow-hidden"
+        class="bg-white rounded-[2.5rem] shadow-2xl p-10 pb-12 max-w-sm w-full text-center border border-white/50 animate-in zoom-in-95 duration-500 relative overflow-y-auto max-h-[90vh]"
       >
         <!-- Decor -->
         <div

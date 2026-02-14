@@ -3,38 +3,43 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import { json } from '@sveltejs/kit';
 import { adminAuth, adminDb } from '$lib/server/firebase-admin';
 
+export const config = {
+    maxDuration: 60
+};
+
 export const POST = async ({ request }) => {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    try {
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-    // --- Auth Check ---
-    let uid: string | null = null;
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-            const idToken = authHeader.split('Bearer ')[1];
-            const decodedToken = await adminAuth.verifyIdToken(idToken);
-            uid = decodedToken.uid;
-        } catch (e) {
-            console.warn('Auth token verification failed:', e);
+        // --- Auth Check ---
+        let uid: string | null = null;
+        const authHeader = request.headers.get('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                const idToken = authHeader.split('Bearer ')[1];
+                const decodedToken = await adminAuth.verifyIdToken(idToken);
+                uid = decodedToken.uid;
+            } catch (e) {
+                console.warn('Auth token verification failed:', e);
+            }
         }
-    }
 
-    if (!uid) {
-        return json({ error: "解析にはログインが必要です" }, { status: 401 });
-    }
+        if (!uid) {
+            return json({ error: "解析にはログインが必要です" }, { status: 401 });
+        }
 
-    const { sourceAnalysis, targetMode, targetLength } = await request.json();
+        const { sourceAnalysis, targetMode, targetLength } = await request.json();
 
-    if (!sourceAnalysis || !targetMode) {
-        return json({ error: "不足しているパラメータがあります" }, { status: 400 });
-    }
+        if (!sourceAnalysis || !targetMode) {
+            return json({ error: "不足しているパラメータがあります" }, { status: 400 });
+        }
 
-    const tolerance = targetLength >= 1000 ? 0.05 : 0.1;
-    const minLength = Math.floor(targetLength * (1 - tolerance));
-    const maxLength = Math.floor(targetLength * (1 + tolerance));
+        const tolerance = targetLength >= 1000 ? 0.05 : 0.1;
+        const minLength = Math.floor(targetLength * (1 - tolerance));
+        const maxLength = Math.floor(targetLength * (1 + tolerance));
 
-    let systemPrompt = "";
-    const jsonSchema = `
+        let systemPrompt = "";
+        const jsonSchema = `
   出力は必ず以下のJSON形式で行ってください。
   重要：Markdownのコードブロック（\`\`\`jsonなど）は絶対に使用しないでください。純粋なJSON文字列のみを出力してください。
   **厳守**: JSON文字列内（summaryなど）で改行が必要な場合は、必ずエスケープシーケンス（\\n）を使用し、リテラルの改行コードを含めないでください。
@@ -46,9 +51,9 @@ export const POST = async ({ request }) => {
   }
   `;
 
-    switch (targetMode) {
-        case "thoughts":
-            systemPrompt = `あなたは講義を受講した「熱心な学生」です。提示された要約を基に、丁寧語（です・ます調）でリアクションペーパー（感想文）を作成します。
+        switch (targetMode) {
+            case "thoughts":
+                systemPrompt = `あなたは講義を受講した「熱心な学生」です。提示された要約を基に、丁寧語（です・ます調）でリアクションペーパー（感想文）を作成します。
       ${jsonSchema}
       **【出力フォーマット・ルール】**:
       1. **### 各見出しの直後に必ず1行の空行を入れること。**
@@ -61,10 +66,10 @@ export const POST = async ({ request }) => {
       ### 【講義で得た気づき】
       
       ### 【考察と今後の課題】`;
-            break;
+                break;
 
-        case "report":
-            systemPrompt = `あなたは「論理적批評家」です。提示された要約を基に、常体（だ・である調）で学術レポートを作成します。
+            case "report":
+                systemPrompt = `あなたは「論理적批評家」です。提示された要約を基に、常体（だ・である調）で学術レポートを作成します。
       ${jsonSchema}
       **【出力フォーマット・ルール】**:
       1. **### 各見出しの直後に必ず1行の空行を入れること。**
@@ -77,11 +82,11 @@ export const POST = async ({ request }) => {
       ### 【本論：論理的分析】
       
       ### 【結論】`;
-            break;
+                break;
 
-        case "note":
-        default:
-            systemPrompt = `あなたは「優秀な書記」です。提示された要約を基に、事実関係の正確さを最優先し、講義内容を構造化した講義ノートを作成します。
+            case "note":
+            default:
+                systemPrompt = `あなたは「優秀な書記」です。提示された要約を基に、事実関係の正確さを最優先し、講義内容を構造化した講義ノートを作成します。
       ${jsonSchema}
       **【出力フォーマット・ルール】**:
       1. **### 各見出しの直後に必ず1行の空行を入れること。**
@@ -92,10 +97,10 @@ export const POST = async ({ request }) => {
       ### 【要旨】
       
       ### 【講義のポイント】`;
-            break;
-    }
+                break;
+        }
 
-    const prompt = `
+        const prompt = `
   ${systemPrompt}
 
   以下の【元となる解析結果】を基に、指定された形式に書き換えてください。
@@ -105,22 +110,26 @@ export const POST = async ({ request }) => {
   ${sourceAnalysis}
   `;
 
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
 
-        let cleanedText = text.trim();
-        const firstCurly = cleanedText.indexOf('{');
-        const lastCurly = cleanedText.lastIndexOf('}');
-        if (firstCurly !== -1 && lastCurly !== -1) {
-            cleanedText = cleanedText.substring(firstCurly, lastCurly + 1);
+            let cleanedText = text.trim();
+            const firstCurly = cleanedText.indexOf('{');
+            const lastCurly = cleanedText.lastIndexOf('}');
+            if (firstCurly !== -1 && lastCurly !== -1) {
+                cleanedText = cleanedText.substring(firstCurly, lastCurly + 1);
+            }
+
+            return json({ result: JSON.parse(cleanedText) });
+        } catch (error: any) {
+            console.error("Gemini Generation Error:", error);
+            return json({ error: "生成に失敗しました: " + error.message }, { status: 500 });
         }
-
-        return json({ result: JSON.parse(cleanedText) });
-    } catch (error: any) {
-        console.error("Derivative Analysis Error:", error);
-        return json({ error: "派生生成に失敗しました: " + error.message }, { status: 500 });
+    } catch (globalError: any) {
+        console.error("Derivative Analysis Global Error:", globalError);
+        return json({ error: "サーバー内でエラーが発生しました", details: globalError.message }, { status: 500 });
     }
 };

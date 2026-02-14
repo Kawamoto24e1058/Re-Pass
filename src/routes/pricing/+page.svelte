@@ -33,9 +33,13 @@
         isLoading = planName;
 
         try {
+            const token = await user.getIdToken();
             const response = await fetch("/api/checkout", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
                 body: JSON.stringify({
                     priceId,
                     userId: user.uid,
@@ -91,7 +95,8 @@
 </script>
 
 <div
-    class="min-h-screen bg-[#F9FAFB] flex flex-col items-center py-20 px-6 font-sans selection:bg-indigo-100 relative"
+    class="min-h-screen bg-[#F9FAFB] flex flex-col items-center pt-20 pb-40 px-6 font-sans selection:bg-indigo-100 relative overflow-y-auto"
+    style="height: auto !important;"
 >
     <!-- Back Button -->
     <div class="absolute top-8 left-8">
@@ -157,7 +162,7 @@
 
             <p class="text-slate-500 text-sm mb-8 leading-relaxed">
                 まずは使い心地を体験。<br />
-                月1回までの分析が可能です。
+                1日3回までの分析が可能です。
             </p>
 
             <ul class="space-y-4 mb-12 flex-1">
@@ -178,7 +183,7 @@
                             /></svg
                         >
                     </div>
-                    <span>月1件の講義解析</span>
+                    <span>1日3件の講義解析</span>
                 </li>
                 <li class="flex items-center gap-3 text-sm text-slate-600">
                     <div
@@ -235,14 +240,14 @@
                     Monthly Premium
                 </h3>
                 <div class="text-4xl font-black text-slate-900">
-                    ¥480 <span class="text-sm text-slate-400 font-medium"
+                    ¥980 <span class="text-sm text-slate-400 font-medium"
                         >/ 1ヶ月</span
                     >
                 </div>
                 <div
                     class="mt-2 inline-block px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold rounded-lg border border-amber-100 uppercase"
                 >
-                    ☕️ スタバ1杯分で1ヶ月の講義を資産に
+                    プロ仕様の解析機能を月額で
                 </div>
             </div>
 
@@ -337,10 +342,10 @@
                 <h3
                     class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-4"
                 >
-                    Season Pass (6 Months)
+                    Season Pass (4 Months)
                 </h3>
                 <div class="text-4xl font-black text-white">
-                    ¥1,500 <span
+                    ¥2,480 <span
                         class="text-xs text-slate-500 font-bold ml-1 uppercase"
                         >一括払い</span
                     >
@@ -349,12 +354,12 @@
                     <div
                         class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400"
                     >
-                        月あたり ¥250
+                        月あたり約¥620
                     </div>
                     <div
                         class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-[10px] font-bold rounded border border-indigo-500/30"
                     >
-                        48% OFF
+                        37% OFF
                     </div>
                 </div>
             </div>
@@ -362,7 +367,7 @@
             <p
                 class="text-slate-400 text-sm mb-10 leading-relaxed relative z-10"
             >
-                1学期＋α（6ヶ月）フルサポート。<br />
+                1学期（4ヶ月）フルサポート。<br />
                 一度の支払いで、テスト期間の不安を解消します。
             </p>
 
@@ -403,7 +408,7 @@
                             /></svg
                         >
                     </div>
-                    <span>6ヶ月間(1学期＋α)使い放題</span>
+                    <span>4ヶ月間(1学期)使い放題</span>
                 </li>
                 <li
                     class="flex items-center gap-3 text-sm text-slate-300 pt-3 mt-3 border-t border-slate-700/50"
@@ -458,8 +463,19 @@
             <p
                 class="text-center text-[10px] text-slate-500 mt-4 relative z-10"
             >
-                ※¥1,500（6ヶ月分）の一括決済となります。追加費用はありません。
+                ※¥2,480（4ヶ月分）の一括決済となります。追加費用はありません。
             </p>
         </div>
     </div>
 </div>
+
+<style>
+    /* このページのみグローバルのスクロール制限を強制解除 */
+    :global(body),
+    :global(html) {
+        overflow: auto !important;
+        height: auto !important;
+        overscroll-behavior-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+</style>

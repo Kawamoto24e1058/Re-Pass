@@ -2,6 +2,7 @@
 import { json } from '@sveltejs/kit';
 import Stripe from 'stripe';
 import { env } from '$env/dynamic/private';
+import { adminAuth } from '$lib/server/firebase-admin';
 import {
     PUBLIC_STRIPE_PRICE_SEASON,
     PUBLIC_BASE_URL
@@ -19,8 +20,23 @@ export async function POST({ request, url }) {
     const stripe = new Stripe(secretKey);
 
     try {
-        const { priceId, userId, email } = await request.json();
-        const baseUrl = PUBLIC_BASE_URL || url.origin;
+        const { priceId, userId: bodyUserId, email } = await request.json();
+        const baseUrl = url.origin;
+
+        // --- Auth Check (Prefer ID Token) ---
+        let userId = bodyUserId;
+        const authHeader = request.headers.get('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                const idToken = authHeader.split('Bearer ')[1];
+                const decodedToken = await adminAuth.verifyIdToken(idToken);
+                userId = decodedToken.uid; // Prioritize token UID
+                console.log(`Verified UID from token: ${userId}`);
+            } catch (e) {
+                console.warn('Auth token verification failed in checkout:', e);
+                // Fallback to bodyUserId if token is invalid but present
+            }
+        }
 
         if (!priceId || !userId) {
             return json({ error: 'Missing required parameters' }, { status: 400 });
@@ -40,10 +56,10 @@ export async function POST({ request, url }) {
                         price_data: {
                             currency: 'jpy',
                             product_data: {
-                                name: 'Season Pass (6 Months)',
-                                description: '1学期＋α（6ヶ月）フルサポート・一括払い',
+                                name: 'Season Pass (4 Months)',
+                                description: '1学期（4ヶ月）フルサポート・一括払い',
                             },
-                            unit_amount: 1500,
+                            unit_amount: 2480,
                         },
                         quantity: 1,
                     }
@@ -59,7 +75,8 @@ export async function POST({ request, url }) {
             client_reference_id: userId,
             metadata: {
                 userId: userId,
-                plan: isSeason ? 'season' : 'premium'
+                plan: 'pro',
+                priceId: priceId
             }
         } as any);
 

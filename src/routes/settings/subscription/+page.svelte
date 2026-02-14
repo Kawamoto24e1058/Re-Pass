@@ -40,6 +40,7 @@
                 fetchSubscriptionDetails(currentUser);
 
                 if (isSuccess) {
+                    await currentUser.getIdToken(true); // Force token refresh
                     triggerSuccessEffects();
                 }
             } else {
@@ -337,13 +338,13 @@
                                     <p
                                         class="text-4xl font-black text-slate-900 tracking-tight"
                                     >
-                                        {#if userData?.plan === "premium"}
-                                            プレミアムプラン
+                                        {#if userData?.plan === "pro" || userData?.plan === "premium" || userData?.plan === "season"}
+                                            プロプラン
                                         {:else}
                                             フリープラン
                                         {/if}
                                     </p>
-                                    {#if userData?.plan === "premium"}
+                                    {#if userData?.plan === "pro" || userData?.plan === "premium" || userData?.plan === "season"}
                                         <span
                                             class="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider"
                                             >Active</span

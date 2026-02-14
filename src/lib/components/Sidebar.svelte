@@ -344,11 +344,25 @@
 
     // Derived state for plan
     let planName = $derived(
-        userData?.plan === "premium" ? "Pro Plan" : "Free Plan",
+        userData?.plan === "pro" ||
+            userData?.plan === "premium" ||
+            userData?.plan === "season"
+            ? "Pro Plan"
+            : "Free Plan",
     );
-    let usagePercent = $derived(userData?.plan === "premium" ? 100 : 33); // Mock usage logic for now
+    let usagePercent = $derived(
+        userData?.plan === "pro" ||
+            userData?.plan === "premium" ||
+            userData?.plan === "season"
+            ? 100
+            : 33,
+    ); // Mock usage logic for now
     let usageText = $derived(
-        userData?.plan === "premium" ? "Unlimited" : "1 / 3 used",
+        userData?.plan === "pro" ||
+            userData?.plan === "premium" ||
+            userData?.plan === "season"
+            ? "Unlimited"
+            : "1 / 3 used",
     );
 </script>
 
@@ -705,14 +719,18 @@
                 class="flex items-center justify-between text-xs font-semibold mb-2"
             >
                 <span class="text-slate-700"
-                    >{userData?.plan === "premium"
+                    >{userData?.plan === "pro" ||
+                    userData?.plan === "premium" ||
+                    userData?.plan === "season"
                         ? "プロプラン"
                         : "フリープラン"}</span
                 >
                 <span class="text-slate-400"
-                    >{userData?.plan === "premium"
+                    >{userData?.plan === "pro" ||
+                    userData?.plan === "premium" ||
+                    userData?.plan === "season"
                         ? "無制限"
-                        : `残り ${3 - props.lectures.length}枠`}</span
+                        : `残り ${3}枠`}</span
                 >
             </div>
             <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">

@@ -50,7 +50,8 @@ export async function POST({ request, url }) {
             console.log(`Successfully created and saved Stripe customer ${customerId} for user ${uid}`);
         }
 
-        const baseUrl = PUBLIC_BASE_URL || url.origin;
+        // リクエストの origin を優先的に使用して、ローカル環境（localhost）でも正しくリダイレクトされるようにする
+        const baseUrl = url.origin;
 
         // Create a billing portal session
         const session = await stripe.billingPortal.sessions.create({

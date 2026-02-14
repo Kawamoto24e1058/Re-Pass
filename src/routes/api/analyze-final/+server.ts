@@ -3,15 +3,17 @@ import { GEMINI_API_KEY } from '$env/static/private';
 import { json } from '@sveltejs/kit';
 import { adminAuth, adminDb } from '$lib/server/firebase-admin';
 
+export const config = {
+    maxDuration: 60
+};
+
 export const POST = async ({ request }) => {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     try {
         const { subjectName, analyses, customInstructions } = await request.json();
 
-        // --- Auth & Usage Check ---
+        // --- Auth Check ---
         let uid: string | null = null;
-        let isPremium = false;
-        let userData: any = null;
 
         const authHeader = request.headers.get('Authorization');
         if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -19,31 +21,8 @@ export const POST = async ({ request }) => {
                 const idToken = authHeader.split('Bearer ')[1];
                 const decodedToken = await adminAuth.verifyIdToken(idToken);
                 uid = decodedToken.uid;
-
-                const userDoc = await adminDb.collection('users').doc(uid).get();
-                userData = userDoc.data();
-                isPremium = userData?.plan === 'premium' || userData?.plan === 'season' || userData?.isPro === true;
             } catch (e) {
                 console.warn('Auth token verification failed:', e);
-            }
-        }
-
-        // Daily Usage Check for Free Plan
-        if (!isPremium && uid) {
-            const today = new Date().toISOString().split('T')[0];
-            const dailyUsage = userData?.dailyUsage || { count: 0, lastResetDate: today };
-
-            // Reset if it's a new day
-            if (dailyUsage.lastResetDate !== today) {
-                dailyUsage.count = 0;
-                dailyUsage.lastResetDate = today;
-            }
-
-            if (dailyUsage.count >= 3) {
-                return json({
-                    error: "本日の上限に達しました",
-                    details: "無料プランの1日あたりの解析上限（3回）に達しました。明日また試すか、Proプランへアップグレードしてください。"
-                }, { status: 403 });
             }
         }
 
@@ -167,23 +146,6 @@ ${finalContext}
 
         const result = await finalModel.generateContent(systemPrompt);
         const responseText = result.response.text();
-
-        // Match usage increment logic from main analyze API
-        if (!isPremium && uid) {
-            const today = new Date().toISOString().split('T')[0];
-            const dailyUsage = userData?.dailyUsage || { count: 0, lastResetDate: today };
-
-            if (dailyUsage.lastResetDate !== today) {
-                dailyUsage.count = 1;
-                dailyUsage.lastResetDate = today;
-            } else {
-                dailyUsage.count += 1;
-            }
-
-            await adminDb.collection('users').doc(uid).set({
-                dailyUsage: dailyUsage
-            }, { merge: true });
-        }
 
         return json({ result: responseText });
 

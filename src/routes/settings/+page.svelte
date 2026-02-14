@@ -333,8 +333,10 @@
                                     </p>
                                     <p class="text-sm text-slate-500">
                                         現在のプラン: {userData?.plan ===
-                                        "premium"
-                                            ? "PREMIUM"
+                                            "pro" ||
+                                        userData?.plan === "premium" ||
+                                        userData?.plan === "season"
+                                            ? "PRO"
                                             : "FREE"}
                                     </p>
                                 </div>

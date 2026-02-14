@@ -36,9 +36,11 @@
 		"@capacitor/ios": "^8.1.0",
 		"@google/generative-ai": "^0.24.1",
 		"@types/marked": "^5.0.2",
+		"cheerio": "^1.2.0",
 		"firebase": "^12.9.0",
 		"firebase-admin": "^13.6.1",
 		"marked": "^17.0.1",
-		"stripe": "^20.3.1"
+		"stripe": "^20.3.1",
+		"youtube-transcript": "^1.2.1"
 	}
 }
