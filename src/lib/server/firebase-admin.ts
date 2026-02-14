@@ -1,8 +1,7 @@
 import { getApps, getApp, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-// JSONファイルを直接インポート（ViteでJSONを読み込むための記述）
-import serviceAccount from './service-account.json';
+import { FB_PROJECT_ID, FB_CLIENT_EMAIL, FB_PRIVATE_KEY } from '$env/static/private';
 
 function initializeAdmin() {
     const apps = getApps();
@@ -10,10 +9,17 @@ function initializeAdmin() {
         return getApp();
     }
 
-    console.log("🔥 Initializing Firebase Admin with JSON file...");
+    console.log("🔥 Initializing Firebase Admin with Environment Variables...");
+
+    // Remove quotes if present and replace literal \n with actual newlines
+    const privateKey = FB_PRIVATE_KEY?.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
 
     return initializeApp({
-        credential: cert(serviceAccount as any),
+        credential: cert({
+            projectId: FB_PROJECT_ID,
+            clientEmail: FB_CLIENT_EMAIL,
+            privateKey: privateKey,
+        }),
     });
 }
 

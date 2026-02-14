@@ -110,6 +110,13 @@
   let isCopied = $state(false); // Feedback state for summary copy
   let isResultCopied = $state(false); // Feedback state for individual results
 
+  // --- Derivative Generation State ---
+  let lectureAnalyses = $state<Record<string, string>>({}); // Store different modes for current lecture
+  let initialGenerationDone = $state(false);
+  let derivativeAnalyzing = $state(false);
+
+  // Copy result to clipboard
+
   // Copy result to clipboard
   function copyToClipboard() {
     if (!finalResultContainer) return;
@@ -381,6 +388,7 @@
     analyzing = true;
     startProgress(); // Start visual feedback
     result = "";
+    lectureAnalyses = {}; // Reset accumulation
     toastMessage = null; // Clear previous toast
 
     try {
@@ -472,6 +480,8 @@
             `\n</dl>\n</div>`;
         }
         result = finalMarkdown;
+        lectureAnalyses = { [analysisMode]: finalMarkdown };
+        initialGenerationDone = true;
       } else {
         // Fallback handling
         result = data.text || data.result;
@@ -537,6 +547,61 @@
     }
   }
 
+  async function handleDerivativeGenerate(
+    targetMode: "note" | "thoughts" | "report",
+  ) {
+    if (lectureAnalyses[targetMode]) {
+      analysisMode = targetMode;
+      result = lectureAnalyses[targetMode];
+      return;
+    }
+
+    // Must have a source to derive from
+    const sourceAnalysis = result;
+    if (!sourceAnalysis) return;
+
+    derivativeAnalyzing = true;
+    analysisMode = targetMode;
+    startProgress();
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch("/api/analyze-derivative", {
+        method: "POST",
+        body: JSON.stringify({
+          sourceAnalysis,
+          targetMode,
+          targetLength,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Derivative generation failed");
+
+      const data = await response.json();
+      const newResult = data.result.summary;
+
+      // Update accumulation
+      lectureAnalyses = { ...lectureAnalyses, [targetMode]: newResult };
+      result = newResult;
+
+      // Save the updated lecture with multiple analyses
+      await saveLecture();
+
+      toastMessage = "新しい形式を生成しました";
+      setTimeout(() => (toastMessage = null), 3000);
+    } catch (e) {
+      console.error(e);
+      alert("追加生成エラー: " + (e as Error).message);
+    } finally {
+      await stopProgress();
+      derivativeAnalyzing = false;
+    }
+  }
+
   function toggleLectureSelection(lectureId: string) {
     if (selectedLectureIds.has(lectureId)) {
       selectedLectureIds.delete(lectureId);
@@ -574,6 +639,7 @@
       title: lectureTitle || `講義 ${new Date().toLocaleString()}`,
       content: $transcript,
       analysis: result,
+      analyses: lectureAnalyses, // Save all generated formats
       analysisMode: analysisMode,
       targetLength: targetLength,
       categoryTag: categoryTag || null,
@@ -758,6 +824,9 @@
     targetLength = lecture.targetLength || 1000;
 
     result = lecture.analysis || "";
+    lectureAnalyses =
+      lecture.analyses || (result ? { [analysisMode]: result } : {});
+    initialGenerationDone = !!result;
     isEditing = false; // Switch to View Mode
 
     localStorage.setItem("transcript", $transcript);
@@ -1228,7 +1297,7 @@
           : ''}"
       >
         <div class="absolute top-8 right-8 flex items-center gap-4 z-20">
-          {#if result}
+          {#if result && !derivativeAnalyzing}
             <button
               onclick={copyResultToClipboard}
               class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200 text-slate-500 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm active:scale-95"
@@ -1245,26 +1314,84 @@
               {/if}
             </button>
           {/if}
-          <span
-            class="text-[10px] font-bold text-slate-300 uppercase tracking-widest"
-            >{analysisMode}</span
-          >
         </div>
 
-        <article
-          bind:this={resultTextContainer}
-          class="relative z-10 prose prose-slate prose-lg max-w-none
-          prose-headings:font-bold prose-headings:tracking-tight
-          prose-h1:text-3xl prose-h1:mb-6 prose-h1:bg-gradient-to-r prose-h1:from-indigo-700 prose-h1:to-pink-600 prose-h1:bg-clip-text prose-h1:text-transparent
-          prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:border-l-4 prose-h2:border-indigo-600 prose-h2:pl-4 prose-h2:text-slate-800
-          prose-p:text-slate-600 prose-p:leading-loose
-          prose-li:text-slate-600 prose-strong:text-slate-900 prose-strong:font-bold
-          prose-table:border-collapse prose-th:text-slate-900 prose-td:text-slate-600
-          prose-blockquote:border-l-pink-400 prose-blockquote:bg-pink-50/50 md:prose-blockquote:py-1
-       "
-        >
-          {@html parsedHtml}
-        </article>
+        {#if derivativeAnalyzing}
+          <div class="py-20 text-center animate-in fade-in">
+            <div class="mb-4">
+              <div
+                class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden"
+              >
+                <div
+                  class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-2.5 rounded-full transition-all duration-300 ease-out"
+                  style="width: {progressValue}%"
+                ></div>
+              </div>
+            </div>
+            <p
+              class="text-slate-600 font-bold text-sm tracking-wide animate-pulse"
+            >
+              {progressStatus}
+            </p>
+          </div>
+        {:else}
+          <article
+            bind:this={resultTextContainer}
+            class="relative z-10 prose prose-slate prose-lg max-w-none
+            prose-headings:font-bold prose-headings:tracking-tight
+            prose-h1:text-3xl prose-h1:mb-6 prose-h1:bg-gradient-to-r prose-h1:from-indigo-700 prose-h1:to-pink-600 prose-h1:bg-clip-text prose-h1:text-transparent
+            prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:border-l-4 prose-h2:border-indigo-600 prose-h2:pl-4 prose-h2:text-slate-800
+            prose-p:text-slate-600 prose-p:leading-loose
+            prose-li:text-slate-600 prose-strong:text-slate-900 prose-strong:font-bold
+            prose-table:border-collapse prose-th:text-slate-900 prose-td:text-slate-600
+            prose-blockquote:border-l-pink-400 prose-blockquote:bg-pink-50/50 md:prose-blockquote:py-1"
+          >
+            {@html parsedHtml}
+          </article>
+
+          <div class="mt-12 pt-8 border-t border-slate-100">
+            <p
+              class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 text-center"
+            >
+              他の形式も作成する
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+              <button
+                onclick={() => handleDerivativeGenerate("note")}
+                class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
+                {analysisMode === 'note'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
+                  : lectureAnalyses['note']
+                    ? 'bg-white border border-indigo-200 text-indigo-600'
+                    : 'bg-white border border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'}"
+              >
+                {lectureAnalyses["note"] ? "✅ " : ""}ノート形式
+              </button>
+              <button
+                onclick={() => handleDerivativeGenerate("thoughts")}
+                class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
+                {analysisMode === 'thoughts'
+                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-100'
+                  : lectureAnalyses['thoughts']
+                    ? 'bg-white border border-amber-200 text-amber-600'
+                    : 'bg-white border border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600'}"
+              >
+                {lectureAnalyses["thoughts"] ? "✅ " : ""}感想文形式
+              </button>
+              <button
+                onclick={() => handleDerivativeGenerate("report")}
+                class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
+                {analysisMode === 'report'
+                  ? 'bg-slate-800 text-white shadow-lg shadow-slate-200'
+                  : lectureAnalyses['report']
+                    ? 'bg-white border border-slate-400 text-slate-800'
+                    : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-800 hover:text-slate-800'}"
+              >
+                {lectureAnalyses["report"] ? "✅ " : ""}レポート形式
+              </button>
+            </div>
+          </div>
+        {/if}
       </div>
     {/if}
   {/snippet}
@@ -2150,7 +2277,11 @@
                     onclick={handleAnalyze}
                     class="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm transition-all flex items-center gap-2"
                   >
-                    解析を開始
+                    まず {analysisMode === "note"
+                      ? "ノート"
+                      : analysisMode === "thoughts"
+                        ? "感想文"
+                        : "レポート"} を生成
                     {#if selectedSummary}
                       <span
                         class="ml-2 bg-white/20 px-2 py-0.5 rounded text-xs font-normal opacity-90"
