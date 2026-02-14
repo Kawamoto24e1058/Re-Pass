@@ -369,6 +369,17 @@
       return;
     }
 
+    // YouTube URL Validation - Block YouTube links
+    if (
+      targetUrl &&
+      (targetUrl.includes("youtube.com") || targetUrl.includes("youtu.be"))
+    ) {
+      alert(
+        "現在、YouTube動画の解析はWebサイト（記事・ブログ等）のみに対応してい ます。\n\n動画を解析する場合は、動画ファイルをアップロードしてください。",
+      );
+      return;
+    }
+
     // Usage Quota Check
     const isPremium =
       userData?.plan === "premium" || userData?.plan === "season";
@@ -2286,7 +2297,7 @@
                                 ? videoFile.name
                                 : audioFile
                                   ? audioFile.name
-                                  : "動画・音声ファイル"}
+                                  : "動画・音声から抽出"}
                             </div>
                           </div>
                           <input
@@ -2325,7 +2336,7 @@
                         <input
                           type="text"
                           bind:value={targetUrl}
-                          placeholder="URL (YouTube / Web)"
+                          placeholder="URL (Webサイトのみ)"
                           class="flex-1 py-3 text-sm font-medium text-slate-700 placeholder-slate-400 bg-transparent border-none focus:ring-0 px-0"
                         />
                       </div>
@@ -2333,7 +2344,7 @@
                   </div>
                 </div>
 
-                <div class="flex justify-end p-4 pt-0">
+                <div class="flex justify-end p-4 pt-0 mt-8">
                   <button
                     onclick={handleAnalyze}
                     class="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm transition-all flex items-center gap-2"

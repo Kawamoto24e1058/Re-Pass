@@ -134,7 +134,11 @@ export const POST = async ({ request }) => {
       try {
         console.log(`🔗 Scraping URL: ${targetUrl}`);
         if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
-          // YouTube Transcript extraction (MANDATORY)
+          // YouTube Content Extraction with Fallback
+          let youtubeContent = '';
+          let contentSource = 'unknown';
+
+          // Primary: Try transcript extraction
           try {
             const { YoutubeTranscript } = await import('youtube-transcript');
             const transcripts = await YoutubeTranscript.fetchTranscript(targetUrl);
@@ -153,13 +157,51 @@ export const POST = async ({ request }) => {
               fullTranscript = `${head}\n\n... (略: 内容が長いため中間部分をカットしました) ...\n\n${tail}`;
             }
 
-            transcript += `\n\n【YouTube動画内容（字幕）】\n${fullTranscript}`;
-          } catch (ytError) {
-            console.error('YouTube transcript fetch failed:', ytError);
-            return json({
-              error: '字幕が取得できなかったため詳細な解析ができません。この動画には字幕が設定されていない可能性があります。'
-            }, { status: 400 });
+            youtubeContent = `\n\n【YouTube動画内容（字幕）】\n${fullTranscript}`;
+            contentSource = 'transcript';
+            console.log('✅ YouTube transcript extracted successfully');
+          } catch (transcriptError) {
+            console.warn('YouTube transcript fetch failed, trying metadata fallback...', transcriptError);
+
+            // Fallback: Scrape metadata (title, description, comments)
+            try {
+              const response = await fetch(targetUrl);
+              const html = await response.text();
+              const cheerio = await import('cheerio');
+              const $ = cheerio.load(html);
+
+              // Extract title
+              let title = $('meta[property="og:title"]').attr('content') ||
+                $('title').text() ||
+                'タイトル取得失敗';
+
+              // Extract description
+              let description = $('meta[property="og:description"]').attr('content') ||
+                $('meta[name="description"]').attr('content') ||
+                '';
+
+              // Limit description length
+              if (description.length > 500) {
+                description = description.substring(0, 500) + '...';
+              }
+
+              youtubeContent = `\n\n【YouTube動画情報（字幕なし・メタデータのみ）】
+タイトル: ${title}
+概要: ${description || '概要なし'}
+
+⚠️ 注意: この動画には字幕が設定されていないため、詳細な内容分析はできません。`;
+
+              contentSource = 'metadata';
+              console.log('⚠️ YouTube metadata extracted as fallback (no transcript available)');
+            } catch (fallbackError) {
+              console.error('YouTube metadata fallback also failed:', fallbackError);
+              return json({
+                error: '動画情報を取得できませんでした。URLが正しいか、動画が公開されているか確認してください。'
+              }, { status: 400 });
+            }
           }
+
+          transcript += youtubeContent;
         } else {
           // Generic Web Scraping with cheerio
           const response = await fetch(targetUrl);
@@ -224,6 +266,7 @@ export const POST = async ({ request }) => {
       **【最重要原則】**:
       - **提供されたテキストの内容のみに基づいて解析すること。**
       - **一般的な知識や推測で補完することは厳禁。**
+      - **テキストが短すぎるか不明瞭な場合**: 絶対に一般論で補完せず、「動画の詳細情報を取得できなかったため、概要のみ表示します」と出力し、取得できた情報（例：タイトルのみ）だけを表示すること。
       - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
 
       **自動分類の指示**:
@@ -251,6 +294,7 @@ export const POST = async ({ request }) => {
       **【最重要原則】**:
       - **提供されたテキストの内容のみに基づいて解析すること。**
       - **一般的な知識や推測で補完することは厳禁。**
+      - **テキストが短すぎるか不明瞭な場合**: 絶対に一般論で補完せず、「動画の詳細情報を取得できなかったため、概要のみ表示します」と出力し、取得できた情報（例：タイトルのみ）だけを表示すること。
       - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
 
       **自動分類の指示**:
@@ -279,6 +323,7 @@ export const POST = async ({ request }) => {
       **【最重要原則】**:
       - **提供されたテキストの内容のみに基づいて解析すること。**
       - **一般的な知識や推測で補完することは厳禁。**
+      - **テキストが短すぎるか不明瞭な場合**: 絶対に一般論で補完せず、「動画の詳細情報を取得できなかったため、概要のみ表示します」と出力し、取得できた情報（例：タイトルのみ）だけを表示すること。
       - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
 
       **自動分類の指示**:
@@ -315,12 +360,27 @@ ${transcript}
     // Retry Logic
     const maxRetries = 3;
     let retryCount = 0;
-    let currentModelName = "gemini-2.0-flash"; // Use generic latest
+    let currentModelName = "gemini-2.0-flash-exp"; // Use experimental Flash for best cost/performance
+
+    // Dynamic Token Calculation for Cost Optimization
+    // Japanese: ~2-3 tokens per character (including JSON structure overhead)
+    const tokensPerChar = 3;
+    const jsonOverhead = 500; // Buffer for JSON structure, field names, etc.
+    const calculatedMaxTokens = Math.ceil(targetLength * tokensPerChar) + jsonOverhead;
+    const maxOutputTokens = Math.min(calculatedMaxTokens, 8192); // Cap at model limit
+
+    console.log(`📊 Token optimization: targetLength=${targetLength} → maxOutputTokens=${maxOutputTokens}`);
 
     while (retryCount < maxRetries) {
       try {
         const model = genAI.getGenerativeModel(
-          { model: currentModelName },
+          {
+            model: currentModelName,
+            generationConfig: {
+              maxOutputTokens: maxOutputTokens,
+              temperature: 0.7,
+            }
+          },
           { apiVersion: 'v1' }
         );
 
