@@ -950,6 +950,19 @@
     targetLength = 1000;
 
     isEditing = true; // Switch to Edit Mode
+    finalExamView = false;
+    finalExamResult = "";
+    lectureAnalyses = {};
+    initialGenerationDone = false;
+    derivativeAnalyzing = false;
+    analyzing = false;
+    analyzingSeries = false;
+    analyzingFinal = false;
+    progressValue = 0;
+
+    analyzedTitle = "";
+    analyzedCategory = "";
+    categoryTag = "";
 
     const pdfInput = document.getElementById("pdf-upload") as HTMLInputElement;
     if (pdfInput) pdfInput.value = "";
@@ -957,6 +970,14 @@
     if (txtInput) txtInput.value = "";
 
     localStorage.removeItem("transcript");
+  }
+
+  /**
+   * Complete Reset & Force Home Navigation
+   */
+  function handleLogoClick() {
+    startNewLecture();
+    goto("/", { invalidateAll: true });
   }
 
   /**
@@ -1492,10 +1513,10 @@
       </svg>
     </button>
 
-    <a
-      href="/"
-      class="font-bold text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent"
-      >Re-Pass</a
+    <button
+      onclick={handleLogoClick}
+      class="font-bold text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent border-none bg-transparent p-0 cursor-pointer"
+      >Re-Pass</button
     >
 
     <a href="/settings" class="p-1">
@@ -1547,6 +1568,7 @@
       onDragStart={(id: string) => (draggingLectureId = id)}
       onDragEnd={handleDragEnd}
       {draggingLectureId}
+      onLogoClick={handleLogoClick}
     />
   {/if}
 

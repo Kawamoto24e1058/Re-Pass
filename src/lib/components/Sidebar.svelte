@@ -32,6 +32,7 @@
         draggingLectureId?: string | null;
         isMobileOpen?: boolean;
         onClose?: () => void;
+        onLogoClick?: () => void;
     }>();
 
     // Local State
@@ -62,9 +63,13 @@
 
     // Logo Click Handler: Force Home Navigation and Reset State
     function handleLogoClick() {
-        // Clear sidebar selection
-        currentBinder.set(null);
-        props.onSelectSubject(null);
+        if (props.onLogoClick) {
+            props.onLogoClick();
+        } else {
+            // Clear sidebar selection
+            currentBinder.set(null);
+            props.onSelectSubject(null);
+        }
 
         // Force navigate to home with full invalidation
         goto("/", { invalidateAll: true });

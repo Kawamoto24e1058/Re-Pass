@@ -7,10 +7,8 @@ export const config = {
   maxDuration: 60
 };
 
-// genAI will be initialized inside the POST handler to avoid build-time issues with $env/static/private
 export const POST = async ({ request }) => {
   try {
-    // APIキーを使って初期化
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
     // --- Auth & Usage Check ---
@@ -42,7 +40,6 @@ export const POST = async ({ request }) => {
       let currentCount = usageData.count;
       let lastResetDate = usageData.lastResetDate;
 
-      // Reset if it's a new day
       if (lastResetDate !== today) {
         currentCount = 0;
         lastResetDate = today;
@@ -60,193 +57,173 @@ export const POST = async ({ request }) => {
 
     const formData = await request.formData();
     const mode = formData.get('mode') as string || "note";
-    const targetLength = parseInt(formData.get('targetLength') as string || "1000");
+    const targetLengthRaw = formData.get('targetLength');
+    const targetLength = parseInt(targetLengthRaw as string || "1000");
     let transcript = formData.get('transcript') as string || "";
+    const targetUrl = formData.get('url') as string;
 
-    // Backend Plan Check (Redundant but kept for safety)
-    if (!isPremium) {
-      if (mode === 'thoughts' || mode === 'report') {
-        return json({ error: "この機能はプレミアム限定です" }, { status: 403 });
-      }
+    // --- Validation & Logging ---
+    console.log('--- 🤖 Analysis Request Received ---');
+    console.log('Mode:', mode);
+    console.log('TargetLength (Raw):', targetLengthRaw);
+    console.log('TargetLength (Parsed):', targetLength);
+    console.log('URL:', targetUrl || 'None');
+    console.log('Transcript Length:', transcript.length);
+    console.log('Files:', {
+      pdf: formData.has('pdf'),
+      txt: formData.has('txt'),
+      audio: formData.has('audio'),
+      image: formData.has('image'),
+      video: formData.has('video')
+    });
+
+    if (isNaN(targetLength) || targetLength <= 0) {
+      console.error('❌ Validation Failed: Invalid targetLength');
+      return json({ error: "無効な文字数指定です (targetLength must be a positive number)" }, { status: 400 });
     }
 
+    const hasInput = transcript || targetUrl || formData.has('pdf') || formData.has('txt') || formData.has('audio') || formData.has('image') || formData.has('video');
+    if (!hasInput) {
+      console.error('❌ Validation Failed: No input data provided');
+      return json({ error: "解析対象となるデータ（テキスト、URL、またはファイル）が必要です" }, { status: 400 });
+    }
+
+    if (!isPremium && (mode === 'thoughts' || mode === 'report')) {
+      console.warn('⚠️ Feature Gating: Free user attempted premium mode');
+      return json({ error: "この機能はプレミアム限定です" }, { status: 403 });
+    }
+
+    // --- Input Processing ---
+    const promptParts: any[] = [];
+
     // Handle Text File
-    const txtFile = formData.get('txt') as File;
-    if (txtFile) {
-      const textContent = await txtFile.text();
+    const txtFileInput = formData.get('txt') as File;
+    if (txtFileInput) {
+      const textContent = await txtFileInput.text();
       transcript += `\n\n【テキストファイル内容】\n${textContent}`;
     }
 
-    // Handle Binary Files
-    const promptParts: any[] = [];
-
     // Audio
-    const audioFile = formData.get('audio') as File;
-    if (audioFile) {
-      const arrayBuffer = await audioFile.arrayBuffer();
+    const audioFileInput = formData.get('audio') as File;
+    if (audioFileInput) {
+      console.log(`🎙️ Processing Audio: ${audioFileInput.name || 'blob'}, type=${audioFileInput.type}, size=${audioFileInput.size} bytes`);
+      const arrayBuffer = await audioFileInput.arrayBuffer();
       promptParts.push({
         inlineData: {
           data: Buffer.from(arrayBuffer).toString('base64'),
-          mimeType: audioFile.type
+          mimeType: audioFileInput.type || 'audio/mpeg'
         }
       });
     }
 
-    // Video (New)
-    const videoFile = formData.get('video') as File;
-    if (videoFile) {
-      const arrayBuffer = await videoFile.arrayBuffer();
+    // Video
+    const videoFileInput = formData.get('video') as File;
+    if (videoFileInput) {
+      console.log(`🎥 Processing Video: ${videoFileInput.name || 'blob'}, type=${videoFileInput.type}, size=${videoFileInput.size} bytes`);
+      const arrayBuffer = await videoFileInput.arrayBuffer();
       promptParts.push({
         inlineData: {
           data: Buffer.from(arrayBuffer).toString('base64'),
-          mimeType: videoFile.type
+          mimeType: videoFileInput.type || 'video/mp4'
         }
       });
     }
 
-    // PDF
-    const pdfFile = formData.get('pdf') as File;
-    if (pdfFile) {
-      const arrayBuffer = await pdfFile.arrayBuffer();
+    // PDF 
+    const pdfFileInput = formData.get('pdf') as File;
+    if (pdfFileInput) {
+      console.log(`📄 Processing PDF: ${pdfFileInput.name || 'blob'}, type=${pdfFileInput.type}, size=${pdfFileInput.size} bytes`);
+      const arrayBuffer = await pdfFileInput.arrayBuffer();
       promptParts.push({
         inlineData: {
           data: Buffer.from(arrayBuffer).toString('base64'),
-          mimeType: pdfFile.type
+          mimeType: 'application/pdf'
         }
       });
     }
 
-    // Image (New)
-    const imageFile = formData.get('image') as File;
-    if (imageFile) {
-      const arrayBuffer = await imageFile.arrayBuffer();
+    // Image
+    const imageFileInput = formData.get('image') as File;
+    if (imageFileInput) {
+      console.log(`🖼️ Processing Image: ${imageFileInput.name || 'blob'}, type=${imageFileInput.type}, size=${imageFileInput.size} bytes`);
+      const arrayBuffer = await imageFileInput.arrayBuffer();
       promptParts.push({
         inlineData: {
           data: Buffer.from(arrayBuffer).toString('base64'),
-          mimeType: imageFile.type
+          mimeType: imageFileInput.type || 'image/jpeg'
         }
       });
     }
 
-    // URL (Scraping Enhancement)
-    const targetUrl = formData.get('url') as string;
+    // Scraping URL
     if (targetUrl) {
       try {
         console.log(`🔗 Scraping URL: ${targetUrl}`);
         if (targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')) {
-          // YouTube Content Extraction with Fallback
-          let youtubeContent = '';
-          let contentSource = 'unknown';
-
-          // Primary: Try transcript extraction
           try {
             const { YoutubeTranscript } = await import('youtube-transcript');
             const transcripts = await YoutubeTranscript.fetchTranscript(targetUrl);
-
-            if (!transcripts || transcripts.length === 0) {
-              throw new Error('Transcript is empty');
-            }
+            if (!transcripts || transcripts.length === 0) throw new Error('Transcript is empty');
 
             let fullTranscript = transcripts.map(t => t.text).join(' ');
-
-            // Intelligent Truncation if too long
             if (fullTranscript.length > 10000) {
-              console.log(`✂️ Truncating long YouTube transcript (${fullTranscript.length} chars)`);
               const head = fullTranscript.substring(0, 5000);
               const tail = fullTranscript.substring(fullTranscript.length - 5000);
               fullTranscript = `${head}\n\n... (略: 内容が長いため中間部分をカットしました) ...\n\n${tail}`;
             }
-
-            youtubeContent = `\n\n【YouTube動画内容（字幕）】\n${fullTranscript}`;
-            contentSource = 'transcript';
+            transcript += `\n\n【YouTube動画内容（字幕）】\n${fullTranscript}`;
             console.log('✅ YouTube transcript extracted successfully');
           } catch (transcriptError) {
             console.warn('YouTube transcript fetch failed, trying metadata fallback...', transcriptError);
-
-            // Fallback: Scrape metadata (title, description, comments)
             try {
               const response = await fetch(targetUrl);
               const html = await response.text();
               const cheerio = await import('cheerio');
               const $ = cheerio.load(html);
-
-              // Extract title
-              let title = $('meta[property="og:title"]').attr('content') ||
-                $('title').text() ||
-                'タイトル取得失敗';
-
-              // Extract description
-              let description = $('meta[property="og:description"]').attr('content') ||
-                $('meta[name="description"]').attr('content') ||
-                '';
-
-              // Limit description length
-              if (description.length > 500) {
-                description = description.substring(0, 500) + '...';
-              }
-
-              youtubeContent = `\n\n【YouTube動画情報（字幕なし・メタデータのみ）】
-タイトル: ${title}
-概要: ${description || '概要なし'}
-
-⚠️ 注意: この動画には字幕が設定されていないため、詳細な内容分析はできません。`;
-
-              contentSource = 'metadata';
-              console.log('⚠️ YouTube metadata extracted as fallback (no transcript available)');
+              let title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'タイトル取得失敗';
+              let description = $('meta[property="og:description"]').attr('content') || '';
+              if (description.length > 500) description = description.substring(0, 500) + '...';
+              transcript += `\n\n【YouTube動画情報（字幕なし・メタデータのみ）】\nタイトル: ${title}\n概要: ${description || '概要なし'}\n\n⚠️ 注意: この動画には字幕が設定されていないため、詳細な内容分析はできません。`;
+              console.log('⚠️ YouTube metadata extracted as fallback');
             } catch (fallbackError) {
-              console.error('YouTube metadata fallback also failed:', fallbackError);
-              return json({
-                error: '動画情報を取得できませんでした。URLが正しいか、動画が公開されているか確認してください。'
-              }, { status: 400 });
+              console.error('YouTube metadata fallback failed:', fallbackError);
             }
           }
-
-          transcript += youtubeContent;
         } else {
-          // Generic Web Scraping with cheerio
-          const response = await fetch(targetUrl);
-          const html = await response.text();
-          const cheerio = await import('cheerio');
-          const $ = cheerio.load(html);
-
-          // Remove scripts, styles, and other noisy elements
-          $('script, style, nav, footer, aside, .ads, #ads').remove();
-
-          // Extract main content: article, main or high-density text areas
-          let mainContent = $('article').text() || $('main').text() || $('body').text();
-
-          // Basic cleaning
-          mainContent = mainContent
-            .replace(/\s+/g, ' ')
-            .trim();
-
-          // Intelligent Truncation if too long
-          if (mainContent.length > 10000) {
-            console.log(`✂️ Truncating long Web content (${mainContent.length} chars)`);
-            const head = mainContent.substring(0, 5000);
-            const tail = mainContent.substring(mainContent.length - 5000);
-            mainContent = `${head}\n\n... (略: 内容が長いため中間部分をカットしました) ...\n\n${tail}`;
+          try {
+            const response = await fetch(targetUrl);
+            const html = await response.text();
+            const cheerio = await import('cheerio');
+            const $ = cheerio.load(html);
+            $('script, style, nav, footer, aside, .ads, #ads').remove();
+            let mainContent = $('article').text() || $('main').text() || $('body').text();
+            mainContent = mainContent.replace(/\s+/g, ' ').trim();
+            if (mainContent.length > 10000) {
+              const head = mainContent.substring(0, 5000);
+              const tail = mainContent.substring(mainContent.length - 5000);
+              mainContent = `${head}\n\n... (略: 内容が長いため中間部分をカットしました) ...\n\n${tail}`;
+            }
+            transcript += `\n\n【ウェブサイト内容】\n${mainContent}\n(URL: ${targetUrl})`;
+          } catch (scrapeErr) {
+            console.error('Generic scraping failed:', scrapeErr);
           }
-
-          transcript += `\n\n【ウェブサイト内容】\n${mainContent}\n(URL: ${targetUrl})`;
         }
-      } catch (e) {
-        console.error('URL Scraping failed:', e);
-        transcript += `\n\n【参照URL（取得失敗）】\n${targetUrl}\n(URLの内容を取得できませんでした。解析不能として扱ってください)`;
+      } catch (e: any) {
+        console.error('URL Scraping master failed:', e);
+        transcript += `\n\n【参照URL（取得失敗）】\n${targetUrl}\n(URLの内容を取得できませんでした)`;
       }
     }
 
-    // Calculate character limits
+    // --- Generation Logic ---
     const tolerance = targetLength >= 1000 ? 0.05 : 0.1;
     const minLength = Math.floor(targetLength * (1 - tolerance));
     const maxLength = Math.floor(targetLength * (1 + tolerance));
 
-    let systemPrompt = "";
-    // JSON Schema Definition for structured output
     const jsonSchema = `
   出力は必ず以下のJSON形式で行ってください。
   重要：Markdownのコードブロック（\`\`\`jsonなど）は絶対に使用しないでください。純粋なJSON文字列のみを出力してください。
   **厳守**: JSON文字列内（summaryなど）で改行が必要な場合は、必ずエスケープシーケンス（\\n）を使用し、リテラルの改行コードを含めないでください。
+  絶対禁止: JSON以外の解説文、前置き、Markdownの装飾（\`\`\`jsonなど）は一切含めないでください。
   {
     "title": "講義タイトル",
     "category": "科目名（例：心理学、マクロ経済学）",
@@ -258,236 +235,123 @@ export const POST = async ({ request }) => {
   }
   `;
 
+    let systemPrompt = "";
     switch (mode) {
       case "thoughts":
-        console.log(`Generating prompt for THOUGHTS mode`);
-        systemPrompt = `あなたは講義を受講した「熱心な学生」です。丁寧語（です・ます調）でリアクションペーパーを作成します。
-      ${jsonSchema}
-      **【最重要原則】**:
-      - **提供されたテキストの内容のみに基づいて解析すること。**
-      - **一般的な知識や推測で補完することは厳禁。**
-      - **テキストが短すぎるか不明瞭な場合**: 絶対に一般論で補完せず、「動画の詳細情報を取得できなかったため、概要のみ表示します」と出力し、取得できた情報（例：タイトルのみ）だけを表示すること。
-      - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
-
-      **自動分類の指示**:
-      - 入力された資料から『科目名』を特定し category にセット。
-      - 講義タイトルを生成し title にセット。
-      
-      **【出力フォーマット・ルール】**:
-      1. **### 各見出しの直後に必ず1行の空行を入れること。**
-      2. **要旨（冒頭）は3行以内**で「何を学んだか」を端的に記述してください。
-      3. **用語解説**: \`**用語名**: 説明\` の形式で記述し、HTMLタグは一切使用しないでください。
-      4. **重要な結論**: \`> [!IMPORTANT]\` または引用ブロックで強調してください。
-
-      summaryの中身は以下の構成にしてください:
-      ### 【要旨】
-      
-      ### 【講義で得た気づき】
-      
-      ### 【考察と今後の課題】`;
+        systemPrompt = `あなたは講義を受講した「熱心な学生」です。丁寧語（です・ます調）でリアクションペーパーを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
         break;
-
       case "report":
-        console.log(`Generating prompt for REPORT mode`);
-        systemPrompt = `あなたは「論理的批評家」です。常体（だ・である調）で学術レポートを作成します。
-      ${jsonSchema}
-      **【最重要原則】**:
-      - **提供されたテキストの内容のみに基づいて解析すること。**
-      - **一般的な知識や推測で補完することは厳禁。**
-      - **テキストが短すぎるか不明瞭な場合**: 絶対に一般論で補完せず、「動画の詳細情報を取得できなかったため、概要のみ表示します」と出力し、取得できた情報（例：タイトルのみ）だけを表示すること。
-      - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
-
-      **自動分類の指示**:
-      - 入力された資料から『科目名』を特定し category にセット。
-      - 講義タイトルを生成し title にセット。
-
-      **【出力フォーマット・ルール】**:
-      1. **### 各見出しの直後に必ず1行の空行を入れること。**
-      2. **要旨（冒頭）は3行以内**で論旨を簡潔にまとめてください。
-      3. **用語解説**: \`**用語名**: 説明\` の形式で記述し、HTMLタグは一切使用しないでください。
-      4. **複雑な対比**: シンプルな Markdown テーブルを使用してください。
-
-      summaryの中身は以下の構成にしてください:
-      ### 【序論：テーマの提示】
-      
-      ### 【本論：論理的分析】
-      
-      ### 【結論】`;
+        systemPrompt = `あなたは「論理的批評家」です。常体（だ・である調）で学術レポートを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
         break;
-
       case "note":
       default:
-        console.log(`Generating prompt for NOTE mode`);
-        systemPrompt = `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を構造化します。
-      ${jsonSchema}
-      **【最重要原則】**:
-      - **提供されたテキストの内容のみに基づいて解析すること。**
-      - **一般的な知識や推測で補完することは厳禁。**
-      - **テキストが短すぎるか不明瞭な場合**: 絶対に一般論で補完せず、「動画の詳細情報を取得できなかったため、概要のみ表示します」と出力し、取得できた情報（例：タイトルのみ）だけを表示すること。
-      - **ゲーム実況動画（マインクラフト等）の場合**: その中で起きた固有の出来事（アイテム名、プレイヤーの行動など）を具体的に抽出すること。
-
-      **自動分類の指示**:
-      - 入力された資料から『科目名』を特定し category にセット。
-      - 講義タイトルを生成し title にセット。
-
-      **【出力フォーマット・ルール】**:
-      1. **### 各見出しの直後に必ず1行の空行を入れること。**
-      2. **要旨は3行以内**で全体の核心を記述してください。
-      3. **内容が不明な場合、適当に推測せず「解析できませんでした」と答えよ。**
-      4. **用語解説**: \`**用語名**: 説明\` または \`> **用語名**: 説明\` の形式で記述し、HTMLタグは一切使用しないでください。
-      5. **比較**: 必要に応じて Markdown テーブル（2-3列程度）で整理してください。
-      6. **重要ポイント**: \`> [!IMPORTANT]\` 等で視覚的に強調してください。
-
-      summaryの中身は以下の【厳格な構成】に従ってください:
-      ### 【要旨】
-      
-      ### 【講義のポイント】
-
-      ### 【比較テーブル】 (比較対象がある場合のみ作成)`;
+        systemPrompt = `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を構造化します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
         break;
     }
 
     const prompt = `
 ${systemPrompt}
-
-以下のリソース（文字起こし/ファイル/URL）をもとに、指定された形式で出力を行ってください。
-文字数は概ね ${minLength}〜${maxLength}文字 を目指してください。
-
-【文字起こし・テキスト情報】
+以下の資料をもとに解析を行ってください。目標文字数: ${minLength}〜${maxLength}文字程度。
+【テキスト情報】
 ${transcript}
 `;
 
-    // Retry Logic with Model Fallback
     const maxRetries = 3;
     let retryCount = 0;
-    let currentModelName = "gemini-2.0-flash"; // Stable 2.0 Flash model
-    let hasTriedFallback = false; // Track if we've tried 1.5 fallback
+    let currentModelName = "gemini-2.0-flash";
+    let hasTriedFallback = false;
 
-    // Dynamic Token Calculation for Cost Optimization
-    // Japanese: ~2-3 tokens per character (including JSON structure overhead)
     const tokensPerChar = 3;
-    const jsonOverhead = 500; // Buffer for JSON structure, field names, etc.
-    const calculatedMaxTokens = Math.ceil(targetLength * tokensPerChar) + jsonOverhead;
-    const maxOutputTokens = Math.min(calculatedMaxTokens, 8192); // Cap at model limit
-
-    console.log(`📊 Token optimization: targetLength=${targetLength} → maxOutputTokens=${maxOutputTokens}`);
+    const jsonOverhead = 500;
+    const maxOutputTokens = Math.min(Math.ceil(targetLength * tokensPerChar) + jsonOverhead, 8192);
 
     while (retryCount < maxRetries) {
       try {
-        console.log(`🤖 Attempting with model: ${currentModelName} (retry ${retryCount + 1}/${maxRetries})`);
+        console.log(`🤖 Model: ${currentModelName} (Attempt ${retryCount + 1}/${maxRetries})`);
+        const model = genAI.getGenerativeModel({
+          model: currentModelName,
+          generationConfig: { maxOutputTokens, temperature: 0.7 }
+        }, { apiVersion: 'v1' });
 
-        const model = genAI.getGenerativeModel(
-          {
-            model: currentModelName,
-            generationConfig: {
-              maxOutputTokens: maxOutputTokens,
-              temperature: 0.7,
-            }
-          },
-          { apiVersion: 'v1' }
-        );
-
-        // Pass input parts + text prompt
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [...promptParts, { text: prompt }] }]
         });
 
         const response = await result.response;
-        const text = response.text();
+        const rawText = response.text();
+        console.log(`📥 Raw AI Response (Length: ${rawText.length})`);
 
-        // Better JSON extraction: Find first '{' and last '}'
-        let cleanedText = text.trim();
+        // --- Aggressive JSON Extraction ---
+        let cleanedText = rawText.trim();
+        // Remove Markdown code blocks if present
+        cleanedText = cleanedText.replace(/^```json\n?|```$/g, '').trim();
+
         const firstCurly = cleanedText.indexOf('{');
         const lastCurly = cleanedText.lastIndexOf('}');
 
-        if (firstCurly === -1 || lastCurly === -1) {
-          throw new Error("JSON object not found in response");
+        if (firstCurly !== -1 && lastCurly !== -1) {
+          cleanedText = cleanedText.substring(firstCurly, lastCurly + 1);
         }
 
-        cleanedText = cleanedText.substring(firstCurly, lastCurly + 1);
-
-        // After successful analysis, increment usage count for free users
+        // Update usage count
         if (!isPremium && uid) {
           const today = new Date().toISOString().split('T')[0];
           const usageRef = adminDb.collection('users').doc(uid).collection('usage').doc('daily');
           const usageDoc = await usageRef.get();
           const usageData = usageDoc.data() || { count: 0, lastResetDate: today };
-
-          let newCount = usageData.count;
-          let newResetDate = usageData.lastResetDate;
-
-          if (newResetDate !== today) {
-            newCount = 1;
-            newResetDate = today;
-          } else {
-            newCount += 1;
-          }
-
-          await usageRef.set({
-            count: newCount,
-            lastResetDate: newResetDate,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
-
-          // Also increment legacy usageCount for compatibility/tracking
-          await adminDb.collection('users').doc(uid).set({
-            usageCount: (userData?.usageCount || 0) + 1
-          }, { merge: true });
+          let newCount = (usageData.lastResetDate !== today) ? 1 : usageData.count + 1;
+          await usageRef.set({ count: newCount, lastResetDate: today, updatedAt: new Date().toISOString() }, { merge: true });
+          await adminDb.collection('users').doc(uid).set({ usageCount: (userData?.usageCount || 0) + 1 }, { merge: true });
         }
 
         try {
           return json({ result: JSON.parse(cleanedText) });
-        } catch (e) {
-          console.warn("Standard JSON parse failed, attempting sanitization...", e);
-          const fixControlChars = (str: string) => {
-            return str.replace(/[\x00-\x1f]/g, (match) => {
-              if (match === '\n') return '\\n';
-              if (match === '\r') return '\\r';
-              if (match === '\t') return '\\t';
-              return '\\u' + match.charCodeAt(0).toString(16).padStart(4, '0');
-            });
-          };
+        } catch (parseError) {
+          console.warn("⚠️ JSON.parse failed, attempting sanitization...", parseError);
+          const sanitize = (str: string) => str.replace(/[\x00-\x1f]/g, (m) => ({ '\n': '\\n', '\r': '\\r', '\t': '\\t' }[m] || '\\u' + m.charCodeAt(0).toString(16).padStart(4, '0')));
+
           try {
-            return json({ result: JSON.parse(fixControlChars(cleanedText)) });
-          } catch (innerError) {
-            console.error("Sanitized JSON parse also failed:", innerError);
-            console.error("Raw Text:", text);
-            throw new Error("JSON Parse Failed");
+            return json({ result: JSON.parse(sanitize(cleanedText)) });
+          } catch (finalError) {
+            console.error("🚨 Final JSON parse failed. Using fail-safe fallback.");
+            // FAIL-SAFE FALLBACK: Wrap raw text in valid JSON structure
+            return json({
+              result: {
+                title: "解析結果 (構造化失敗)",
+                category: "未分類",
+                summary: rawText,
+                glossary: []
+              },
+              fallback: true,
+              parseError: (finalError as Error).message
+            });
           }
         }
-
       } catch (error: any) {
-        console.error(`Attempt ${retryCount + 1} failed with ${currentModelName}:`, error.message);
+        console.error(`❌ Attempt ${retryCount + 1} failed:`, error.message);
+        if (error.stack) console.error(error.stack);
 
-        // Rate limit or server errors - retry with same model
-        if (error.status === 429 || error.status === 503 || error.message?.includes("429")) {
+        if (error.status === 429 || error.status === 503) {
           retryCount++;
           await new Promise(r => setTimeout(r, 5000));
           continue;
         }
 
-        // Model-specific errors - try fallback to 1.5-flash
-        if (!hasTriedFallback && (
-          error.message?.includes("2.0") ||
-          error.message?.includes("not found") ||
-          error.message?.includes("unavailable") ||
-          error.status === 404
-        )) {
-          console.warn(`⚠️ Falling back to gemini-1.5-flash due to: ${error.message}`);
+        if (!hasTriedFallback && (error.message?.includes("2.0") || error.status === 404)) {
+          console.warn(`⚠️ Falling back to gemini-1.5-flash`);
           currentModelName = "gemini-1.5-flash";
           hasTriedFallback = true;
-          retryCount++; // Increment retry but continue with fallback model
-          await new Promise(r => setTimeout(r, 1000));
+          retryCount++;
           continue;
         }
 
-        // All other errors - return immediately
-        return json({ error: "解析サーバーエラー: " + error.message }, { status: 500 });
+        return json({ error: "解析エラー: " + error.message, stack: error.stack }, { status: 500 });
       }
     }
-    return json({ error: "一定回数試行しましたが失敗しました" }, { status: 500 });
+    return json({ error: "リトライ上限に達しました" }, { status: 500 });
   } catch (globalError: any) {
-    console.error("Analyze Global Error:", globalError);
-    return json({ error: "サーバー内で致命的なエラーが発生しました", details: globalError.message }, { status: 500 });
+    console.error("🚨 Global Error:", globalError);
+    if (globalError.stack) console.error(globalError.stack);
+    return json({ error: "サーバー内で致命的なエラーが発生しました", details: globalError.message, stack: globalError.stack }, { status: 500 });
   }
 };
