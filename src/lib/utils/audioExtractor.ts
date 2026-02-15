@@ -1,10 +1,11 @@
 /**
  * Audio Extraction Utility
- * Extracts audio from video files using Web Audio API and compresses to MP3
+ * Extracts audio from video files using OfflineAudioContext for high-speed processing
+ * and converts to 16kHz Mono WAV.
  */
 
 export interface AudioExtractionProgress {
-    stage: 'loading' | 'extracting' | 'encoding' | 'complete';
+    stage: 'decoding' | 'resampling' | 'encoding' | 'complete';
     progress: number; // 0-100
     message: string;
 }
@@ -17,161 +18,118 @@ export interface AudioExtractionResult {
 }
 
 /**
- * Extract audio from video file
+ * Extract audio from video file using OfflineAudioContext
  * @param videoFile - Video file to extract audio from
  * @param onProgress - Progress callback
- * @param targetBitrate - Target bitrate in kbps (default: auto-detect based on duration)
- * @returns Extracted and compressed audio as Blob
+ * @returns Extracted audio as WAV Blob (16kHz Mono)
  */
 export async function extractAudioFromVideo(
     videoFile: File,
-    onProgress: (progress: AudioExtractionProgress) => void,
-    targetBitrate?: number
+    onProgress: (progress: AudioExtractionProgress) => void
 ): Promise<AudioExtractionResult> {
 
-    return new Promise(async (resolve, reject) => {
-        try {
-            onProgress({ stage: 'loading', progress: 10, message: '動画を読み込んでいます...' });
+    onProgress({ stage: 'decoding', progress: 0, message: '動画を読み込んでいます...' });
 
-            // Create video element to load the file
-            const videoUrl = URL.createObjectURL(videoFile);
-            const video = document.createElement('video');
-            video.src = videoUrl;
-            video.load();
+    // 1. Read file as ArrayBuffer
+    const arrayBuffer = await videoFile.arrayBuffer();
 
-            await new Promise((res, rej) => {
-                video.onloadedmetadata = () => res(true);
-                video.onerror = () => rej(new Error('動画の読み込みに失敗しました'));
-            });
+    // 2. Decode Audio Data
+    const audioContext = new AudioContext();
+    onProgress({ stage: 'decoding', progress: 20, message: '音声をデコード中...' });
 
-            const duration = video.duration;
+    try {
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-            // Optimized bitrate for size/quality balance
-            let bitrate = targetBitrate;
-            if (!bitrate) {
-                if (duration > 3600) { // > 1 hour
-                    bitrate = 48; // Highly compressed
-                } else {
-                    bitrate = 64; // Standard for speech
-                }
-            }
+        // 3. Resample to 16kHz Mono using OfflineAudioContext
+        const targetSampleRate = 16000;
+        const duration = audioBuffer.duration;
+        const offlineContext = new OfflineAudioContext(1, duration * targetSampleRate, targetSampleRate);
 
-            onProgress({
-                stage: 'extracting',
-                progress: 30,
-                message: `音声を抽出中... (${Math.floor(duration / 60)}分${Math.floor(duration % 60)}秒, ${bitrate}kbps)`
-            });
+        const source = offlineContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(offlineContext.destination);
+        source.start();
 
-            // Create audio context
-            const audioContext = new AudioContext();
-            const source = audioContext.createMediaElementSource(video);
-            const destination = audioContext.createMediaStreamDestination();
-            source.connect(destination);
+        onProgress({ stage: 'resampling', progress: 50, message: '16kHzに変換中...' });
 
-            // Record the audio stream
-            const mediaRecorder = new MediaRecorder(destination.stream, {
-                mimeType: 'audio/webm;codecs=opus',
-                audioBitsPerSecond: bitrate * 1000
-            });
+        const renderedBuffer = await offlineContext.startRendering();
 
-            const chunks: Blob[] = [];
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    chunks.push(event.data);
-                }
-            };
+        // 4. Encode to WAV
+        onProgress({ stage: 'encoding', progress: 80, message: 'WAV形式に変換中...' });
+        const wavBlob = encodeWAV(renderedBuffer);
 
-            mediaRecorder.onstop = () => {
-                onProgress({ stage: 'encoding', progress: 80, message: '音声を圧縮しています...' });
+        onProgress({ stage: 'complete', progress: 100, message: '完了！' });
 
-                const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        return {
+            blob: wavBlob,
+            duration: duration,
+            sizeBytes: wavBlob.size,
+            format: 'audio/wav'
+        };
 
-                // Convert to MP3 if possible (for better compatibility)
-                // For now, return WebM as-is (browsers support it well)
-                // TODO: Add actual MP3 encoding using lamejs if needed
-
-                onProgress({ stage: 'complete', progress: 100, message: '完了！' });
-
-                URL.revokeObjectURL(videoUrl);
-
-                resolve({
-                    blob: audioBlob,
-                    duration: duration,
-                    sizeBytes: audioBlob.size,
-                    format: 'audio/webm'
-                });
-            };
-
-            mediaRecorder.onerror = (error) => {
-                reject(new Error(`音声抽出に失敗しました: ${error}`));
-            };
-
-            // Start recording
-            mediaRecorder.start();
-            video.play();
-
-            // Stop recording when video ends
-            video.onended = () => {
-                mediaRecorder.stop();
-                video.pause();
-            };
-
-            // Monitor progress during playback
-            const progressInterval = setInterval(() => {
-                if (video.currentTime > 0 && duration > 0) {
-                    const extractProgress = Math.min(95, 30 + (video.currentTime / duration) * 50);
-                    onProgress({
-                        stage: 'extracting',
-                        progress: extractProgress,
-                        message: `音声を抽出中... (${Math.floor(video.currentTime)}/${Math.floor(duration)}秒)`
-                    });
-                }
-            }, 500);
-
-            video.onended = () => {
-                clearInterval(progressInterval);
-            };
-
-        } catch (error: any) {
-            reject(new Error(`音声抽出エラー: ${error.message || error}`));
-        }
-    });
+    } catch (e: any) {
+        throw new Error('音声の抽出に失敗しました: ' + e.message);
+    } finally {
+        audioContext.close();
+    }
 }
 
 /**
- * Convert audio file to different format or compress
- * (Placeholder - can be enhanced with actual conversion libraries)
+ * Encode AudioBuffer to WAV (16-bit PCM)
  */
-export async function compressAudio(
-    audioBlob: Blob,
-    targetBitrate: number
-): Promise<Blob> {
-    // For now, just return the same blob
-    // TODO: Implement actual compression using lamejs or similar
-    return audioBlob;
+function encodeWAV(audioBuffer: AudioBuffer): Blob {
+    const numChannels = 1; // Always mono for this use case
+    const sampleRate = audioBuffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+
+    const samples = audioBuffer.getChannelData(0);
+    const bufferLength = samples.length * 2; // 2 bytes per sample
+    const arrayBuffer = new ArrayBuffer(44 + bufferLength);
+    const view = new DataView(arrayBuffer);
+
+    // RIFF identifier
+    writeString(view, 0, 'RIFF');
+    // RIFF chunk length
+    view.setUint32(4, 36 + bufferLength, true);
+    // RIFF type
+    writeString(view, 8, 'WAVE');
+    // format chunk identifier
+    writeString(view, 12, 'fmt ');
+    // format chunk length
+    view.setUint32(16, 16, true);
+    // sample format (raw)
+    view.setUint16(20, format, true);
+    // channel count
+    view.setUint16(22, numChannels, true);
+    // sample rate
+    view.setUint32(24, sampleRate, true);
+    // byte rate (sample rate * block align)
+    view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
+    // block align (channel count * bytes per sample)
+    view.setUint16(32, numChannels * (bitDepth / 8), true);
+    // bits per sample
+    view.setUint16(34, bitDepth, true);
+    // data chunk identifier
+    writeString(view, 36, 'data');
+    // data chunk length
+    view.setUint32(40, bufferLength, true);
+
+    // Float to 16-bit PCM
+    floatTo16BitPCM(view, 44, samples);
+
+    return new Blob([view], { type: 'audio/wav' });
 }
 
-/**
- * Estimate the cost of analyzing an audio file
- */
-export function estimateAnalysisCost(durationSeconds: number, targetLength: number): {
-    estimatedInputTokens: number;
-    estimatedOutputTokens: number;
-    estimatedCostUSD: number;
-} {
-    // Rough estimates for Gemini 2.0 Flash
-    // Audio: ~10 tokens per second (very rough estimate)
-    const inputTokens = Math.ceil(durationSeconds * 10);
-    const outputTokens = Math.ceil(targetLength * 3) + 500;
+function writeString(view: DataView, offset: number, string: string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
 
-    // Pricing: $0.075 per 1M input tokens, $0.30 per 1M output tokens
-    const inputCost = (inputTokens / 1000000) * 0.075;
-    const outputCost = (outputTokens / 1000000) * 0.30;
-    const totalCost = inputCost + outputCost;
-
-    return {
-        estimatedInputTokens: inputTokens,
-        estimatedOutputTokens: outputTokens,
-        estimatedCostUSD: Number(totalCost.toFixed(4))
-    };
+function floatTo16BitPCM(output: DataView, offset: number, input: Float32Array) {
+    for (let i = 0; i < input.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, input[i]));
+        output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
 }

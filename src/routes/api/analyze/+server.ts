@@ -1,7 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { GEMINI_API_KEY } from '$env/static/private';
 import { json } from '@sveltejs/kit';
 import { adminAuth, adminDb } from '$lib/server/firebase-admin';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 
 export const config = {
   maxDuration: 60
@@ -10,6 +14,7 @@ export const config = {
 export const POST = async ({ request }) => {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const fileManager = new GoogleAIFileManager(GEMINI_API_KEY);
 
     // --- Auth & Usage Check ---
     let uid: string | null = null;
@@ -114,23 +119,50 @@ export const POST = async ({ request }) => {
     }
 
 
-    // Helper to fetch file from URL and convert to Part
+    // Helper to fetch file from URL, save to temp, upload to Gemini, and get URI
     const processFileUrl = async (url: string, mimeType: string, label: string) => {
       if (!url) return;
+      let tempFilePath = '';
       try {
         console.log(`📡 Fetching ${label} from Storage: ${url}`);
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Failed to fetch ${label}`);
         const arrayBuffer = await response.arrayBuffer();
-        console.log(`✅ ${label} fetched: ${arrayBuffer.byteLength} bytes`);
+
+        // Create temp file
+        const tempDir = os.tmpdir();
+        const fileName = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        tempFilePath = path.join(tempDir, fileName);
+
+        await fs.writeFile(tempFilePath, Buffer.from(arrayBuffer));
+        console.log(`✅ ${label} downloaded to temp: ${tempFilePath} (${arrayBuffer.byteLength} bytes)`);
+
+        // Upload to Gemini
+        console.log(`☁️ Uploading ${label} to Gemini File Manager...`);
+        const uploadResponse = await fileManager.uploadFile(tempFilePath, {
+          mimeType: mimeType,
+          displayName: label
+        });
+
+        console.log(`✅ ${label} uploaded to Gemini: ${uploadResponse.file.uri}`);
+
         promptParts.push({
-          inlineData: {
-            data: Buffer.from(arrayBuffer).toString('base64'),
-            mimeType: mimeType
+          fileData: {
+            mimeType: uploadResponse.file.mimeType,
+            fileUri: uploadResponse.file.uri
           }
         });
       } catch (err) {
         console.error(`❌ Error processing ${label} URL:`, err);
+      } finally {
+        // Cleanup temp file
+        if (tempFilePath) {
+          try {
+            await fs.unlink(tempFilePath);
+          } catch (e) {
+            console.warn(`Failed to cleanup temp file: ${tempFilePath}`, e);
+          }
+        }
       }
     };
 
@@ -138,7 +170,8 @@ export const POST = async ({ request }) => {
     const audioUrl = formData.get('audioUrl') as string;
     const audioFileInput = formData.get('audio') as File;
     if (audioUrl) {
-      await processFileUrl(audioUrl, 'audio/mpeg', 'Audio');
+      const mimeType = audioUrl.toLowerCase().includes('.wav') ? 'audio/wav' : 'audio/mpeg';
+      await processFileUrl(audioUrl, mimeType, 'Audio');
     } else if (audioFileInput) {
       console.log(`🎙️ Processing Audio (Direct): ${audioFileInput.name || 'blob'}, type=${audioFileInput.type}, size=${audioFileInput.size} bytes`);
       const arrayBuffer = await audioFileInput.arrayBuffer();
@@ -313,11 +346,16 @@ ${transcript}
     while (retryCount < maxRetries) {
       try {
         console.log(`🤖 Model: ${currentModelName} (Attempt ${retryCount + 1}/${maxRetries})`);
+        // Model Configuration
         const model = genAI.getGenerativeModel({
           model: currentModelName,
-          generationConfig: { maxOutputTokens, temperature: 0.7 }
-        }, { apiVersion: 'v1' });
+          generationConfig: {
+            maxOutputTokens: targetLength ? Math.min(targetLength * 4, 8192) : 2000,
+            temperature: 0.7,
+          }
+        });
 
+        console.log(`🚀 Sending request to Gemini (Model: gemini-2.0-flash)...`);
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [...promptParts, { text: prompt }] }]
         });

@@ -47,6 +47,7 @@
   let videoFile = $state<File | null>(null);
   let isExtractingAudio = $state(false);
   let extractionProgress = $state<AudioExtractionProgress | null>(null);
+  let audioUploadPromise = $state<Promise<string> | null>(null);
   let targetUrl = $state("");
   let analyzing = $state(false);
   let result = $state("");
@@ -376,6 +377,7 @@
   ) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
+      audioUploadPromise = null; // Reset previous upload
       if (type === "pdf") pdfFile = input.files[0];
       else if (type === "txt") txtFile = input.files[0];
       else if (type === "audio") audioFile = input.files[0];
@@ -397,13 +399,17 @@
       });
       audioFile = new File(
         [result.blob],
-        file.name.replace(/\.[^/.]+$/, "") + ".mp3",
+        file.name.replace(/\.[^/.]+$/, "") + ".wav",
         {
-          type: "audio/mpeg",
+          type: "audio/wav",
         },
       );
       videoFile = null; // Prioritize audio for analysis savings
-      toastMessage = "🎥 動画から音声を抽出・圧縮しました";
+      toastMessage = "🎥 デジタル高速抽出完了 (WAV 16kHz)";
+
+      // Start background upload immediately
+      audioUploadPromise = uploadToStorage(audioFile);
+
       setTimeout(() => (toastMessage = null), 3000);
     } catch (e: any) {
       console.error(e);
@@ -479,8 +485,13 @@
       let imageUrl = "";
 
       if (audioFile) {
-        progressStatus = "音声ファイルをアップロード中...";
-        audioUrl = await uploadToStorage(audioFile);
+        if (audioUploadPromise) {
+          progressStatus = "アップロード完了を待機中...";
+          audioUrl = await audioUploadPromise;
+        } else {
+          progressStatus = "音声ファイルをアップロード中...";
+          audioUrl = await uploadToStorage(audioFile);
+        }
       }
       if (videoFile) {
         progressStatus = "動画ファイルをアップロード中...";
