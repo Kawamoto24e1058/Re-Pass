@@ -305,7 +305,7 @@ export const POST = async ({ request }) => {
   {
     "title": "講義タイトル",
     "category": "科目名（例：心理学、マクロ経済学）",
-    "summary": "ここにMarkdown形式で構成されたノート本文を記述",
+    "summary": "ここにMarkdown形式で構成されたノート本文を記述。構成は必ず【導入】【本編（トピックごとにセクション化）】【まとめ】の順序で記述すること。",
     "glossary": [
       { "term": "用語1", "definition": "解説1" },
       { "term": "用語2", "definition": "解説2" }
@@ -323,7 +323,14 @@ export const POST = async ({ request }) => {
         break;
       case "note":
       default:
-        systemPrompt = `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を構造化します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
+        systemPrompt = `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を詳細に構造化します。\n${jsonSchema}\n
+**【最重要原則】**:
+1. **提供された資料のみ**に基づき解析すること。一般論での補完は厳禁。
+2. **階層的な箇条書き**を多用し、読者がこのノートだけで講義を完全に復習できるようにすること。
+3. **具体的**な事例、ケーススタディ、エピソードは必ず省略せずに記述すること。
+4. **数式**（例えば $PaQa + PbQb = Bg$）が登場した場合は、LaTeX形式で記述し、変数の意味と式の意図を詳細に解説すること。
+5. **専門用語**は用語辞典だけでなく、本文中でも文脈に沿って解説を加えること。
+6. 各見出しの直後に必ず空行を入れること。`;
         break;
     }
 
@@ -339,8 +346,8 @@ ${transcript}
     let currentModelName = "gemini-2.0-flash";
     let hasTriedFallback = false;
 
-    const tokensPerChar = 3;
-    const jsonOverhead = 500;
+    const tokensPerChar = 6; // Increased from 3 to 6 for deeper analysis
+    const jsonOverhead = 1000; // Increased buffer
     const maxOutputTokens = Math.min(Math.ceil(targetLength * tokensPerChar) + jsonOverhead, 8192);
 
     while (retryCount < maxRetries) {
@@ -350,7 +357,7 @@ ${transcript}
         const model = genAI.getGenerativeModel({
           model: currentModelName,
           generationConfig: {
-            maxOutputTokens: targetLength ? Math.min(targetLength * 4, 8192) : 2000,
+            maxOutputTokens: maxOutputTokens,
             temperature: 0.7,
           }
         });
