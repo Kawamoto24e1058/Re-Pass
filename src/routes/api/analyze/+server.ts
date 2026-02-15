@@ -103,10 +103,34 @@ export const POST = async ({ request }) => {
       transcript += `\n\n【テキストファイル内容】\n${textContent}`;
     }
 
+
+    // Helper to fetch file from URL and convert to Part
+    const processFileUrl = async (url: string, mimeType: string, label: string) => {
+      if (!url) return;
+      try {
+        console.log(`📡 Fetching ${label} from Storage: ${url}`);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Failed to fetch ${label}`);
+        const arrayBuffer = await response.arrayBuffer();
+        console.log(`✅ ${label} fetched: ${arrayBuffer.byteLength} bytes`);
+        promptParts.push({
+          inlineData: {
+            data: Buffer.from(arrayBuffer).toString('base64'),
+            mimeType: mimeType
+          }
+        });
+      } catch (err) {
+        console.error(`❌ Error processing ${label} URL:`, err);
+      }
+    };
+
     // Audio
+    const audioUrl = formData.get('audioUrl') as string;
     const audioFileInput = formData.get('audio') as File;
-    if (audioFileInput) {
-      console.log(`🎙️ Processing Audio: ${audioFileInput.name || 'blob'}, type=${audioFileInput.type}, size=${audioFileInput.size} bytes`);
+    if (audioUrl) {
+      await processFileUrl(audioUrl, 'audio/mpeg', 'Audio');
+    } else if (audioFileInput) {
+      console.log(`🎙️ Processing Audio (Direct): ${audioFileInput.name || 'blob'}, type=${audioFileInput.type}, size=${audioFileInput.size} bytes`);
       const arrayBuffer = await audioFileInput.arrayBuffer();
       promptParts.push({
         inlineData: {
@@ -117,9 +141,14 @@ export const POST = async ({ request }) => {
     }
 
     // Video
+    const videoUrl = formData.get('videoUrl') as string;
     const videoFileInput = formData.get('video') as File;
-    if (videoFileInput) {
-      console.log(`🎥 Processing Video: ${videoFileInput.name || 'blob'}, type=${videoFileInput.type}, size=${videoFileInput.size} bytes`);
+    if (videoUrl) {
+      // For video, we still just pass the audio part if it was extracted, 
+      // but if it's a direct video URL, we pass it as video/mp4
+      await processFileUrl(videoUrl, 'video/mp4', 'Video');
+    } else if (videoFileInput) {
+      console.log(`🎥 Processing Video (Direct): ${videoFileInput.name || 'blob'}, type=${videoFileInput.type}, size=${videoFileInput.size} bytes`);
       const arrayBuffer = await videoFileInput.arrayBuffer();
       promptParts.push({
         inlineData: {
@@ -130,9 +159,12 @@ export const POST = async ({ request }) => {
     }
 
     // PDF 
+    const pdfUrl = formData.get('pdfUrl') as string;
     const pdfFileInput = formData.get('pdf') as File;
-    if (pdfFileInput) {
-      console.log(`📄 Processing PDF: ${pdfFileInput.name || 'blob'}, type=${pdfFileInput.type}, size=${pdfFileInput.size} bytes`);
+    if (pdfUrl) {
+      await processFileUrl(pdfUrl, 'application/pdf', 'PDF');
+    } else if (pdfFileInput) {
+      console.log(`📄 Processing PDF (Direct): ${pdfFileInput.name || 'blob'}, type=${pdfFileInput.type}, size=${pdfFileInput.size} bytes`);
       const arrayBuffer = await pdfFileInput.arrayBuffer();
       promptParts.push({
         inlineData: {
@@ -143,9 +175,12 @@ export const POST = async ({ request }) => {
     }
 
     // Image
+    const imageUrl = formData.get('imageUrl') as string;
     const imageFileInput = formData.get('image') as File;
-    if (imageFileInput) {
-      console.log(`🖼️ Processing Image: ${imageFileInput.name || 'blob'}, type=${imageFileInput.type}, size=${imageFileInput.size} bytes`);
+    if (imageUrl) {
+      await processFileUrl(imageUrl, 'image/jpeg', 'Image');
+    } else if (imageFileInput) {
+      console.log(`🖼️ Processing Image (Direct): ${imageFileInput.name || 'blob'}, type=${imageFileInput.type}, size=${imageFileInput.size} bytes`);
       const arrayBuffer = await imageFileInput.arrayBuffer();
       promptParts.push({
         inlineData: {

@@ -46,15 +46,13 @@ export async function extractAudioFromVideo(
 
             const duration = video.duration;
 
-            // Auto-select bitrate based on duration
+            // Optimized bitrate for size/quality balance
             let bitrate = targetBitrate;
             if (!bitrate) {
                 if (duration > 3600) { // > 1 hour
-                    bitrate = 48; // Very compressed for long files
-                } else if (duration > 1800) { // > 30 mins
-                    bitrate = 64;
+                    bitrate = 48; // Highly compressed
                 } else {
-                    bitrate = 128; // Higher quality for short files
+                    bitrate = 64; // Standard for speech
                 }
             }
 

@@ -1,7 +1,12 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from "svelte";
   import { storage, auth, db } from "$lib/firebase";
-  import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+  import {
+    ref,
+    uploadBytes,
+    uploadBytesResumable,
+    getDownloadURL,
+  } from "firebase/storage";
   import { marked } from "marked";
   import {
     collection,
@@ -293,6 +298,29 @@
     }, 200);
   }
 
+  async function uploadToStorage(file: Blob, folder: string): Promise<string> {
+    const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const storageRef = ref(storage, `${folder}/${user.uid}/${filename}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    return new Promise((resolve, reject) => {
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          progressValue = 40 + progress * 0.4; // Mapping 0-100 to 40-80% of total progress
+          progressStatus = "ファイルをアップロード中...";
+        },
+        (error) => reject(error),
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadURL);
+        },
+      );
+    });
+  }
+
   async function stopProgress() {
     clearInterval(progressInterval);
     // Smoothly animate to 100%
@@ -404,27 +432,48 @@
     toastMessage = null; // Clear previous toast
 
     try {
-      console.log("Starting analysis...");
-
-      const formData = new FormData();
-      if (pdfFile) formData.append("pdf", pdfFile as Blob);
-      if (txtFile) formData.append("txt", txtFile as Blob);
-      if (audioFile) formData.append("audio", audioFile as Blob);
-      if (imageFile) formData.append("image", imageFile as Blob);
-      if (videoFile) formData.append("video", videoFile as Blob);
-      if (targetUrl) formData.append("url", targetUrl);
-
-      formData.append("transcript", $transcript);
-      formData.append("mode", analysisMode); // Send specific mode
-      formData.append("plan", userData?.plan || "free");
-      formData.append("targetLength", targetLength.toString());
-
       console.log("Analyzing...");
       const idToken = await user.getIdToken();
 
+      // --- Storage-first Upload ---
+      let audioUrl = "";
+      let videoUrl = "";
+      let pdfUrl = "";
+      let imageUrl = "";
+
+      if (audioFile) {
+        progressStatus = "音声ファイルをアップロード中...";
+        audioUrl = await uploadToStorage(audioFile, "audio");
+      }
+      if (videoFile) {
+        progressStatus = "動画ファイルをアップロード中...";
+        videoUrl = await uploadToStorage(videoFile, "video");
+      }
+      if (pdfFile) {
+        progressStatus = "PDFファイルをアップロード中...";
+        pdfUrl = await uploadToStorage(pdfFile, "pdf");
+      }
+      if (imageFile) {
+        progressStatus = "画像ファイルをアップロード中...";
+        imageUrl = await uploadToStorage(imageFile, "images");
+      }
+
+      const formData = new FormData();
+      if (audioUrl) formData.append("audioUrl", audioUrl);
+      if (videoUrl) formData.append("videoUrl", videoUrl);
+      if (pdfUrl) formData.append("pdfUrl", pdfUrl);
+      if (imageUrl) formData.append("imageUrl", imageUrl);
+      if (txtFile) formData.append("txt", txtFile as Blob); // TXT is small, keep direct
+      if (targetUrl) formData.append("url", targetUrl);
+
+      formData.append("transcript", $transcript);
+      formData.append("mode", analysisMode);
+      formData.append("plan", userData?.plan || "free");
+      formData.append("targetLength", targetLength.toString());
+
       // Implement AbortController for timeout handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 55000); // 55 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // Extended timeout for bigger files
 
       const response = await fetch("/api/analyze", {
         method: "POST",
