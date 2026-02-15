@@ -1,4 +1,8 @@
 <script lang="ts">
+  import {
+    extractAudioFromVideo,
+    type AudioExtractionProgress,
+  } from "$lib/utils/audioExtractor";
   import { onMount, onDestroy, tick } from "svelte";
   import { storage, auth, db } from "$lib/firebase";
   import {
@@ -41,6 +45,8 @@
   let audioFile = $state<File | null>(null); // New: Audio File
   let imageFile = $state<File | null>(null);
   let videoFile = $state<File | null>(null);
+  let isExtractingAudio = $state(false);
+  let extractionProgress = $state<AudioExtractionProgress | null>(null);
   let targetUrl = $state("");
   let analyzing = $state(false);
   let result = $state("");
@@ -374,7 +380,37 @@
       else if (type === "txt") txtFile = input.files[0];
       else if (type === "audio") audioFile = input.files[0];
       else if (type === "image") imageFile = input.files[0];
-      else if (type === "video") videoFile = input.files[0];
+      else if (type === "video") {
+        const file = input.files[0];
+        videoFile = file;
+        // Automatically extract and compress audio if it's a video
+        extractAudio(file);
+      }
+    }
+  }
+
+  async function extractAudio(file: File) {
+    try {
+      isExtractingAudio = true;
+      const result = await extractAudioFromVideo(file, (p) => {
+        extractionProgress = p;
+      });
+      audioFile = new File(
+        [result.blob],
+        file.name.replace(/\.[^/.]+$/, "") + ".mp3",
+        {
+          type: "audio/mpeg",
+        },
+      );
+      videoFile = null; // Prioritize audio for analysis savings
+      toastMessage = "🎥 動画から音声を抽出・圧縮しました";
+      setTimeout(() => (toastMessage = null), 3000);
+    } catch (e: any) {
+      console.error(e);
+      alert("音声の抽出に失敗しました: " + e.message);
+    } finally {
+      isExtractingAudio = false;
+      extractionProgress = null;
     }
   }
 
@@ -2441,6 +2477,54 @@
                       /></svg
                     >
                   </button>
+                </div>
+              {/if}
+
+              {#if isExtractingAudio}
+                <div
+                  class="p-8 text-center animate-in fade-in flex flex-col items-center bg-indigo-50/50 rounded-2xl border border-indigo-100 mb-4"
+                >
+                  <div class="mb-6 relative">
+                    <div
+                      class="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-indigo-600"
+                    >
+                      <svg
+                        class="w-10 h-10 animate-bounce"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="w-full max-w-md mb-4 text-left">
+                    <p
+                      class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1"
+                    >
+                      {extractionProgress?.stage || "Processing"}
+                    </p>
+                    <div
+                      class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"
+                    >
+                      <div
+                        class="bg-indigo-500 h-2 rounded-full transition-all duration-300 ease-out"
+                        style="width: {extractionProgress?.progress || 0}%"
+                      ></div>
+                    </div>
+                  </div>
+                  <p class="text-slate-700 font-bold text-sm tracking-wide">
+                    {extractionProgress?.message || "動画を最適化中..."}
+                  </p>
+                  <p class="text-[10px] text-slate-400 mt-2 italic">
+                    ※
+                    解析の前に、動画から音声を抽出し、サイズを約90%削減しています。
+                  </p>
                 </div>
               {/if}
 
