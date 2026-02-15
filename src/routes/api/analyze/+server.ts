@@ -70,11 +70,17 @@ export const POST = async ({ request }) => {
     console.log('URL:', targetUrl || 'None');
     console.log('Transcript Length:', transcript.length);
     console.log('Files:', {
-      pdf: formData.has('pdf'),
+      pdf: formData.has('pdf') || formData.has('pdfUrl'),
       txt: formData.has('txt'),
-      audio: formData.has('audio'),
-      image: formData.has('image'),
-      video: formData.has('video')
+      audio: formData.has('audio') || formData.has('audioUrl'),
+      image: formData.has('image') || formData.has('imageUrl'),
+      video: formData.has('video') || formData.has('videoUrl')
+    });
+    console.log('Storage URLs:', {
+      audio: formData.get('audioUrl') ? '✅' : '❌',
+      video: formData.get('videoUrl') ? '✅' : '❌',
+      pdf: formData.get('pdfUrl') ? '✅' : '❌',
+      image: formData.get('imageUrl') ? '✅' : '❌'
     });
 
     if (isNaN(targetLength) || targetLength <= 0) {
@@ -82,7 +88,11 @@ export const POST = async ({ request }) => {
       return json({ error: "無効な文字数指定です (targetLength must be a positive number)" }, { status: 400 });
     }
 
-    const hasInput = transcript || targetUrl || formData.has('pdf') || formData.has('txt') || formData.has('audio') || formData.has('image') || formData.has('video');
+    const hasInput =
+      transcript ||
+      targetUrl ||
+      formData.has('pdf') || formData.has('txt') || formData.has('audio') || formData.has('image') || formData.has('video') ||
+      formData.get('audioUrl') || formData.get('videoUrl') || formData.get('pdfUrl') || formData.get('imageUrl');
     if (!hasInput) {
       console.error('❌ Validation Failed: No input data provided');
       return json({ error: "解析対象となるデータ（テキスト、URL、またはファイル）が必要です" }, { status: 400 });
