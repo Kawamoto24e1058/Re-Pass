@@ -298,9 +298,10 @@
     }, 200);
   }
 
-  async function uploadToStorage(file: Blob, folder: string): Promise<string> {
-    const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const storageRef = ref(storage, `${folder}/${user.uid}/${filename}`);
+  async function uploadToStorage(file: File | Blob): Promise<string> {
+    const originalName = (file as File).name || "extracted_audio.mp3";
+    const filename = `${Date.now()}_${originalName}`;
+    const storageRef = ref(storage, `video/${user.uid}/${filename}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     return new Promise((resolve, reject) => {
@@ -443,19 +444,19 @@
 
       if (audioFile) {
         progressStatus = "音声ファイルをアップロード中...";
-        audioUrl = await uploadToStorage(audioFile, "audio");
+        audioUrl = await uploadToStorage(audioFile);
       }
       if (videoFile) {
         progressStatus = "動画ファイルをアップロード中...";
-        videoUrl = await uploadToStorage(videoFile, "video");
+        videoUrl = await uploadToStorage(videoFile);
       }
       if (pdfFile) {
         progressStatus = "PDFファイルをアップロード中...";
-        pdfUrl = await uploadToStorage(pdfFile, "pdf");
+        pdfUrl = await uploadToStorage(pdfFile);
       }
       if (imageFile) {
         progressStatus = "画像ファイルをアップロード中...";
-        imageUrl = await uploadToStorage(imageFile, "images");
+        imageUrl = await uploadToStorage(imageFile);
       }
 
       const formData = new FormData();
