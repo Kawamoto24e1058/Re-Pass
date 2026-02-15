@@ -162,15 +162,15 @@
   let manuscriptPages = $derived(Math.ceil(targetLength / 400));
   let thumbPosition = $derived((targetLength / 4000) * 100);
 
-  let dailyRemaining = $derived.by(() => {
-    if (
-      userData?.plan === "pro" ||
+  let isPremium = $derived(
+    userData?.plan === "pro" ||
       userData?.plan === "premium" ||
       userData?.plan === "season" ||
-      userData?.isPro === true
-    ) {
-      return Infinity;
-    }
+      userData?.isPro === true,
+  );
+
+  let dailyRemaining = $derived.by(() => {
+    if (isPremium) return Infinity;
     const today = new Date().toISOString().split("T")[0];
     const dailyUsage = userData?.dailyUsage || {
       count: 0,
@@ -220,6 +220,9 @@
         unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
           if (docSnap.exists()) {
             userData = docSnap.data();
+            console.log(
+              `👤 User Plan Updated: ${userData.plan || "free"} (isPro: ${userData.isPro || false})`,
+            );
           }
         });
       } else {
@@ -307,10 +310,6 @@
   }
 
   function setAnalysisMode(newMode: "note" | "thoughts" | "report") {
-    const isPremium =
-      userData?.plan === "pro" ||
-      userData?.plan === "premium" ||
-      userData?.plan === "season";
     if ((newMode === "thoughts" || newMode === "report") && !isPremium) {
       showUpgradeModal = true;
       return;
@@ -321,11 +320,6 @@
   function handleLengthChange(e: Event) {
     let val = parseInt((e.target as HTMLInputElement).value);
     if (val < 100) val = 100; // Snap to 100 min
-
-    const isPremium =
-      userData?.plan === "pro" ||
-      userData?.plan === "premium" ||
-      userData?.plan === "season";
 
     if (!isPremium && val > 500) {
       showUpgradeModal = true;
@@ -381,8 +375,10 @@
     }
 
     // Usage Quota Check
-    const isPremium =
-      userData?.plan === "premium" || userData?.plan === "season";
+    console.log(
+      `🚀 HandleAnalyze - Plan: ${userData?.plan || "free"}, isPremium: ${isPremium}`,
+    );
+
     const usageCount = userData?.usageCount || 0;
 
     if (!isPremium && usageCount >= 5) {
