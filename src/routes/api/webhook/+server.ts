@@ -97,6 +97,10 @@ export async function POST({ request }) {
 
             if (expiresAt) {
                 updateData.expiresAt = expiresAt;
+                // Season Pass Logic
+                updateData.plan = 'season';
+                updateData.isUltimate = true;
+                updateData.ultimateExpiresAt = expiresAt; // Same as expiresAt for now
                 console.log(`Setting expiration to ${expiresAt.toISOString()} for Season Pass.`);
             }
 

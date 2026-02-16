@@ -19,7 +19,11 @@
     } from "firebase/firestore";
     import { onMount, onDestroy } from "svelte";
     import { goto } from "$app/navigation";
-    import { currentBinder, expandedSubjects } from "$lib/stores";
+    import {
+        currentBinder,
+        expandedSubjects,
+        isSidebarOpen,
+    } from "$lib/stores";
 
     // Props
     let props = $props<{
@@ -34,7 +38,6 @@
         onDragStart?: (lectureId: string) => void;
         onDragEnd?: () => void;
         draggingLectureId?: string | null;
-        isMobileOpen?: boolean;
         onClose?: () => void;
         onLogoClick?: () => void;
     }>();
@@ -417,12 +420,12 @@
 
 <!-- Sidebar -->
 <aside
-    class="fixed inset-y-0 left-0 w-72 bg-white/70 backdrop-blur-md border-r border-slate-200/50 flex flex-col h-full z-[100] transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-20 {props.isMobileOpen
+    class="fixed inset-y-0 left-0 w-72 bg-white/70 backdrop-blur-md border-r border-slate-200/50 flex flex-col h-full z-[100] transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-20 {$isSidebarOpen
         ? 'translate-x-0 shadow-2xl'
         : '-translate-x-full lg:translate-x-0'} font-sans"
 >
     <!-- Mobile Close Button -->
-    {#if props.isMobileOpen}
+    {#if $isSidebarOpen}
         <button
             onclick={props.onClose}
             class="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-indigo-600 transition-colors"
@@ -760,20 +763,57 @@
 
     <!-- Momodai Community -->
     <div class="px-3 mt-4 mb-2">
-        <div
-            class="px-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2"
-        >
-            桃大コミュニティ
-        </div>
-        <div class="space-y-1">
+        <!-- Momodai Community Section -->
+        <div class="mb-6">
+            <h3
+                class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2 flex items-center justify-between"
+            >
+                <span>桃大コミュニティ</span>
+                <span
+                    class="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded text-[10px]"
+                    >BETA</span
+                >
+            </h3>
+
+            <!-- Home Link (Analysis) -->
+            <button
+                onclick={() => {
+                    handleLogoClick();
+                    isSidebarOpen.set(false);
+                }}
+                class="w-full text-left flex items-center gap-2 px-2 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+            >
+                <div
+                    class="w-6 h-6 flex items-center justify-center text-slate-400"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                        />
+                    </svg>
+                </div>
+                <span>ホーム（解析画面）</span>
+            </button>
+
             <!-- Search Link -->
             <a
                 href="/search"
+                onclick={() => isSidebarOpen.set(false)}
                 class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
             >
-                <div class="w-4 h-4 flex items-center justify-center">
+                <div
+                    class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
+                >
                     <svg
-                        class="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors"
+                        class="w-4 h-4"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"

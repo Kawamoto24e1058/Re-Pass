@@ -223,7 +223,6 @@
   let resultContainer = $state<HTMLElement | null>(null); // For auto-scroll
   let resultTextContainer = $state<HTMLElement | null>(null); // For individual copy
   let finalResultContainer = $state<HTMLElement | null>(null); // For final copy
-  let isMobileOpen = $state(false);
 
   // Speech Recognition State - Moved to global recordingStore
   // let isRecording = $state(false);
@@ -747,6 +746,24 @@
         showUpgradeModal = true;
         return;
       }
+    }
+
+    // Feature Gating: Report Mode (Premium Only)
+    if (analysisMode === "report" && !isPremium) {
+      showUpgradeModal = true;
+      toastMessage = "レポート作成モードはPremiumプラン限定です";
+      return;
+    }
+
+    // Feature Gating: Video Length/Size (Premium Only)
+    // Limit free users to < 100MB or implement duration check if metadata available.
+    // For now, using file size as proxy (approx 10 mins 1080p ~ 100-200MB, but depends on compression)
+    // Let's set a conservative limit for free tier: 200MB
+    if (videoFile && !isPremium && videoFile.size > 200 * 1024 * 1024) {
+      showUpgradeModal = true;
+      toastMessage =
+        "動画のサイズ制限(200MB)を超えています。Premiumで無制限になります。";
+      return;
     }
 
     analyzing = true;
@@ -2115,64 +2132,6 @@
     {/if}
   {/snippet}
 
-  <!-- Mobile Header -->
-  <header
-    class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
-  >
-    <button
-      onclick={() => (isMobileOpen = true)}
-      class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
-      aria-label="メニューを開く"
-    >
-      <svg
-        class="w-6 h-6"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 6h16M4 12h16M4 18h16"
-        />
-      </svg>
-    </button>
-
-    <button
-      onclick={handleLogoClick}
-      class="font-bold text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent border-none bg-transparent p-0 cursor-pointer"
-      >Re-Pass</button
-    >
-
-    <a href="/settings" class="p-1">
-      <div
-        class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 overflow-hidden"
-      >
-        {#if user?.photoURL}
-          <img
-            src={user.photoURL}
-            alt="User"
-            class="w-full h-full object-cover"
-          />
-        {:else}
-          {userData?.nickname?.substring(0, 1).toUpperCase() || "U"}
-        {/if}
-      </div>
-    </a>
-  </header>
-
-  <!-- Sidebar Component & Overlay -->
-  {#if isMobileOpen}
-    <div
-      class="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
-      onclick={() => (isMobileOpen = false)}
-      onkeydown={(e) => e.key === "Escape" && (isMobileOpen = false)}
-      role="button"
-      tabindex="0"
-    ></div>
-  {/if}
-
   {#if user}
     <Sidebar
       {user}
@@ -2180,15 +2139,11 @@
       subjects={$subjects}
       {currentLectureId}
       {selectedSubjectId}
-      {isMobileOpen}
-      onClose={() => (isMobileOpen = false)}
       onLoadLecture={(lecture) => {
         loadLecture(lecture);
-        isMobileOpen = false;
       }}
       onSelectSubject={(id) => {
         handleSelectSubject(id);
-        isMobileOpen = false;
       }}
       onSignOut={() => signOut(auth)}
       onDragStart={(id: string) => (draggingLectureId = id)}

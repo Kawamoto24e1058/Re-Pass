@@ -13,7 +13,7 @@
 	} from "firebase/firestore";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/stores";
-	import { subjects, lectures } from "$lib/stores";
+	import { subjects, lectures, isSidebarOpen } from "$lib/stores";
 	import {
 		user as userStore,
 		userProfile,
@@ -164,11 +164,72 @@
 			cleanupLectureListeners();
 		};
 	});
+
+	function toggleSidebar() {
+		isSidebarOpen.update((v) => !v);
+	}
 </script>
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
+
+<div
+	class="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-700"
+>
+	<!-- Mobile Header (Global) -->
+	<header
+		class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
+	>
+		<button
+			onclick={toggleSidebar}
+			class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
+			aria-label="メニューを開く"
+		>
+			<svg
+				class="w-6 h-6"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M4 6h16M4 12h16M4 18h16"
+				/>
+			</svg>
+		</button>
+
+		<a
+			href="/"
+			class="font-bold text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent border-none bg-transparent p-0 cursor-pointer"
+		>
+			Re-Pass
+		</a>
+
+		<!-- User Profile Icon (Placeholder or Link to settings) -->
+		<a href="/settings" class="p-1">
+			<div
+				class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 overflow-hidden"
+			>
+				{#if user?.photoURL}
+					<img
+						src={user.photoURL}
+						alt="User"
+						class="w-full h-full object-cover"
+					/>
+				{:else}
+					<span>{(user?.displayName || "U")[0].toUpperCase()}</span>
+				{/if}
+			</div>
+		</a>
+	</header>
+
+	<div class="flex-1 flex flex-col relative pt-16 lg:pt-0">
+		{@render children()}
+	</div>
+</div>
 
 <!-- Splash Screen -->
 {#if loading}
