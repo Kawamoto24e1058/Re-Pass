@@ -34,6 +34,8 @@
     let showUltimateModal = $state(false);
     let searchError = $state<string | null>(null);
     let selectedLecture = $state<any>(null);
+    let upgradeModalTitle = $state("ULTIMATE限定機能");
+    let upgradeModalMessage = $state("");
 
     // Derived
     let isPremium = $derived(
@@ -537,6 +539,10 @@
                                     <button
                                         onclick={() => {
                                             if (!isUltimate) {
+                                                upgradeModalTitle =
+                                                    "講義攻略ノートをアンロック";
+                                                upgradeModalMessage =
+                                                    "この講義の攻略ノートをすべて見るには、<br /><span class='text-indigo-900 font-bold'>ULTIMATEプラン</span>への参加が必要です。<br /><br /><span class='text-sm text-slate-500'>※ 先輩の過去問・試験対策情報が含まれています</span>";
                                                 showUltimateModal = true;
                                                 return;
                                             }
@@ -546,23 +552,46 @@
                                         }}
                                         class="text-indigo-600 flex items-center gap-1 hover:underline"
                                     >
-                                        <svg
-                                            class="w-3 h-3"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                            ><path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                            /><path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                            /></svg
-                                        >
+                                        {#if !isUltimate}
+                                            <div class="relative group/tooltip">
+                                                <svg
+                                                    class="w-3 h-3 text-amber-500"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                                    />
+                                                </svg>
+                                                <div
+                                                    class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none"
+                                                >
+                                                    クリックでアンロック
+                                                </div>
+                                            </div>
+                                        {:else}
+                                            <svg
+                                                class="w-3 h-3"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                ><path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                /><path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                /></svg
+                                            >
+                                        {/if}
                                         見る
                                     </button>
                                 {:else}
@@ -823,3 +852,10 @@
         </div>
     </div>
 {/if}
+
+<UpgradeModal
+    isOpen={showUltimateModal}
+    onClose={() => (showUltimateModal = false)}
+    title={upgradeModalTitle}
+    message={upgradeModalMessage}
+/>

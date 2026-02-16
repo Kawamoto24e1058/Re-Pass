@@ -1,7 +1,12 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
 
-    let { isOpen = false, onClose } = $props();
+    let {
+        isOpen = false,
+        onClose,
+        title = "ULTIMATE限定機能",
+        message = "動画解析・URL読み込み・共有ノートの閲覧は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>限定の機能です。",
+    } = $props();
 
     function handleUpgrade() {
         goto("/pricing");
@@ -43,7 +48,7 @@
                     <h2
                         class="text-2xl font-black text-white tracking-tight mb-1"
                     >
-                        ULTIMATE限定機能
+                        {title}
                     </h2>
                     <p class="text-indigo-200 text-sm font-bold">
                         大学生活を完全に攻略する。
@@ -56,9 +61,7 @@
                 <p
                     class="text-slate-600 text-center mb-8 leading-relaxed font-medium"
                 >
-                    動画解析・URL読み込み・共有ノートの閲覧は<br />
-                    <span class="text-indigo-900 font-bold">Ultimateプラン</span
-                    >限定の機能です。
+                    {@html message}
                 </p>
 
                 <ul class="space-y-4 mb-8">

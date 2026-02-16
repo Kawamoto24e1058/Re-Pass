@@ -57,6 +57,8 @@
   let audioUploadPromise = $state<Promise<string> | null>(null);
   let targetUrl = $state("");
   let analyzing = $state(false);
+  let upgradeModalTitle = $state("ULTIMATE限定機能");
+  let upgradeModalMessage = $state("");
 
   type AnalysisResult =
     | {
@@ -2171,6 +2173,12 @@
       {draggingLectureId}
       onLogoClick={handleLogoClick}
     />
+    <UpgradeModal
+      isOpen={showUpgradeModal}
+      onClose={() => (showUpgradeModal = false)}
+      title={upgradeModalTitle}
+      message={upgradeModalMessage}
+    />
   {/if}
 
   <!-- Main Content -->
@@ -2884,19 +2892,16 @@
                         /></svg
                       >
                       Ultimate限定 (自動文字起こし)
-                      {#if !isUltimate}
-                        <span
-                          class="bg-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded-full ml-auto"
-                          >🔒Locked</span
-                        >
-                      {/if}
                     </h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <!-- Video -->
                       <button
                         onclick={() => {
                           if (!isUltimate) {
-                            showUltimateModal = true;
+                            upgradeModalTitle = "動画解析をアンロック";
+                            upgradeModalMessage =
+                              "動画ファイルからの文字起こし・自動解析は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>専用の機能です。<br /><br />Zoom録画や講義動画をそのままドラッグするだけで、試験対策ノートが完成します。";
+                            showUpgradeModal = true;
                             return;
                           }
                           // Trigger file input click
@@ -2909,44 +2914,51 @@
                             ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
                             : isUltimate
                               ? 'border-slate-200 hover:border-indigo-300'
-                              : 'border-slate-200 bg-slate-50 opacity-60'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
+                              : 'border-slate-200 bg-slate-50 opacity-70'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
                         >
                           <div
                             class="w-8 h-8 rounded-full {isUltimate
                               ? 'bg-indigo-100 text-indigo-600'
                               : 'bg-slate-200 text-slate-400'} flex items-center justify-center relative z-10 flex-shrink-0"
                           >
-                            {#if isUltimate}
-                              <svg
-                                class="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                ><path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                /></svg
-                              >
-                            {:else}
-                              <span>🔒</span>
-                            {/if}
+                            <svg
+                              class="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              ><path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              /></svg
+                            >
                           </div>
                           <div class="relative z-10 flex-1 min-w-0">
                             <div
-                              class="text-[10px] font-bold text-slate-400 uppercase"
+                              class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"
                             >
                               Video
+                              {#if !isUltimate}
+                                <svg
+                                  class="w-3 h-3 text-slate-500"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                  />
+                                </svg>
+                              {/if}
                             </div>
                             <div
                               class="text-xs font-bold text-slate-700 truncate"
                             >
-                              {videoFile
-                                ? videoFile.name
-                                : isUltimate
-                                  ? "動画ファイル"
-                                  : "Unlock Ultimate"}
+                              {videoFile ? videoFile.name : "動画ファイル"}
                             </div>
                           </div>
                           <input
@@ -2964,7 +2976,10 @@
                       <button
                         onclick={() => {
                           if (!isUltimate) {
-                            showUltimateModal = true;
+                            upgradeModalTitle = "音声解析をアンロック";
+                            upgradeModalMessage =
+                              "音声ファイルからの文字起こし・自動解析は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>専用の機能です。<br /><br />長時間の講義録音も、AIが瞬時に構造化してノートにまとめます。";
+                            showUpgradeModal = true;
                             return;
                           }
                           document.getElementById("audio-upload")?.click();
@@ -2976,44 +2991,51 @@
                             ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-200'
                             : isUltimate
                               ? 'border-slate-200 hover:border-pink-300'
-                              : 'border-slate-200 bg-slate-50 opacity-60'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
+                              : 'border-slate-200 bg-slate-50 opacity-70'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
                         >
                           <div
                             class="w-8 h-8 rounded-full {isUltimate
                               ? 'bg-pink-100 text-pink-600'
                               : 'bg-slate-200 text-slate-400'} flex items-center justify-center relative z-10 flex-shrink-0"
                           >
-                            {#if isUltimate}
-                              <svg
-                                class="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                ><path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                                /></svg
-                              >
-                            {:else}
-                              <span>🔒</span>
-                            {/if}
+                            <svg
+                              class="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              ><path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                              /></svg
+                            >
                           </div>
                           <div class="relative z-10 flex-1 min-w-0">
                             <div
-                              class="text-[10px] font-bold text-slate-400 uppercase"
+                              class="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1"
                             >
                               Audio
+                              {#if !isUltimate}
+                                <svg
+                                  class="w-3 h-3 text-slate-500"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                  />
+                                </svg>
+                              {/if}
                             </div>
                             <div
                               class="text-xs font-bold text-slate-700 truncate"
                             >
-                              {audioFile
-                                ? audioFile.name
-                                : isUltimate
-                                  ? "音声ファイル"
-                                  : "Unlock Ultimate"}
+                              {audioFile ? audioFile.name : "音声ファイル"}
                             </div>
                           </div>
                           <input
@@ -3033,7 +3055,10 @@
                       {#if !isUltimate}
                         <button
                           onclick={() => {
-                            showUltimateModal = true;
+                            upgradeModalTitle = "URL解析をアンロック";
+                            upgradeModalMessage =
+                              "Web記事やブログからの自動ノート生成は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>専用の機能です。<br /><br />参考文献のURLを貼るだけで、要約と重要なポイントを抽出できます。";
+                            showUpgradeModal = true;
                           }}
                           class="absolute inset-0 z-20 cursor-pointer w-full h-full"
                           aria-label="Unlock feature"
@@ -3044,14 +3069,14 @@
                         bind:value={targetUrl}
                         placeholder={isUltimate
                           ? "WebサイトのURLを入力 (https://...)"
-                          : "URL入力 (Ultimate限定 - 🔒Locked)"}
+                          : "WebサイトのURLを入力 (Ultimate限定)"}
                         disabled={!isUltimate}
                         class="w-full bg-white border border-slate-200 rounded-xl p-4 pl-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all {isUltimate
                           ? ''
-                          : 'opacity-60 bg-slate-50 text-slate-400'}"
+                          : 'opacity-70 bg-slate-50'}"
                       />
                       <svg
-                        class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"
+                        class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -3060,9 +3085,36 @@
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           stroke-width="2"
-                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"
+                        />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M9 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M14.828 14.828a4 4 0 01-5.656 0l-4-4a4 4 0 010-5.656l4-4a4 4 0 015.656 5.656l-1.102 1.101"
                         />
                       </svg>
+                      {#if !isUltimate}
+                        <svg
+                          class="w-4 h-4 text-slate-500 absolute right-4 top-1/2 -translate-y-1/2"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                      {/if}
                     </div>
                   </div>
 
