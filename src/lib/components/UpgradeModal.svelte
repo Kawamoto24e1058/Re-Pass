@@ -1,5 +1,6 @@
 <script lang="ts">
     import { goto } from "$app/navigation";
+    import { fade, fly } from "svelte/transition";
 
     let {
         isOpen = false,
@@ -32,7 +33,8 @@
     >
         <!-- Backdrop -->
         <div
-            class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            transition:fade={{ duration: 200 }}
+            class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             onclick={onClose}
             role="button"
             tabindex="0"
@@ -41,7 +43,8 @@
 
         <!-- Modal Content -->
         <div
-            class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden transform transition-all scale-100 flex flex-col"
+            transition:fly={{ y: 20, duration: 400 }}
+            class="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
         >
             <!-- Header with Gradient -->
             <div

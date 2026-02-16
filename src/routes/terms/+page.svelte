@@ -2,44 +2,12 @@
     import { fade } from "svelte/transition";
 </script>
 
-<div class="min-h-screen bg-[#F9FAFB] font-sans selection:bg-indigo-100 pb-20">
-    <!-- Navigation -->
-    <nav
-        class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4"
-    >
-        <div class="max-w-4xl mx-auto flex items-center justify-between">
-            <a href="/login" class="flex items-center gap-2 group">
-                <div
-                    class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm group-hover:scale-110 transition-transform"
-                >
-                    <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 19l-7-7 7-7"
-                        />
-                    </svg>
-                </div>
-                <span class="font-bold text-slate-600">戻る</span>
-            </a>
-            <a
-                href="/"
-                class="text-xl font-black text-slate-900 tracking-tighter no-underline hover:opacity-80 transition-opacity"
-            >
-                Re-Pass <span class="text-indigo-600">Legal</span>
-            </a>
-        </div>
-    </nav>
-
-    <main class="max-w-4xl mx-auto mt-12 px-6" in:fade={{ duration: 400 }}>
+<div
+    class="h-screen overflow-y-auto bg-[#F9FAFB] font-sans selection:bg-indigo-100"
+>
+    <main class="max-w-[800px] mx-auto py-12 px-6" in:fade={{ duration: 400 }}>
         <div
-            class="bg-white rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden"
+            class="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden"
         >
             <!-- Header section -->
             <div

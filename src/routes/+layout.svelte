@@ -308,5 +308,3 @@
 {/if}
 
 <PwaInstallPrompt />
-
-{@render children()}

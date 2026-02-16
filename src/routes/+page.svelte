@@ -2939,7 +2939,7 @@
                               Video
                               {#if !isUltimate}
                                 <svg
-                                  class="w-3 h-3 text-slate-500"
+                                  class="w-3.5 h-3.5 text-slate-500"
                                   fill="none"
                                   viewBox="0 0 24 24"
                                   stroke="currentColor"
@@ -3016,7 +3016,7 @@
                               Audio
                               {#if !isUltimate}
                                 <svg
-                                  class="w-3 h-3 text-slate-500"
+                                  class="w-3.5 h-3.5 text-slate-500"
                                   fill="none"
                                   viewBox="0 0 24 24"
                                   stroke="currentColor"
@@ -3056,7 +3056,7 @@
                         URLから解析（Webサイト・記事）
                         {#if !isUltimate}
                           <svg
-                            class="w-3 h-3 text-slate-400"
+                            class="w-3.5 h-3.5 text-slate-500"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -3100,24 +3100,12 @@
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
+                          stroke-width="2.5"
                         >
                           <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"
-                          />
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M14.828 14.828a4 4 0 01-5.656 0l-4-4a4 4 0 010-5.656l4-4a4 4 0 015.656 5.656l-1.102 1.101"
+                            d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244"
                           />
                         </svg>
                       </div>
@@ -3146,7 +3134,7 @@
                     <div
                       class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
                     >
-                      <div class="mb-4">
+                      <div class="mb-4 relative">
                         <label
                           for="courseNameInput"
                           class="block text-xs font-bold text-slate-500 mb-1"
