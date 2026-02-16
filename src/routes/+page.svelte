@@ -3051,58 +3051,55 @@
                     </div>
 
                     <!-- URL Input -->
-                    <div class="mt-4 relative">
-                      {#if !isUltimate}
-                        <button
-                          onclick={() => {
-                            upgradeModalTitle = "URL解析をアンロック";
-                            upgradeModalMessage =
-                              "Web記事やブログからの自動ノート生成は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>専用の機能です。<br /><br />参考文献のURLを貼るだけで、要約と重要なポイントを抽出できます。";
-                            showUpgradeModal = true;
-                          }}
-                          class="absolute inset-0 z-20 cursor-pointer w-full h-full"
-                          aria-label="Unlock feature"
-                        ></button>
-                      {/if}
-                      <input
-                        type="text"
-                        bind:value={targetUrl}
-                        placeholder={isUltimate
-                          ? "WebサイトのURLを入力 (https://...)"
-                          : "WebサイトのURLを入力 (Ultimate限定)"}
-                        disabled={!isUltimate}
-                        class="w-full bg-white border border-slate-200 rounded-xl p-4 pl-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all {isUltimate
-                          ? ''
-                          : 'opacity-70 bg-slate-50'}"
-                      />
-                      <svg
-                        class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                    <!-- URL Input -->
+                    <div class="mt-6 relative">
+                      <h4
+                        class="text-xs font-bold text-slate-500 mb-2 flex items-center gap-2"
                       >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"
+                        URLから解析（Webサイト・記事）
+                        {#if !isUltimate}
+                          <svg
+                            class="w-3 h-3 text-slate-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                            />
+                          </svg>
+                        {/if}
+                      </h4>
+
+                      <div class="relative">
+                        {#if !isUltimate}
+                          <button
+                            onclick={() => {
+                              upgradeModalTitle = "URL解析をアンロック";
+                              upgradeModalMessage =
+                                "Web記事やブログからの自動ノート生成は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>専用の機能です。<br /><br />参考文献のURLを貼るだけで、要約と重要なポイントを抽出できます。";
+                              showUpgradeModal = true;
+                            }}
+                            class="absolute inset-0 z-20 cursor-pointer w-full h-full"
+                            aria-label="Unlock feature"
+                          ></button>
+                        {/if}
+
+                        <input
+                          type="text"
+                          bind:value={targetUrl}
+                          placeholder="https://example.com/article"
+                          disabled={!isUltimate}
+                          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all {isUltimate
+                            ? 'bg-white'
+                            : 'opacity-60'}"
                         />
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M9 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M14.828 14.828a4 4 0 01-5.656 0l-4-4a4 4 0 010-5.656l4-4a4 4 0 015.656 5.656l-1.102 1.101"
-                        />
-                      </svg>
-                      {#if !isUltimate}
+
                         <svg
-                          class="w-4 h-4 text-slate-500 absolute right-4 top-1/2 -translate-y-1/2"
+                          class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -3111,10 +3108,22 @@
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M14.828 14.828a4 4 0 01-5.656 0l-4-4a4 4 0 010-5.656l4-4a4 4 0 015.656 5.656l-1.102 1.101"
                           />
                         </svg>
-                      {/if}
+                      </div>
                     </div>
                   </div>
 
@@ -3515,67 +3524,6 @@
           </div>
         {/if}
       </button>
-    </div>
-  {/if}
-
-  <!-- Upgrade Modal (Triggered by Limit) -->
-  {#if showUpgradeModal}
-    <div
-      class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-300 px-6"
-    >
-      <div
-        class="bg-white rounded-[2.5rem] shadow-2xl p-10 pb-12 max-w-sm w-full text-center border border-white/50 animate-in zoom-in-95 duration-500 relative overflow-y-auto max-h-[90vh]"
-      >
-        <!-- Decor -->
-        <div
-          class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-50"
-        ></div>
-        <div
-          class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-50 rounded-full blur-3xl opacity-50"
-        ></div>
-
-        <div
-          class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl mx-auto mb-8 flex items-center justify-center text-white shadow-xl shadow-indigo-200 rotate-3"
-        >
-          <svg
-            class="w-10 h-10"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            ><path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2.5"
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            /></svg
-          >
-        </div>
-
-        <h2 class="text-2xl font-black text-slate-900 mb-4 tracking-tight">
-          制限なしで学び放題に
-        </h2>
-        <p class="text-sm text-slate-500 mb-8 leading-relaxed">
-          スタバ1杯分（¥480）で、月間無制限の講義解析、PDF読み込み、高度なレポート作成が使い放題になります。
-        </p>
-
-        <div class="space-y-4">
-          <button
-            onclick={() => goto("/pricing")}
-            class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-slate-200 hover:-translate-y-0.5 active:scale-95"
-          >
-            onclick={() => goto("/pricing")}
-            class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4
-            rounded-2xl transition-all shadow-xl shadow-slate-200 hover:-translate-y-0.5
-            active:scale-95" > プランを見てみる
-          </button>
-          <button
-            onclick={() => (showUpgradeModal = false)}
-            class="w-full text-slate-400 hover:text-slate-600 text-sm font-bold py-2 tracking-wide"
-          >
-            後で検討する
-          </button>
-        </div>
-      </div>
     </div>
   {/if}
 
