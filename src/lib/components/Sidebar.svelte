@@ -427,7 +427,7 @@
 
 <!-- Sidebar -->
 <aside
-    class="fixed inset-y-0 left-0 w-72 bg-white/70 backdrop-blur-md border-r border-slate-200/50 flex flex-col h-full z-[100] transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-20 {$isSidebarOpen
+    class="fixed inset-y-0 left-0 w-[260px] bg-white/70 backdrop-blur-md border-r border-slate-200/50 flex flex-col h-full z-[100] transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-20 {$isSidebarOpen
         ? 'translate-x-0 shadow-2xl'
         : '-translate-x-full lg:translate-x-0'} font-sans"
 >

@@ -244,7 +244,9 @@
 		</a>
 	</header>
 
-	<div class="flex-1 flex flex-col relative pt-16 lg:pt-0">
+	<div
+		class="flex-1 flex flex-col lg:flex-row relative pt-16 lg:pt-0 overflow-hidden"
+	>
 		<!-- Sidebar Component & Overlay -->
 		{#if $isSidebarOpen}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -275,7 +277,7 @@
 			/>
 		{/if}
 
-		<main class="flex-1">
+		<main class="flex-1 min-w-0 relative">
 			{@render children()}
 		</main>
 
