@@ -25,8 +25,12 @@
     doc,
     setDoc,
     getDoc,
+    getDocs,
+    limit,
     deleteDoc,
     serverTimestamp,
+    startAt,
+    endAt,
   } from "firebase/firestore";
   import { goto } from "$app/navigation";
   import Sidebar from "$lib/components/Sidebar.svelte";
@@ -74,6 +78,12 @@
   let isShared = $state(true); // Default true
   let showCourseNameError = $state(false);
 
+  // Syllabus Autocomplete
+  let suggestedCourses = $state<any[]>([]);
+  let selectedSyllabus = $state<any>(null);
+  let showSuggestions = $state(false);
+  let courseInputTimer: any;
+
   $effect(() => {
     if (videoFile) {
       const url = URL.createObjectURL(videoFile);
@@ -98,6 +108,52 @@
     }
     videoPlayer.currentTime = seconds;
     videoPlayer.play();
+  }
+
+  async function handleCourseInput() {
+    showCourseNameError = false;
+    const input = courseName.trim();
+
+    // Clear previous selection if user types
+    if (selectedSyllabus && selectedSyllabus.courseName !== input) {
+      selectedSyllabus = null;
+    }
+
+    if (!input) {
+      suggestedCourses = [];
+      return;
+    }
+
+    clearTimeout(courseInputTimer);
+    courseInputTimer = setTimeout(async () => {
+      const normalized = normalizeCourseName(input);
+      try {
+        const q = query(
+          collection(db, "masterCourses"),
+          orderBy("normalizedCourseName"), // Needs index? Or use startAt/endAt on key?
+          // If we use normalizedCourseName as document ID, we can just getDoc?
+          // But for autocomplete (prefix), we need range query on field.
+          // We seeded it with document ID = normalized name.
+          // But for partial match, we query the field.
+          where("normalizedCourseName", ">=", normalized),
+          where("normalizedCourseName", "<=", normalized + "\uf8ff"),
+          limit(5),
+        );
+
+        const snapshot = await getDocs(q);
+        suggestedCourses = snapshot.docs.map((d: any) => d.data());
+        showSuggestions = true;
+      } catch (e) {
+        console.error("Autocomplete error", e);
+      }
+    }, 300);
+  }
+
+  function selectCourse(course: any) {
+    courseName = course.courseName;
+    selectedSyllabus = course;
+    showSuggestions = false;
+    showCourseNameError = false;
   }
 
   function handleTimestampClick(e: MouseEvent) {
@@ -204,6 +260,25 @@
   let derivativeAnalyzing = $state(false);
 
   // Copy result to clipboard (AnalysisResult aware)
+  let strategyContent = $derived.by(() => {
+    const ca = lectureAnalyses[analysisMode];
+    if (!ca || typeof ca !== "object" || !ca.summary) return null;
+    const match = ca.summary.match(
+      /\[A_STRATEGY_START\]([\s\S]*?)\[A_STRATEGY_END\]/,
+    );
+    return match ? match[1].trim() : null;
+  });
+
+  let displaySummary = $derived.by(() => {
+    const ca = lectureAnalyses[analysisMode];
+    if (!ca) return "";
+    if (typeof ca === "string") return ca;
+    if (!ca.summary) return "";
+    return ca.summary
+      .replace(/\[A_STRATEGY_START\][\s\S]*?\[A_STRATEGY_END\]/g, "")
+      .trim();
+  });
+
   function copyToClipboard() {
     if (!finalResultContainer) return;
 
@@ -1852,8 +1927,8 @@
               {@html (
                 marked(
                   isVideoSource
-                    ? currentAnalysis.summary
-                    : currentAnalysis.summary.replace(
+                    ? displaySummary
+                    : displaySummary.replace(
                         /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
                         "",
                       ),
@@ -1863,6 +1938,71 @@
                 '<button class="timestamp-link inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md text-xs font-bold hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer select-none border border-indigo-100/50" data-timestamp="$1">▶ $1</button>',
               )}
             </article>
+
+            <!-- Strategy Guide -->
+            {#if strategyContent}
+              <div
+                class="mt-8 relative group overflow-hidden rounded-2xl border-2 transition-all duration-500 {isPremium
+                  ? 'border-amber-400 bg-amber-50'
+                  : 'border-slate-200 bg-slate-50'}"
+              >
+                <!-- Header -->
+                <div
+                  class="bg-gradient-to-r {isPremium
+                    ? 'from-amber-400 to-amber-500 text-white'
+                    : 'from-slate-200 to-slate-300 text-slate-500'} px-6 py-3 font-bold flex items-center gap-2"
+                >
+                  <span class="text-xl">{isPremium ? "🏆" : "🔒"}</span>
+                  <span>A評価攻略ガイド</span>
+                  {#if isPremium}
+                    <span
+                      class="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded text-amber-50 font-normal"
+                      >Pro Only</span
+                    >
+                  {/if}
+                </div>
+
+                <!-- Content -->
+                <div class="p-6 relative">
+                  <div
+                    class="prose prose-sm max-w-none prose-p:text-slate-700 prose-headings:text-amber-900 {isPremium
+                      ? ''
+                      : 'blur-sm select-none opacity-50 pointer-events-none'}"
+                  >
+                    {@html marked(strategyContent)}
+                  </div>
+
+                  <!-- Lock Overlay for Free Users -->
+                  {#if !isPremium}
+                    <div
+                      class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center"
+                    >
+                      <div
+                        class="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/50 max-w-sm"
+                      >
+                        <div
+                          class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"
+                        >
+                          🔒
+                        </div>
+                        <h3 class="font-bold text-slate-900 mb-2">
+                          A評価攻略ガイドをアンロック
+                        </h3>
+                        <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                          この講義の「評価基準」に基づいた、具体的な高評価獲得戦略（レポートのキーワードやテスト対策など）を表示します。
+                        </p>
+                        <button
+                          onclick={() => (showUpgradeModal = true)}
+                          class="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                        >
+                          Proプランにアップグレード
+                        </button>
+                      </div>
+                    </div>
+                  {/if}
+                </div>
+              </div>
+            {/if}
 
             <!-- Glossary Section (Conditional) -->
             {#if currentAnalysis.glossary && currentAnalysis.glossary.length > 0}
@@ -2855,10 +2995,13 @@
                     class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
                   >
                     <div class="mb-4">
-                      <label class="block text-xs font-bold text-slate-500 mb-1"
+                      <label
+                        for="courseNameInput"
+                        class="block text-xs font-bold text-slate-500 mb-1"
                         >講義名</label
                       >
                       <input
+                        id="courseNameInput"
                         type="text"
                         bind:value={courseName}
                         list="enrolled-courses"
@@ -2866,15 +3009,84 @@
                         class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none {showCourseNameError
                           ? 'border-red-500 ring-1 ring-red-500'
                           : ''}"
-                        oninput={() => (showCourseNameError = false)}
+                        oninput={handleCourseInput}
+                        onfocus={() => {
+                          if (suggestedCourses.length > 0)
+                            showSuggestions = true;
+                        }}
+                        onblur={() =>
+                          setTimeout(() => (showSuggestions = false), 200)}
                       />
-                      <datalist id="enrolled-courses">
-                        {#if userData?.enrolledCourses}
-                          {#each userData.enrolledCourses as course}
-                            <option value={course}></option>
+
+                      <!-- Custom Autocomplete Dropdown -->
+                      {#if showSuggestions && suggestedCourses.length > 0}
+                        <div
+                          class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1"
+                        >
+                          {#each suggestedCourses as course}
+                            <button
+                              class="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-slate-50 last:border-0"
+                              onclick={() => selectCourse(course)}
+                              onmousedown={(e) => e.preventDefault()}
+                            >
+                              <div class="font-bold text-slate-800 text-sm">
+                                {course.courseName}
+                              </div>
+                              {#if course.teacherName || course.faculty}
+                                <div
+                                  class="text-xs text-slate-500 mt-0.5 flex gap-2"
+                                >
+                                  {#if course.faculty}<span
+                                      class="bg-slate-100 px-1.5 rounded"
+                                      >{course.faculty}</span
+                                    >{/if}
+                                  {#if course.teacherName}<span
+                                      >{course.teacherName}</span
+                                    >{/if}
+                                </div>
+                              {/if}
+                              {#if course.evaluationCriteria}
+                                <div
+                                  class="text-[10px] text-indigo-500 mt-1 truncate opacity-70"
+                                >
+                                  評価: {course.evaluationCriteria}
+                                </div>
+                              {/if}
+                            </button>
                           {/each}
-                        {/if}
-                      </datalist>
+                        </div>
+                      {:else if userData?.enrolledCourses && !courseName}
+                        <!-- Fallback to Enrolled Courses suggestions if empty? Or just rely on typing? -->
+                        <!-- Let's keep the datalist as a fallback or just show enrolled as suggestions initially? -->
+                        <!-- The user requested "From masterCourses", so let's stick to that. -->
+                        <!-- But seeing enrolled courses is nice. Let's merge? -->
+                        <!-- For now, we only show Master Course suggestions when typing. -->
+                      {/if}
+
+                      {#if selectedSyllabus}
+                        <div
+                          class="mt-2 bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-800 animate-in fade-in slide-in-from-top-1"
+                        >
+                          <div class="font-bold mb-1 flex items-center gap-1">
+                            <svg
+                              class="w-3 h-3"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              ><path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              /></svg
+                            >
+                            シラバス連携中
+                          </div>
+                          <div class="opacity-80">
+                            評価方法: {selectedSyllabus.evaluationCriteria}
+                          </div>
+                        </div>
+                      {/if}
                       {#if showCourseNameError}
                         <p class="text-red-500 text-xs mt-1">
                           ※講義名の入力は必須です

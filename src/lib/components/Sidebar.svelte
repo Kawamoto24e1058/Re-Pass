@@ -2,6 +2,9 @@
     import { auth, db } from "$lib/firebase";
     import {
         doc,
+        where,
+        limit,
+        getDocs,
         onSnapshot,
         setDoc,
         getDoc,
@@ -197,6 +200,42 @@
     // --- Subject Management ---
 
     let editingSubjectId = $state<string | null>(null); // Track if we are editing
+    let sharedCounts = $state<Record<string, number>>({});
+
+    // Fetch shared counts when enrolled courses change
+    $effect(() => {
+        if (userData?.normalizedEnrolledCourses?.length > 0) {
+            const courses = userData.normalizedEnrolledCourses;
+            courses.forEach(async (normalizedName: string) => {
+                // Optimization: Could batch this or use a separate aggregation collection
+                try {
+                    const q = query(
+                        collection(db, "lectures"),
+                        // where("normalizedCourseName", "==", normalizedName), // Needs index with isShared
+                        // Ideally we query by normalizedCourseName and check isShared, or just search generic
+                        // Since we don't have composite index yet, let's just use a simple query if possible,
+                        // or just rely on client side filtering if volume is low.
+                        // Better: Use the same search index logic if available.
+                        // Current search uses: where("isShared", "==", true), orderBy("createdAt")
+                        // then client side filter. That's too heavy for sidebar.
+
+                        // Let's assume we can query by normalizedCourseName directly.
+                        where("normalizedCourseName", "==", normalizedName),
+                        where("isShared", "==", true),
+                        limit(10), // Just to check existence/count cap
+                    );
+                    const snapshot = await getDocs(q);
+                    sharedCounts[normalizedName] = snapshot.size;
+                } catch (e) {
+                    console.error(
+                        "Error fetching count for",
+                        normalizedName,
+                        e,
+                    );
+                }
+            });
+        }
+    });
 
     async function handleSubjectSubmit() {
         if (!newSubjectName.trim()) return;
@@ -722,6 +761,74 @@
                     </div>
                 {/each}
             </div>
+        </div>
+    </div>
+
+    <!-- Momodai Community -->
+    <div class="px-3 mt-4 mb-2">
+        <div
+            class="px-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2"
+        >
+            桃大コミュニティ
+        </div>
+        <div class="space-y-1">
+            <!-- Search Link -->
+            <a
+                href="/search"
+                class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
+            >
+                <div class="w-4 h-4 flex items-center justify-center">
+                    <svg
+                        class="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                    </svg>
+                </div>
+                <span>講義ノートを探す</span>
+            </a>
+
+            <!-- Enrolled Courses -->
+            {#if userData?.enrolledCourses?.length > 0}
+                <div class="mt-2 pt-2 border-t border-slate-100">
+                    <div
+                        class="px-2 mb-1 text-[10px] text-slate-400 font-medium"
+                    >
+                        履修中の講義
+                    </div>
+                    {#each userData.enrolledCourses as course, i}
+                        {@const normalizedName =
+                            userData.normalizedEnrolledCourses?.[i] ||
+                            course.toLowerCase().replace(/\s+/g, "")}
+                        {@const count = sharedCounts[normalizedName] || 0}
+                        <a
+                            href="/search?q={encodeURIComponent(course)}"
+                            class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
+                        >
+                            <div class="flex items-center gap-2 truncate">
+                                <span
+                                    class="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-indigo-400 transition-colors"
+                                ></span>
+                                <span class="truncate">{course}</span>
+                            </div>
+                            {#if count > 0}
+                                <span
+                                    class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100"
+                                >
+                                    {count}
+                                </span>
+                            {/if}
+                        </a>
+                    {/each}
+                </div>
+            {/if}
         </div>
     </div>
 

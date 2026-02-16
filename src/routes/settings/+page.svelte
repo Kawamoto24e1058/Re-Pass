@@ -12,6 +12,7 @@
     import Sidebar from "$lib/components/Sidebar.svelte";
     import { subjects, lectures } from "$lib/stores";
     import { normalizeCourseName } from "$lib/utils/textUtils";
+    import { seedMasterCourses } from "$lib/utils/seed";
 
     let user = $state<any>(null);
     let userData = $state<any>(null);

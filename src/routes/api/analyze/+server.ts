@@ -66,6 +66,7 @@ export const POST = async ({ request }) => {
     const targetLength = parseInt(targetLengthRaw as string || "1000");
     let transcript = formData.get('transcript') as string || "";
     const targetUrl = formData.get('url') as string;
+    const evaluationCriteria = formData.get('evaluationCriteria') as string || "";
 
     // --- Validation & Logging ---
     console.log('--- 🤖 Analysis Request Received ---');
@@ -337,9 +338,20 @@ export const POST = async ({ request }) => {
 
     const prompt = `
 ${systemPrompt}
-以下の資料をもとに解析を行ってください。目標文字数: ${minLength}〜${maxLength}文字程度。
+        以下の資料をもとに解析を行ってください。目標文字数: ${minLength}〜${maxLength} 文字程度。
 【テキスト情報】
 ${transcript}
+${evaluationCriteria ? `
+【追加指示：A評価攻略ガイド】
+この講義の評価基準は「${evaluationCriteria}」です。
+生成されたノート（summaryフィールド）の最後に、この評価基準に基づいた「A評価を勝ち取るための戦略的アドバイス」を追加してください。
+具体的かつ『楽をしたい学生』向けに、レポートで強調すべきキーワードや、テストで重視すべきポイントを300文字程度で記述してください。
+
+**重要：出力形式の制御**
+このアドバイス部分は、必ず **[A_STRATEGY_START]** と **[A_STRATEGY_END]** というタグで囲んでください。
+このタグは summary フィールドの文字列の中に含めてください。
+例: "...まとめの文章。\n\n[A_STRATEGY_START]\n### 🏆 A評価攻略ガイド\n評価基準の「期末レポート50%」を攻略するには...\n[A_STRATEGY_END]"` : ""
+      }
 `;
 
     const maxRetries = 3;
@@ -363,19 +375,19 @@ ${transcript}
           }
         });
 
-        console.log(`🚀 Sending request to Gemini (Model: gemini-2.0-flash)...`);
+        console.log(`🚀 Sending request to Gemini(Model: gemini - 2.0 - flash)...`);
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [...promptParts, { text: prompt }] }]
         });
 
         const response = await result.response;
         const rawText = response.text();
-        console.log(`📥 Raw AI Response (Length: ${rawText.length})`);
+        console.log(`📥 Raw AI Response(Length: ${rawText.length})`);
 
         // --- Aggressive JSON Extraction ---
         let cleanedText = rawText.trim();
         // Remove Markdown code blocks if present
-        cleanedText = cleanedText.replace(/^```json\n?|```$/g, '').trim();
+        cleanedText = cleanedText.replace(/^```json\n ?| ```$/g, '').trim();
 
         const firstCurly = cleanedText.indexOf('{');
         const lastCurly = cleanedText.lastIndexOf('}');
@@ -419,7 +431,7 @@ ${transcript}
           }
         }
       } catch (error: any) {
-        console.error(`❌ Attempt ${retryCount + 1} failed:`, error.message);
+        console.error(`❌ Attempt ${retryCount + 1} failed: `, error.message);
         if (error.stack) console.error(error.stack);
 
         if (error.status === 429 || error.status === 503) {
@@ -429,7 +441,7 @@ ${transcript}
         }
 
         if (!hasTriedFallback && (error.message?.includes("2.0") || error.status === 404)) {
-          console.warn(`⚠️ Falling back to gemini-1.5-flash`);
+          console.warn(`⚠️ Falling back to gemini - 1.5 - flash`);
           currentModelName = "gemini-1.5-flash";
           hasTriedFallback = true;
           retryCount++;
