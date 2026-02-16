@@ -14,6 +14,9 @@
     } from "firebase/firestore";
     import { goto } from "$app/navigation";
     import Sidebar from "$lib/components/Sidebar.svelte";
+    import UpgradeModal from "$lib/components/UpgradeModal.svelte";
+
+    import { fade, fly } from "svelte/transition";
     import { subjects, lectures } from "$lib/stores";
     import { signOut } from "firebase/auth";
     import { marked } from "marked";
@@ -28,6 +31,7 @@
     let searchQuery = $state("");
     let searchResults = $state<any[]>([]);
     let searching = $state(false);
+    let showUltimateModal = $state(false);
     let searchError = $state<string | null>(null);
     let selectedLecture = $state<any>(null);
 
@@ -533,16 +537,7 @@
                                     <button
                                         onclick={() => {
                                             if (!isUltimate) {
-                                                // Simplified modal for Search page
-                                                // Since showUpgradeModal isn't defined here, we'll need to add it or use alert + redirect
-                                                // For better UX, let's inject a simple overlay state
-                                                if (
-                                                    confirm(
-                                                        "この機能はUltimateプラン限定です。\n詳細ページを閲覧するにはアップグレードが必要です。\n\nPricingページへ移動しますか？",
-                                                    )
-                                                ) {
-                                                    goto("/pricing");
-                                                }
+                                                showUltimateModal = true;
                                                 return;
                                             }
                                             goto(

@@ -187,7 +187,9 @@
   let analyzedTitle = $state(""); // AI generated title
   let analyzedCategory = $state(""); // AI generated category raw
   let draggingLectureId = $state<string | null>(null);
+  import UpgradeModal from "$lib/components/UpgradeModal.svelte";
   let showUpgradeModal = $state(false);
+  let showUltimateModal = $state(false); // New modal for Ultimate features
   let isDragOverMainTarget = $state(false);
 
   // Advanced Organization State
@@ -2905,65 +2907,188 @@
                               /></svg
                             >
                           </div>
+                  <!-- 2. Rich Media (Video / Audio / URL) - Ultimate Only -->
+                  <div>
+                    <h3
+                      class="text-xs font-bold {isUltimate ? 'text-indigo-500' : 'text-slate-400'} uppercase tracking-wider mb-3 flex items-center gap-2"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                        /><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        /></svg
+                      >
+                      Ultimate限定 (自動文字起こし)
+                      {#if !isUltimate}
+                        <span class="bg-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded-full ml-auto">🔒Locked</span>
+                      {/if}
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <!-- Video -->
+                      <button
+                        onclick={() => {
+                            if(!isUltimate) {
+                                showUltimateModal = true;
+                                return;
+                            }
+                            // Trigger file input click
+                            document.getElementById('video-upload')?.click();
+                        }}
+                        class="text-left w-full group block relative focus:outline-none"
+                      >
+                        <div
+                          class="{videoFile
+                            ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
+                            : isUltimate 
+                                ? 'border-slate-200 hover:border-indigo-300' 
+                                : 'border-slate-200 bg-slate-50 opacity-60'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
+                        >
+                          <div
+                            class="w-8 h-8 rounded-full {isUltimate ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-200 text-slate-400'} flex items-center justify-center relative z-10 flex-shrink-0"
+                          >
+                            {#if isUltimate}
+                                <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                ><path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                /></svg>
+                            {:else}
+                                <span>🔒</span>
+                            {/if}
+                          </div>
                           <div class="relative z-10 flex-1 min-w-0">
                             <div
                               class="text-[10px] font-bold text-slate-400 uppercase"
                             >
-                              Video / Audio
+                              Video
                             </div>
                             <div
                               class="text-xs font-bold text-slate-700 truncate"
                             >
-                              {videoFile
-                                ? videoFile.name
-                                : audioFile
-                                  ? audioFile.name
-                                  : "動画・音声から抽出"}
+                              {videoFile ? videoFile.name : (isUltimate ? "動画ファイル" : "Unlock Ultimate")}
                             </div>
                           </div>
                           <input
+                            id="video-upload"
                             type="file"
-                            accept="video/*,audio/*"
+                            accept="video/*"
                             class="hidden"
-                            onchange={(e) => {
-                              const f = (e.target as HTMLInputElement)
-                                .files?.[0];
-                              if (f) {
-                                if (f.type.startsWith("audio"))
-                                  handleFileChange(e, "audio");
-                                else handleFileChange(e, "video");
-                              }
-                            }}
+                            onchange={(e) => handleFileChange(e, "video")}
+                            disabled={!isUltimate}
                           />
                         </div>
-                      </label>
+                      </button>
 
-                      <!-- URL Input -->
-                      <div
-                        class="flex-1 bg-white border border-slate-200 rounded-xl px-4 flex items-center gap-3 shadow-sm focus-within:ring-2 focus-within:ring-indigo-100 transition-all"
+                      <!-- Audio -->
+                      <button
+                         onclick={() => {
+                            if(!isUltimate) {
+                                showUltimateModal = true;
+                                return;
+                            }
+                            document.getElementById('audio-upload')?.click();
+                        }}
+                        class="text-left w-full group block relative focus:outline-none"
                       >
-                        <svg
-                          class="w-4 h-4 text-slate-400 flex-shrink-0"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          ><path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                          /></svg
+                        <div
+                          class="{audioFile
+                            ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-200'
+                            : isUltimate
+                                ? 'border-slate-200 hover:border-pink-300'
+                                : 'border-slate-200 bg-slate-50 opacity-60'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
                         >
-                        <input
-                          type="text"
-                          bind:value={targetUrl}
-                          placeholder="URL (Webサイトのみ)"
-                          class="flex-1 py-3 text-sm font-medium text-slate-700 placeholder-slate-400 bg-transparent border-none focus:ring-0 px-0"
+                          <div
+                            class="w-8 h-8 rounded-full {isUltimate ? 'bg-pink-100 text-pink-600' : 'bg-slate-200 text-slate-400'} flex items-center justify-center relative z-10 flex-shrink-0"
+                          >
+                             {#if isUltimate}
+                                <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                ><path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                                /></svg>
+                             {:else}
+                                <span>🔒</span>
+                             {/if}
+                          </div>
+                          <div class="relative z-10 flex-1 min-w-0">
+                            <div
+                              class="text-[10px] font-bold text-slate-400 uppercase"
+                            >
+                              Audio
+                            </div>
+                            <div
+                              class="text-xs font-bold text-slate-700 truncate"
+                            >
+                              {audioFile ? audioFile.name : (isUltimate ? "音声ファイル" : "Unlock Ultimate")}
+                            </div>
+                          </div>
+                          <input
+                            id="audio-upload"
+                            type="file"
+                            accept="audio/*"
+                            class="hidden"
+                            onchange={(e) => handleFileChange(e, "audio")}
+                            disabled={!isUltimate}
+                          />
+                        </div>
+                      </button>
+                    </div>
+
+                    <!-- URL Input -->
+                    <div class="mt-4 relative">
+                        {#if !isUltimate}
+                            <button 
+                                onclick={() => {
+                                    showUltimateModal = true;
+                                }}
+                                class="absolute inset-0 z-20 cursor-pointer w-full h-full"
+                            aria-label="Unlock feature"></button>
+                        {/if}
+                      <input
+                        type="text"
+                        bind:value={targetUrl}
+                        placeholder={isUltimate ? "WebサイトのURLを入力 (https://...)" : "URL入力 (Ultimate限定 - 🔒Locked)"}
+                        disabled={!isUltimate}
+                        class="w-full bg-white border border-slate-200 rounded-xl p-4 pl-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all {isUltimate ? '' : 'opacity-60 bg-slate-50 text-slate-400'}"
+                      />
+                      <svg
+                        class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
                         />
-                      </div>
+                      </svg>
                     </div>
                   </div>
-                </div>
 
                 <!-- 3. Course Info (Mandatory) -->
                 <div class="mt-6">
