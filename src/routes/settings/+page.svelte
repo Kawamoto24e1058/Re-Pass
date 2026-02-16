@@ -24,6 +24,7 @@
     // Form State
     let displayName = $state("");
     let email = $state("");
+    let university = $state("");
     let enrolledCourses = $state<string[]>([]);
     let newCourseInput = $state("");
 
@@ -39,6 +40,7 @@
                 if (docSnap.exists()) {
                     userData = docSnap.data();
                     enrolledCourses = userData.enrolledCourses || [];
+                    university = userData.university || "";
                 }
             } else {
                 goto("/login");
@@ -61,7 +63,10 @@
         try {
             await updateProfile(user, { displayName });
             // Update Firestore as well if needed
-            await updateDoc(doc(db, "users", user.uid), { displayName });
+            await updateDoc(doc(db, "users", user.uid), {
+                displayName,
+                university: university.trim(),
+            });
             showToast("プロフィールを更新しました");
         } catch (e) {
             console.error(e);
@@ -209,6 +214,7 @@
         <button
             onclick={() => (isMobileOpen = true)}
             class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
+            aria-label="メニューを開く"
         >
             <svg
                 class="w-6 h-6"
@@ -264,7 +270,6 @@
             subjects={$subjects}
             currentLectureId={null}
             selectedSubjectId={null}
-            {isMobileOpen}
             onClose={() => (isMobileOpen = false)}
             onLoadLecture={() => {
                 goto("/");
@@ -347,6 +352,24 @@
                                 placeholder="名前を入力"
                             />
                         </div>
+
+                        <!-- University Input -->
+                        <div
+                            class="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
+                        >
+                            <label
+                                for="university"
+                                class="w-32 text-sm font-medium text-slate-600"
+                                >所属大学</label
+                            >
+                            <input
+                                id="university"
+                                type="text"
+                                bind:value={university}
+                                class="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 font-medium placeholder-slate-400 p-0"
+                                placeholder="大学名を入力"
+                            />
+                        </div>
                     </div>
                     <div class="mt-4 flex justify-end">
                         <button
@@ -400,6 +423,7 @@
                                         <button
                                             onclick={() => removeCourse(course)}
                                             class="text-indigo-400 hover:text-red-500 transition-colors"
+                                            aria-label="{course}を削除"
                                         >
                                             <svg
                                                 class="w-4 h-4"

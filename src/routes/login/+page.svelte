@@ -46,6 +46,7 @@
                     email: user.email || null,
                     photoURL: user.photoURL || null,
                     plan: "free",
+                    university: null, // Initialize university field
                     agreedAt: serverTimestamp(),
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp(),

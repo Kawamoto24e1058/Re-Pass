@@ -128,15 +128,17 @@
 
     clearTimeout(courseInputTimer);
     courseInputTimer = setTimeout(async () => {
+      if (!userData?.university) {
+        suggestedCourses = [];
+        return;
+      }
+
       const normalized = normalizeCourseName(input);
       try {
         const q = query(
           collection(db, "masterCourses"),
-          orderBy("normalizedCourseName"), // Needs index? Or use startAt/endAt on key?
-          // If we use normalizedCourseName as document ID, we can just getDoc?
-          // But for autocomplete (prefix), we need range query on field.
-          // We seeded it with document ID = normalized name.
-          // But for partial match, we query the field.
+          where("university", "==", userData.university),
+          orderBy("normalizedCourseName"),
           where("normalizedCourseName", ">=", normalized),
           where("normalizedCourseName", "<=", normalized + "\uf8ff"),
           limit(5),
@@ -1130,6 +1132,7 @@
       categoryTag: categoryTag || null,
       updatedAt: serverTimestamp(),
       subjectId: $currentBinder || null, // Ensure subjectId is saved
+      university: userData?.university || null, // Save university context
       courseName: courseName.trim(),
       normalizedCourseName: normalizeCourseName(courseName.trim()),
       isShared: isShared,
@@ -1147,15 +1150,38 @@
     };
 
     try {
+      // 1. Save to masterCourses if shared and university is set
+      if (isShared && userData?.university && courseName.trim()) {
+        const normalized = normalizeCourseName(courseName.trim());
+        const masterCourseId = `${userData.university}_${normalized}`;
+        const masterCourseRef = doc(db, "masterCourses", masterCourseId);
+
+        // Try to update or create masterCourse
+        await setDoc(
+          masterCourseRef,
+          {
+            courseName: courseName.trim(),
+            normalizedCourseName: normalized,
+            university: userData.university,
+            teacherName: (result as any)?.teacherName || null, // Extract if available
+            faculty: (result as any)?.faculty || analyzedCategory || null,
+            evaluationCriteria: (result as any)?.evaluationCriteria || null,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      }
+
+      // 2. Save the lecture itself
       if (currentLectureId) {
         // Find the existing lecture to get its path
         const existingLecture = $lectures.find(
-          (l) => l.id === currentLectureId,
+          (l: any) => l.id === currentLectureId,
         );
 
         let docRef;
-        if (existingLecture && existingLecture.path) {
-          docRef = doc(db, existingLecture.path);
+        if (existingLecture && (existingLecture as any).path) {
+          docRef = doc(db, (existingLecture as any).path);
         } else {
           // Fallback to root (shouldn't happen with new logic, but for safety)
           console.warn(

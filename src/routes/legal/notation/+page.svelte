@@ -6,6 +6,30 @@
     class="h-screen overflow-y-auto bg-[#F9FAFB] font-sans selection:bg-indigo-100"
 >
     <main class="max-w-[800px] mx-auto py-12 px-6" in:fade={{ duration: 400 }}>
+        <button
+            onclick={() => history.back()}
+            class="group mb-8 flex items-center gap-3 text-slate-500 hover:text-indigo-600 font-bold transition-all"
+        >
+            <div
+                class="w-10 h-10 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-md transition-all"
+            >
+                <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 19l-7-7 7-7"
+                    />
+                </svg>
+            </div>
+            <span>戻る</span>
+        </button>
+
         <div
             class="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden"
         >

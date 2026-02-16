@@ -132,7 +132,24 @@
 					} else {
 						const profile = userDoc.data() as any;
 						userProfile.set(profile);
-						if (path === "/login" || path === "/pricing")
+
+						// Onboarding check: If university is not set, redirect to /setup
+						const currentPath = path as string;
+						if (
+							!profile.university &&
+							currentPath !== "/setup" &&
+							currentPath !== "/login" &&
+							currentPath !== "/pricing"
+						) {
+							await goto("/setup");
+							return;
+						}
+
+						if (
+							currentPath === "/login" ||
+							currentPath === "/pricing" ||
+							(currentPath === "/setup" && profile.university)
+						)
 							await goto("/");
 					}
 
