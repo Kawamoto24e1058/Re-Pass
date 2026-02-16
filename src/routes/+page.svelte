@@ -4,6 +4,7 @@
     type AudioExtractionProgress,
   } from "$lib/utils/audioExtractor";
   import { retryOperation } from "$lib/utils/retry";
+  import { normalizeCourseName } from "$lib/utils/textUtils";
   import { onMount, onDestroy, tick } from "svelte";
   import { storage, auth, db } from "$lib/firebase";
   import {
@@ -67,6 +68,11 @@
   let categoryTag = $state(""); // AI generated category
   let videoPlayer = $state<HTMLVideoElement | null>(null);
   let previewVideoUrl = $state("");
+
+  // Course Info & Sharing
+  let courseName = $state("");
+  let isShared = $state(true); // Default true
+  let showCourseNameError = $state(false);
 
   $effect(() => {
     if (videoFile) {
@@ -594,6 +600,13 @@
     // Prevent double submission
     if (analyzing || isExtractingAudio) return;
 
+    // Validate Course Name
+    if (!courseName.trim()) {
+      showCourseNameError = true;
+      alert("講義名を入力してください");
+      return;
+    }
+
     if (
       !pdfFile &&
       !txtFile &&
@@ -985,6 +998,9 @@
       categoryTag: categoryTag || null,
       updatedAt: serverTimestamp(),
       subjectId: $currentBinder || null, // Ensure subjectId is saved
+      courseName: courseName.trim(),
+      normalizedCourseName: normalizeCourseName(courseName.trim()),
+      isShared: isShared,
       sourceType: videoFile
         ? "video"
         : audioFile
@@ -2812,6 +2828,81 @@
                           class="flex-1 py-3 text-sm font-medium text-slate-700 placeholder-slate-400 bg-transparent border-none focus:ring-0 px-0"
                         />
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3. Course Info (Mandatory) -->
+                <div class="mt-6">
+                  <h3
+                    class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      ><path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                      /></svg
+                    >
+                    講義情報 (必須)
+                  </h3>
+                  <div
+                    class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
+                  >
+                    <div class="mb-4">
+                      <label class="block text-xs font-bold text-slate-500 mb-1"
+                        >講義名</label
+                      >
+                      <input
+                        type="text"
+                        bind:value={courseName}
+                        list="enrolled-courses"
+                        placeholder="講義名を入力 (例: 経済学入門)"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none {showCourseNameError
+                          ? 'border-red-500 ring-1 ring-red-500'
+                          : ''}"
+                        oninput={() => (showCourseNameError = false)}
+                      />
+                      <datalist id="enrolled-courses">
+                        {#if userData?.enrolledCourses}
+                          {#each userData.enrolledCourses as course}
+                            <option value={course}></option>
+                          {/each}
+                        {/if}
+                      </datalist>
+                      {#if showCourseNameError}
+                        <p class="text-red-500 text-xs mt-1">
+                          ※講義名の入力は必須です
+                        </p>
+                      {/if}
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="text-sm font-bold text-slate-700">
+                          コミュニティ共有
+                        </p>
+                        <p class="text-xs text-slate-500">
+                          同じ講義を履修する学生にノートを共有します
+                        </p>
+                      </div>
+                      <label
+                        class="relative inline-flex items-center cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          bind:checked={isShared}
+                          class="sr-only peer"
+                        />
+                        <div
+                          class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"
+                        ></div>
+                      </label>
                     </div>
                   </div>
                 </div>

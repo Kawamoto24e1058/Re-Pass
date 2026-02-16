@@ -11,6 +11,7 @@
     import { goto } from "$app/navigation";
     import Sidebar from "$lib/components/Sidebar.svelte";
     import { subjects, lectures } from "$lib/stores";
+    import { normalizeCourseName } from "$lib/utils/textUtils";
 
     let user = $state<any>(null);
     let userData = $state<any>(null);
@@ -22,6 +23,8 @@
     // Form State
     let displayName = $state("");
     let email = $state("");
+    let enrolledCourses = $state<string[]>([]);
+    let newCourseInput = $state("");
 
     onMount(() => {
         const unsub = auth.onAuthStateChanged(async (currentUser) => {
@@ -34,6 +37,7 @@
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     userData = docSnap.data();
+                    enrolledCourses = userData.enrolledCourses || [];
                 }
             } else {
                 goto("/login");
@@ -61,6 +65,63 @@
         } catch (e) {
             console.error(e);
             alert("更新に失敗しました: " + (e as Error).message);
+        }
+    }
+
+    async function addCourse() {
+        const course = newCourseInput.trim();
+        if (!course) return;
+        if (enrolledCourses.includes(course)) {
+            showToast("すでに登録されています");
+            return;
+        }
+
+        const normalizedCourse = normalizeCourseName(course);
+        // We also need to check if the normalized version already exists to be safe,
+        // though the user might want to add "Math 101" and "Math 101 " if they are different strings.
+        // But for our purpose, we should probably prevent duplicates based on normalization too?
+        // Let's stick to exact string for enrolledCourses display, but save normalized for search.
+
+        const newCourses = [...enrolledCourses, course];
+        // Fetch current normalized list or derive it?
+        // Better to fetch fresh or just assume we append.
+        // To be safe, let's just save the new normalized list based on the newCourses array.
+        const newNormalizedCourses = newCourses.map((c) =>
+            normalizeCourseName(c),
+        );
+
+        enrolledCourses = newCourses;
+        newCourseInput = "";
+
+        try {
+            await updateDoc(doc(db, "users", user.uid), {
+                enrolledCourses: newCourses,
+                normalizedEnrolledCourses: newNormalizedCourses,
+            });
+            showToast("講義を追加しました");
+        } catch (e) {
+            console.error("Failed to add course", e);
+            showToast("追加に失敗しました");
+        }
+    }
+
+    async function removeCourse(course: string) {
+        if (!confirm(`${course} を削除しますか？`)) return;
+        const newCourses = enrolledCourses.filter((c) => c !== course);
+        const newNormalizedCourses = newCourses.map((c) =>
+            normalizeCourseName(c),
+        );
+
+        enrolledCourses = newCourses;
+        try {
+            await updateDoc(doc(db, "users", user.uid), {
+                enrolledCourses: newCourses,
+                normalizedEnrolledCourses: newNormalizedCourses,
+            });
+            showToast("講義を削除しました");
+        } catch (e) {
+            console.error("Failed to remove course", e);
+            showToast("削除に失敗しました");
         }
     }
 
@@ -293,6 +354,69 @@
                         >
                             変更を保存
                         </button>
+                    </div>
+                </section>
+
+                <!-- Enrolled Courses Section -->
+                <section class="mb-10">
+                    <h2
+                        class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
+                    >
+                        履修講義 (Enrolled Courses)
+                    </h2>
+                    <div
+                        class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6"
+                    >
+                        <div class="flex gap-2 mb-4">
+                            <input
+                                type="text"
+                                bind:value={newCourseInput}
+                                placeholder="講義名（例: 経済学入門）"
+                                class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                onkeydown={(e) =>
+                                    e.key === "Enter" && addCourse()}
+                            />
+                            <button
+                                onclick={addCourse}
+                                disabled={!newCourseInput.trim()}
+                                class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            >
+                                追加
+                            </button>
+                        </div>
+
+                        {#if enrolledCourses.length === 0}
+                            <p class="text-slate-400 text-sm text-center py-4">
+                                履修中の講義を登録すると、同じ講義のノートを共有・閲覧できます。
+                            </p>
+                        {:else}
+                            <div class="flex flex-wrap gap-2">
+                                {#each enrolledCourses as course}
+                                    <div
+                                        class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-100 flex items-center gap-2 group animate-in fade-in zoom-in-95"
+                                    >
+                                        {course}
+                                        <button
+                                            onclick={() => removeCourse(course)}
+                                            class="text-indigo-400 hover:text-red-500 transition-colors"
+                                        >
+                                            <svg
+                                                class="w-4 h-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                ><path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                /></svg
+                                            >
+                                        </button>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
                     </div>
                 </section>
 
