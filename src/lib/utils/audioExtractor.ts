@@ -31,7 +31,16 @@ export async function extractAudioFromVideo(
     onProgress({ stage: 'decoding', progress: 0, message: '動画を読み込んでいます...' });
 
     // 1. Read file as ArrayBuffer
-    const arrayBuffer = await videoFile.arrayBuffer();
+    let arrayBuffer: ArrayBuffer;
+    try {
+        arrayBuffer = await videoFile.arrayBuffer();
+    } catch (e: any) {
+        if (e.name === 'NotReadableError') {
+            throw new Error('ファイルの読み込みに失敗しました。もう一度ファイルを選択し直してください。');
+        } else {
+            throw e;
+        }
+    }
 
     // 2. Decode Audio Data
     const audioContext = new AudioContext();
