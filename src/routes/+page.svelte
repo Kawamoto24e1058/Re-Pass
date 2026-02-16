@@ -2816,34 +2816,90 @@
                   </div>
                 </div>
 
-                <div class="flex justify-end p-4 pt-0 mt-8">
+                <div class="flex justify-end items-center gap-4 p-4 pt-0 mt-8">
+                  {#if analyzing}
+                    <button
+                      onclick={handleCancelAnalysis}
+                      class="text-slate-500 text-sm font-bold hover:text-red-500 underline transition-colors"
+                    >
+                      キャンセル
+                    </button>
+                  {/if}
+
                   <button
                     onclick={handleAnalyze}
-                    class="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm transition-all flex items-center gap-2"
+                    disabled={analyzing || isExtractingAudio}
+                    class="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
-                    まず {analysisMode === "note"
-                      ? "ノート"
-                      : analysisMode === "thoughts"
-                        ? "感想文"
-                        : "レポート"} を生成
-                    {#if selectedSummary}
-                      <span
-                        class="ml-2 bg-white/20 px-2 py-0.5 rounded text-xs font-normal opacity-90"
-                        >{selectedSummary}</span
+                    {#if analyzing}
+                      <svg
+                        class="animate-spin h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          class="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="4"
+                        ></circle>
+                        <path
+                          class="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      解析中...
+                    {:else if isExtractingAudio}
+                      <svg
+                        class="animate-spin h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          class="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="4"
+                        ></circle>
+                        <path
+                          class="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      音声処理中...
+                    {:else}
+                      まず {analysisMode === "note"
+                        ? "ノート"
+                        : analysisMode === "thoughts"
+                          ? "感想文"
+                          : "レポート"} を生成
+                      {#if selectedSummary}
+                        <span
+                          class="ml-2 bg-white/20 px-2 py-0.5 rounded text-xs font-normal opacity-90"
+                          >{selectedSummary}</span
+                        >
+                      {/if}
+                      <svg
+                        class="w-4 h-4 ml-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M14 5l7 7m0 0l-7 7m7-7H3"
+                        /></svg
                       >
                     {/if}
-                    <svg
-                      class="w-4 h-4 ml-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      ><path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M14 5l7 7m0 0l-7 7m7-7H3"
-                      /></svg
-                    >
                   </button>
                 </div>
               {/if}
@@ -2973,59 +3029,7 @@
   <!-- FAB: Recording & Analysis Buttons (Bottom Right) -->
   {#if user}
     <div class="fixed bottom-8 right-8 flex flex-col items-end gap-4 z-50">
-      <!-- Analysis FAB (Only if inputs exist and not already analyzing) -->
-      {#if selectedSummary && !analyzing && isEditing}
-        <button
-          onclick={handleAnalyze}
-          disabled={analyzing || isExtractingAudio}
-          class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 active:scale-95 text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {#if analyzing}
-            <div class="flex items-center gap-3">
-              <div
-                class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
-              ></div>
-              <span>解析中...</span>
-            </div>
-          {:else if isExtractingAudio}
-            <div class="flex items-center gap-3">
-              <div
-                class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
-              ></div>
-              <span>音声処理中...</span>
-            </div>
-          {:else}
-            <svg
-              class="w-6 h-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-            <span>AIで解析する</span>
-          {/if}
-        </button>
-
-        <!-- Cancel Button -->
-        {#if analyzing}
-          <div class="mt-4 text-center">
-            <button
-              onclick={handleCancelAnalysis}
-              class="text-slate-500 text-sm hover:text-red-500 underline transition-colors"
-            >
-              解析を中断する
-            </button>
-          </div>
-        {/if}
-      {/if}
-
-      <!-- Recording FAB -->
+      <!-- Recording FAB (Only item remaining in this floating container) -->
       <button
         onclick={toggleRecording}
         class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-95 group border border-white/10
