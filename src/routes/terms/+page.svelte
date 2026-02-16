@@ -89,10 +89,13 @@
                                 class="p-6 bg-amber-50 border border-amber-100 rounded-2xl text-amber-900 text-sm leading-relaxed"
                             >
                                 <p class="font-bold mb-2">
-                                    【重要】AI解析の性質について
+                                    【重要】AI解析の性質・免責事項について
                                 </p>
                                 <p>
-                                    本サービスは人工知能（AI）を使用して講義内容の解析・要約を行います。AIの性質上，出力される情報の正確性，完全性，有用性を保証するものではありません。生成された内容に誤りが含まれる可能性があることを理解し、ユーザー自身の責任において内容を確認・利用するものとします。AIによる誤情報の生成に起因して生じた損害について、当方は一切の責任を負いません。
+                                    本サービスは人工知能（AI）を使用して講義内容の解析・要約を行います。AIの性質上，出力される情報の正確性，完全性，有用性を保証するものではありません。
+                                </p>
+                                <p class="mt-4 font-black text-red-600">
+                                    本サービス（AIの出力内容）を利用した結果生じた，成績不振，単位の未取得，学則による処分，およびその他一切の不利益について，運営者は損害賠償を含めいかなる責任も負わないものとします。ユーザーは自己の責任において内容を精査し利用するものとします。
                                 </p>
                             </div>
                         </div>
@@ -164,6 +167,11 @@
                                     本サービスの内容等，本サービスに含まれる著作権，商標権ほか知的財産権を侵害する行為
                                 </li>
                                 <li>
+                                    <span class="font-bold underline"
+                                        >自己のアカウントを第三者に譲渡，貸与，または共有する行為</span
+                                    >
+                                </li>
+                                <li>
                                     当方のサーバーまたはネットワークの機能を破壊したり，妨害したりする行為
                                 </li>
                                 <li>
@@ -171,6 +179,22 @@
                                 </li>
                             </ul>
                         </div>
+                        <section>
+                            <h2
+                                class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3"
+                            >
+                                <span
+                                    class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm"
+                                    >06</span
+                                >
+                                未成年者の利用
+                            </h2>
+                            <div class="pl-11 text-slate-600 leading-relaxed">
+                                <p>
+                                    ユーザーが未成年者である場合は，親権者など法定代理人の同意を得た上で本サービスを利用するものとします。本規約に同意した時点で，法定代理人の同意を得ているものとみなします。
+                                </p>
+                            </div>
+                        </section>
                     </section>
                 </div>
 

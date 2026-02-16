@@ -347,6 +347,26 @@
                         >
                     </button>
 
+                    <p
+                        class="text-[10px] text-slate-400 text-center px-4 leading-relaxed mt-2"
+                    >
+                        ログインすることで
+                        <a
+                            href="/terms"
+                            target="_blank"
+                            class="text-indigo-600 font-bold hover:underline"
+                            >利用規約</a
+                        >
+                        および
+                        <a
+                            href="/privacy"
+                            target="_blank"
+                            class="text-indigo-600 font-bold hover:underline"
+                            >プライバシーポリシー</a
+                        >
+                        に同意したものとみなされます。
+                    </p>
+
                     <div class="flex items-center gap-3 py-4">
                         <div class="h-[1px] flex-1 bg-slate-100"></div>
                         <span

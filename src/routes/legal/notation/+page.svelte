@@ -60,27 +60,27 @@
                             事業者名
                         </div>
                         <div class="w-2/3 text-slate-600 font-medium">
-                            請求により遅滞なく開示します
+                            川本 晴春
                         </div>
                     </div>
                     <div class="flex border-b border-slate-100 py-6">
                         <div class="w-1/3 font-bold text-slate-900">所在地</div>
                         <div class="w-2/3 text-slate-600 font-medium">
-                            請求により遅滞なく開示します
+                            消費者からの請求に基づき、遅滞なく電子メール等により開示いたします。
                         </div>
                     </div>
                     <div class="flex border-b border-slate-100 py-6">
                         <div class="w-1/3 font-bold text-slate-900">連絡先</div>
                         <div class="w-2/3 text-slate-600 font-medium">
-                            請求により遅滞なく開示します
+                            消費者からの請求に基づき、遅滞なく電子メール等により開示いたします。
                         </div>
                     </div>
                     <div class="flex border-b border-slate-100 py-6">
                         <div class="w-1/3 font-bold text-slate-900">
-                            代表者名
+                            運営責任者
                         </div>
                         <div class="w-2/3 text-slate-600 font-medium">
-                            請求により遅滞なく開示します
+                            川本 晴春
                         </div>
                     </div>
                     <div class="flex border-b border-slate-100 py-6">
@@ -88,7 +88,7 @@
                             メールアドレス
                         </div>
                         <div class="w-2/3 text-slate-600 font-medium">
-                            repass.academic@gmail.com
+                            repass114@gmail.com
                         </div>
                     </div>
                     <div class="flex border-b border-slate-100 py-6">
@@ -133,10 +133,10 @@
                     </div>
                     <div class="flex border-b border-slate-100 py-6">
                         <div class="w-1/3 font-bold text-slate-900">
-                            キャンセル・返金について
+                            返品・キャンセルについて
                         </div>
                         <div class="w-2/3 text-slate-600 font-medium">
-                            サービスの性質上、決済後のキャンセルおよび返金は承っておりません。解約は設定画面よりいつでも可能です（次回更新が停止されます）。
+                            デジタルコンテンツの性質上、決済完了後の返品・返金・キャンセルには応じられません。解約は設定画面よりいつでも可能です（次回更新が停止されます）。
                         </div>
                     </div>
                 </div>

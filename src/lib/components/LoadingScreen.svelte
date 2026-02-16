@@ -6,6 +6,9 @@
     let progress = $state(0);
 
     onMount(() => {
+        // Prevent scrolling while loading
+        document.body.style.overflow = "hidden";
+
         const duration = 3000; // 3 seconds
         const interval = 30; // 30ms for smooth animation
         const steps = duration / interval;
@@ -16,11 +19,17 @@
             if (progress >= 100) {
                 progress = 100;
                 clearInterval(timer);
-                setTimeout(onComplete, 200); // Small buffer
+                setTimeout(() => {
+                    document.body.style.overflow = "";
+                    onComplete();
+                }, 200); // Small buffer
             }
         }, interval);
 
-        return () => clearInterval(timer);
+        return () => {
+            clearInterval(timer);
+            document.body.style.overflow = "";
+        };
     });
 </script>
 
@@ -92,11 +101,6 @@
 </div>
 
 <style>
-    /* Prevent scrolling or interactions while loading */
-    :global(body) {
-        overflow: hidden;
-    }
-
     /* Gentle Pulse Animation for Icon */
     @keyframes gentlePulse {
         0%,

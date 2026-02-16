@@ -155,8 +155,25 @@
                             class="pl-11 text-slate-600 leading-relaxed space-y-4"
                         >
                             <p>
-                                当方は、法令に基づく場合を除き、ユーザーの同意なく個人情報を第三者に提供することはありません。ただし、AI解析のために匿名化されたデータを解析エンジン（Google
-                                Gemini API等）に送出することがあります。
+                                当方は、法令に基づく場合を除き、ユーザーの同意なく個人情報を第三者に提供することはありません。ただし、本サービスの提供および利便性向上のため、以下の外部サービスへ必要最小限のデータを提供することがあります。
+                            </p>
+                            <ul class="list-disc space-y-2 ml-4">
+                                <li>
+                                    <strong>Google Cloud SDK / Firebase</strong
+                                    >:
+                                    ユーザー認証（Google/Microsoftアカウント等）およびデータの保存・同期のため
+                                </li>
+                                <li>
+                                    <strong>Stripe</strong>:
+                                    決済処理および本人確認のため
+                                </li>
+                                <li>
+                                    <strong>Google Gemini API</strong>:
+                                    アップロードされた資料のAI解析・要約のため
+                                </li>
+                            </ul>
+                            <p class="mt-4">
+                                アップロードされた資料は，AI解析のみを目的に一次的に利用されます。
                             </p>
                         </div>
                     </section>

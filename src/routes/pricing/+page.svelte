@@ -312,6 +312,24 @@
             >
                 {#if isLoading === "Premium"}処理中...{:else}PREMIUMを選択{/if}
             </button>
+            <p
+                class="mt-4 text-[10px] text-slate-400 text-center leading-relaxed"
+            >
+                購入を確定することで、
+                <a
+                    href="/terms"
+                    target="_blank"
+                    class="text-indigo-600 hover:underline">利用規約</a
+                >
+                および
+                <a
+                    href="/legal/notation"
+                    target="_blank"
+                    class="text-indigo-600 hover:underline"
+                    >特定商取引法に基づく表記</a
+                >
+                （返金ポリシー含む）に同意したものとみなされます。
+            </p>
         </div>
 
         <!-- 3. ULTIMATE -->
@@ -452,6 +470,24 @@
             >
                 {#if isLoading === "Ultimate"}処理中...{:else}Ultimateに参加{/if}
             </button>
+            <p
+                class="mt-4 text-[10px] text-slate-300 text-center leading-relaxed opacity-60"
+            >
+                購入を確定することで、
+                <a
+                    href="/terms"
+                    target="_blank"
+                    class="text-indigo-400 hover:underline">利用規約</a
+                >
+                および
+                <a
+                    href="/legal/notation"
+                    target="_blank"
+                    class="text-indigo-400 hover:underline"
+                    >特定商取引法に基づく表記</a
+                >
+                （返金ポリシー含む）に同意したものとみなされます。
+            </p>
         </div>
     </div>
 

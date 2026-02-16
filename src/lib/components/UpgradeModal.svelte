@@ -11,6 +11,17 @@
     function handleUpgrade() {
         goto("/pricing");
     }
+
+    $effect(() => {
+        if (isOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+        };
+    });
 </script>
 
 {#if isOpen}
@@ -88,7 +99,7 @@
                                 >動画・音声・URL解析</span
                             >
                             <span class="text-xs text-slate-500"
-                                >YouTubeやZoom録画を直接解析</span
+                                >動画ファイルやwebサイトを解析</span
                             >
                         </div>
                     </li>

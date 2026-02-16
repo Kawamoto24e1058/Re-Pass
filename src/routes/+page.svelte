@@ -242,7 +242,7 @@
 
   // Analysis Settings
   let analysisMode = $state<"note" | "thoughts" | "report">("note");
-  let targetLength = $state(1000);
+  let targetLength = $state(500);
 
   // Series Analysis State
   let analyzingSeries = $state(false);
@@ -681,7 +681,7 @@
       setTimeout(() => (toastMessage = null), 3000);
     } catch (e: any) {
       console.error(e);
-      alert("音声の抽出に失敗しました: " + e.message);
+      toastMessage = "音声の抽出に失敗しました: " + e.message;
     } finally {
       isExtractingAudio = false;
       extractionProgress = null;
@@ -707,7 +707,7 @@
     // Validate Course Name
     if (!courseName.trim()) {
       showCourseNameError = true;
-      alert("講義名を入力してください");
+      toastMessage = "講義名を入力してください";
       return;
     }
 
@@ -720,7 +720,7 @@
       !targetUrl &&
       !$transcript
     ) {
-      alert("学習素材（ファイル、URL、音声）を入力してください。");
+      toastMessage = "学習素材を入力してください";
       return;
     }
 
@@ -729,9 +729,7 @@
       targetUrl &&
       (targetUrl.includes("youtube.com") || targetUrl.includes("youtu.be"))
     ) {
-      alert(
-        "現在、YouTube動画の解析はWebサイト（記事・ブログ等）のみに対応してい ます。\n\n動画を解析する場合は、動画ファイルをアップロードしてください。",
-      );
+      toastMessage = "YouTubeは未対応です（動画ファイルはOK）";
       return;
     }
 
@@ -1006,7 +1004,7 @@
           toastMessage = "🛑 解析を中断しました。";
         }
       } else {
-        alert("解析エラーが発生しました: " + (e as Error).message);
+        toastMessage = "解析エラーが発生しました: " + (e as Error).message;
       }
     } finally {
       await stopProgress();
@@ -1080,7 +1078,7 @@
         toastMessage =
           "⌛ 派生データの生成に時間がかかっています。しばらく経ってから再度お試しください。";
       } else {
-        alert("追加生成エラー: " + (e as Error).message);
+        toastMessage = "追加生成エラー: " + (e as Error).message;
       }
     } finally {
       await stopProgress();
@@ -1115,7 +1113,7 @@
       setTimeout(() => (toastMessage = null), 2000);
     } catch (e) {
       console.error("Bulk move error", e);
-      alert("一括移動中にエラーが発生しました");
+      toastMessage = "一括移動中にエラーが発生しました";
     }
   }
 
@@ -1183,7 +1181,7 @@
       return currentLectureId;
     } catch (e) {
       console.error("Error saving lecture:", e);
-      alert("保存に失敗しました。");
+      toastMessage = "保存に失敗しました";
       return null;
     }
   }
@@ -1204,7 +1202,7 @@
       (l) => l.subjectId === selectedSubjectId,
     );
     if (subjectLectures.length === 0) {
-      alert("No lectures in this subject to analyze.");
+      toastMessage = "解析可能な講義がありません";
       return;
     }
 
@@ -1259,7 +1257,7 @@
         toastMessage =
           "⌛ まとめ解析に時間がかかっています。しばらく経ってから再度お試しください。";
       } else {
-        alert("Failed to generate series summary.");
+        toastMessage = "まとめ解析に失敗しました";
       }
     } finally {
       analyzingSeries = false;
@@ -1278,7 +1276,7 @@
       );
 
       if (subjectLectures.length === 0) {
-        alert("要約済みの講義がありません。まずは各講義を解析してください。");
+        toastMessage = "要約済みの講義がありません";
         return;
       }
 
@@ -1324,7 +1322,7 @@
         toastMessage =
           "⌛ 試験対策ノートの生成に時間がかかっています。しばらく経ってから再度お試しください。";
       } else {
-        alert(e.message);
+        toastMessage = "エラー: " + e.message;
       }
     } finally {
       analyzingFinal = false;
@@ -3051,7 +3049,6 @@
                     </div>
 
                     <!-- URL Input -->
-                    <!-- URL Input -->
                     <div class="mt-6 relative">
                       <h4
                         class="text-xs font-bold text-slate-500 mb-2 flex items-center gap-2"
@@ -3091,7 +3088,7 @@
                         <input
                           type="text"
                           bind:value={targetUrl}
-                          placeholder="https://example.com/article"
+                          placeholder="https://example.com"
                           disabled={!isUltimate}
                           class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 pl-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all {isUltimate
                             ? 'bg-white'
