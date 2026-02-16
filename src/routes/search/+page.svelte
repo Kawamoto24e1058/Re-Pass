@@ -84,7 +84,8 @@
 
             const snapshot = await getDocs(lecturesQuery);
             let results = snapshot.docs.map(
-                (doc) => ({ id: doc.id, ...doc.data() }) as any,
+                (doc) =>
+                    ({ id: doc.id, path: doc.ref.path, ...doc.data() }) as any,
             );
 
             // 2. Client-side Filtering with Normalization
@@ -139,7 +140,15 @@
                     ...l,
                     accessStatus,
                     isPastYear,
+                    isEnrolled,
                 };
+            });
+
+            // Prioritize Enrolled Courses
+            results.sort((a, b) => {
+                if (a.isEnrolled && !b.isEnrolled) return -1;
+                if (!a.isEnrolled && b.isEnrolled) return 1;
+                return 0;
             });
 
             searchResults = results;
@@ -517,8 +526,12 @@
                                 {/if}
 
                                 {#if lecture.accessStatus === "granted"}
-                                    <span
-                                        class="text-indigo-600 flex items-center gap-1"
+                                    <button
+                                        onclick={() =>
+                                            goto(
+                                                `/?path=${encodeURIComponent(lecture.path || `users/${lecture.uid}/lectures/${lecture.id}`)}`,
+                                            )}
+                                        class="text-indigo-600 flex items-center gap-1 hover:underline"
                                     >
                                         <svg
                                             class="w-3 h-3"
@@ -537,8 +550,8 @@
                                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                                             /></svg
                                         >
-                                        View
-                                    </span>
+                                        見る
+                                    </button>
                                 {:else}
                                     <span
                                         class="text-slate-400 flex items-center gap-1"

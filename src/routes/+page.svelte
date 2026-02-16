@@ -450,6 +450,26 @@
 
     // ... (rest of onMount)
 
+    // Handle Shared Lecture Path
+    const path = $page.url.searchParams.get("path");
+    if (path) {
+      try {
+        const docRef = doc(db, path);
+        getDoc(docRef).then((snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            // Basic access check already enforced by security rules, but UI should be graceful
+            loadLecture({ id: snap.id, path: snap.ref.path, ...data });
+          } else {
+            toastMessage = "ノートが見つからないか、アクセス権がありません";
+            setTimeout(() => (toastMessage = null), 4000);
+          }
+        });
+      } catch (e) {
+        console.error("Error loading shared note", e);
+      }
+    }
+
     // Global click listener to close move menus
     const handleGlobalClick = (e: MouseEvent) => {
       if (movingLectureId) {

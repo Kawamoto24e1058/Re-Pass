@@ -10,6 +10,7 @@
         getDoc,
         addDoc,
         collection,
+        collectionGroup,
         query,
         orderBy,
         deleteDoc,
@@ -209,20 +210,12 @@
             courses.forEach(async (normalizedName: string) => {
                 // Optimization: Could batch this or use a separate aggregation collection
                 try {
+                    // Use collectionGroup to query all 'lectures' collections
                     const q = query(
-                        collection(db, "lectures"),
-                        // where("normalizedCourseName", "==", normalizedName), // Needs index with isShared
-                        // Ideally we query by normalizedCourseName and check isShared, or just search generic
-                        // Since we don't have composite index yet, let's just use a simple query if possible,
-                        // or just rely on client side filtering if volume is low.
-                        // Better: Use the same search index logic if available.
-                        // Current search uses: where("isShared", "==", true), orderBy("createdAt")
-                        // then client side filter. That's too heavy for sidebar.
-
-                        // Let's assume we can query by normalizedCourseName directly.
+                        collectionGroup(db, "lectures"),
                         where("normalizedCourseName", "==", normalizedName),
                         where("isShared", "==", true),
-                        limit(10), // Just to check existence/count cap
+                        limit(10), // Limit to check existence/count cap
                     );
                     const snapshot = await getDocs(q);
                     sharedCounts[normalizedName] = snapshot.size;
@@ -232,6 +225,7 @@
                         normalizedName,
                         e,
                     );
+                    // Fallback or silent fail if index is missing
                 }
             });
         }
