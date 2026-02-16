@@ -531,10 +531,24 @@
 
                                 {#if lecture.accessStatus === "granted"}
                                     <button
-                                        onclick={() =>
+                                        onclick={() => {
+                                            if (!isUltimate) {
+                                                // Simplified modal for Search page
+                                                // Since showUpgradeModal isn't defined here, we'll need to add it or use alert + redirect
+                                                // For better UX, let's inject a simple overlay state
+                                                if (
+                                                    confirm(
+                                                        "この機能はUltimateプラン限定です。\n詳細ページを閲覧するにはアップグレードが必要です。\n\nPricingページへ移動しますか？",
+                                                    )
+                                                ) {
+                                                    goto("/pricing");
+                                                }
+                                                return;
+                                            }
                                             goto(
                                                 `/?path=${encodeURIComponent(lecture.path || `users/${lecture.uid}/lectures/${lecture.id}`)}`,
-                                            )}
+                                            );
+                                        }}
                                         class="text-indigo-600 flex items-center gap-1 hover:underline"
                                     >
                                         <svg

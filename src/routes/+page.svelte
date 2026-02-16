@@ -774,11 +774,13 @@
       showUpgradeModal = true;
       return;
     }
-    // Let's set a conservative limit for free tier: 200MB
+    // Let's set a conservative limit for free tier: 200MB (Actually blocked above, but kept for logic safety if rules change)
     if (videoFile && !isPremium && videoFile.size > 200 * 1024 * 1024) {
+      // This branch is theoretically unreachable now for Non-Ultimate,
+      // but meaningful if we allow Premium video in future.
+      // Current rule: Video/URL is Ultimate ONLY.
       showUpgradeModal = true;
-      toastMessage =
-        "動画のサイズ制限(200MB)を超えています。Premiumで無制限になります。";
+      toastMessage = "動画・URL解析はUltimateプラン限定です";
       return;
     }
 
