@@ -726,10 +726,10 @@
     </div>
 
     <!-- Bottom Status & User -->
-    <div class="p-4 border-t border-slate-200/60 bg-white/40">
+    <div class="p-2 border-t border-slate-200/60 bg-white/40">
         <!-- Usage Status -->
         <div
-            class="mb-4 bg-white/60 rounded-xl p-3 border border-slate-100 shadow-sm"
+            class="mb-2 bg-white/60 rounded-xl p-2.5 border border-slate-100 shadow-sm"
         >
             <div
                 class="flex items-center justify-between text-xs font-semibold mb-2"
@@ -788,7 +788,7 @@
         <!-- Settings Link -->
         <a
             href="/settings"
-            class="block mb-4 mx-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-3 group"
+            class="block mb-2 mx-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-3 group"
         >
             <div
                 class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors"

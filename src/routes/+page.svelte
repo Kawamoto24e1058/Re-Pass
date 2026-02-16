@@ -985,6 +985,17 @@
       categoryTag: categoryTag || null,
       updatedAt: serverTimestamp(),
       subjectId: $currentBinder || null, // Ensure subjectId is saved
+      sourceType: videoFile
+        ? "video"
+        : audioFile
+          ? "audio"
+          : targetUrl
+            ? "url"
+            : pdfFile
+              ? "pdf"
+              : txtFile
+                ? "txt"
+                : "text",
     };
 
     try {
@@ -1746,25 +1757,57 @@
 
           <!-- Rich Structured Display -->
           {#if typeof currentAnalysis === "object"}
-            <!-- Header Section -->
+            {@const isVideoSource =
+              videoFile !== null ||
+              $lectures.find((l) => l.id === currentLectureId)?.sourceType ===
+                "video" ||
+              $lectures.find((l) => l.id === currentLectureId)?.sourceType ===
+                "audio"}
+
             <header class="mb-8 border-b border-indigo-50 pb-6">
-              <div class="flex flex-wrap gap-2 mb-3">
-                {#if currentAnalysis.category}
+              <div
+                class="flex flex-wrap gap-2 mb-3 justify-between items-start"
+              >
+                <div class="flex gap-2">
+                  {#if currentAnalysis.category}
+                    <span
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100"
+                    >
+                      {currentAnalysis.category}
+                    </span>
+                  {/if}
                   <span
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-wider"
                   >
-                    {currentAnalysis.category}
+                    {analysisMode === "note"
+                      ? "Lecture Note"
+                      : analysisMode === "thoughts"
+                        ? "Reflections"
+                        : "Academic Report"}
                   </span>
-                {/if}
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-wider"
+                </div>
+
+                <button
+                  onclick={() => {
+                    isEditing = true;
+                    finalExamView = false;
+                  }}
+                  class="text-xs font-bold text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                 >
-                  {analysisMode === "note"
-                    ? "Lecture Note"
-                    : analysisMode === "thoughts"
-                      ? "Reflections"
-                      : "Academic Report"}
-                </span>
+                  <svg
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    ><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    /></svg
+                  >
+                  編集に戻る
+                </button>
               </div>
 
               <h1
@@ -1781,16 +1824,25 @@
               bind:this={resultTextContainer}
               onclick={handleTimestampClick}
               class="prose prose-slate max-w-none
-                  prose-p:text-slate-700 prose-p:leading-8 prose-p:text-[17px]
-                  prose-headings:font-bold prose-headings:text-slate-900 prose-headings:tracking-tight
-                  prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-l-4 prose-h2:border-indigo-500 prose-h2:pl-3
-                  prose-h3:text-lg prose-h3:text-indigo-900
-                  prose-ul:my-6 prose-li:my-1 prose-li:text-slate-700
-                  prose-strong:text-indigo-900 prose-strong:font-bold
-                  prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
-                  prose-blockquote:border-l-indigo-300 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg"
+                prose-p:text-slate-700 prose-p:leading-8 prose-p:text-[17px]
+                prose-headings:font-bold prose-headings:text-slate-900 prose-headings:tracking-tight
+                prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-l-4 prose-h2:border-indigo-500 prose-h2:pl-3
+                prose-h3:text-lg prose-h3:text-indigo-900
+                prose-ul:my-6 prose-li:my-1 prose-li:text-slate-700
+                prose-strong:text-indigo-900 prose-strong:font-bold
+                prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
+                prose-blockquote:border-l-indigo-300 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg"
             >
-              {@html (marked(currentAnalysis.summary) as string).replace(
+              {@html (
+                marked(
+                  isVideoSource
+                    ? currentAnalysis.summary
+                    : currentAnalysis.summary.replace(
+                        /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
+                        "",
+                      ),
+                ) as string
+              ).replace(
                 /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
                 '<button class="timestamp-link inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md text-xs font-bold hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer select-none border border-indigo-100/50" data-timestamp="$1">▶ $1</button>',
               )}
