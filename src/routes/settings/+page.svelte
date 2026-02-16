@@ -9,17 +9,12 @@
         signOut,
     } from "firebase/auth";
     import { goto } from "$app/navigation";
-    import Sidebar from "$lib/components/Sidebar.svelte";
-    import { subjects, lectures } from "$lib/stores";
     import { normalizeCourseName } from "$lib/utils/textUtils";
-    import { seedMasterCourses } from "$lib/utils/seed";
-
     let user = $state<any>(null);
     let userData = $state<any>(null);
     let loading = $state(true);
     let portalLoading = $state(false);
     let toastMessage = $state<string | null>(null);
-    let isMobileOpen = $state(false);
 
     // Form State
     let displayName = $state("");
@@ -207,291 +202,287 @@
 <div
     class="flex h-screen overflow-hidden bg-[#F9FAFB] text-slate-800 font-sans selection:bg-indigo-100 selection:text-indigo-700 relative"
 >
-    <!-- Mobile Header -->
-    <header
-        class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
-    >
-        <button
-            onclick={() => (isMobileOpen = true)}
-            class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
-            aria-label="メニューを開く"
-        >
-            <svg
-                class="w-6 h-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 6h16M4 12h16M4 18h16"
-                />
-            </svg>
-        </button>
-
-        <a
-            href="/"
-            class="font-bold text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent"
-            >Re-Pass</a
-        >
-
-        <div
-            class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 overflow-hidden"
-        >
-            {#if user?.photoURL}
-                <img
-                    src={user.photoURL}
-                    alt="User"
-                    class="w-full h-full object-cover"
-                />
-            {:else}
-                {userData?.nickname?.substring(0, 1).toUpperCase() || "U"}
-            {/if}
-        </div>
-    </header>
-
-    <!-- Sidebar Component & Overlay -->
-    {#if isMobileOpen}
-        <div
-            class="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
-            onclick={() => (isMobileOpen = false)}
-            onkeydown={(e) => e.key === "Escape" && (isMobileOpen = false)}
-            role="button"
-            tabindex="0"
-        ></div>
-    {/if}
-
     {#if user}
-        <Sidebar
-            {user}
-            lectures={$lectures}
-            subjects={$subjects}
-            currentLectureId={null}
-            selectedSubjectId={null}
-            onClose={() => (isMobileOpen = false)}
-            onLoadLecture={() => {
-                goto("/");
-                isMobileOpen = false;
-            }}
-            onSelectSubject={() => {
-                goto("/");
-                isMobileOpen = false;
-            }}
-            onSignOut={handleLogout}
-        />
-    {/if}
+        <div class="flex-1 relative overflow-y-auto bg-slate-50 pt-16 lg:pt-0">
+            <main class="max-w-3xl mx-auto py-8 lg:py-12 px-4 lg:px-12">
+                <h1
+                    class="text-3xl font-bold text-slate-900 mb-8 tracking-tight"
+                >
+                    設定
+                </h1>
 
-    <div class="flex-1 relative overflow-y-auto bg-slate-50 pt-16 lg:pt-0">
-        <main class="max-w-3xl mx-auto py-8 lg:py-12 px-4 lg:px-12">
-            <h1 class="text-3xl font-bold text-slate-900 mb-8 tracking-tight">
-                設定
-            </h1>
-
-            {#if loading}
-                <div class="text-center py-12">
-                    <div
-                        class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"
-                    ></div>
-                </div>
-            {:else if user}
-                <!-- Profile Section -->
-                <section class="mb-10">
-                    <h2
-                        class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
-                    >
-                        プロフィール設定
-                    </h2>
-                    <div
-                        class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100"
-                    >
-                        <!-- Avatar -->
-                        <div class="p-6 flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                {#if user.photoURL}
-                                    <img
-                                        src={user.photoURL}
-                                        alt="Avatar"
-                                        class="w-16 h-16 rounded-full border border-slate-100 shadow-sm"
-                                    />
-                                {:else}
-                                    <div
-                                        class="w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold"
-                                    >
-                                        {displayName
-                                            ? displayName[0].toUpperCase()
-                                            : "U"}
+                {#if loading}
+                    <div class="text-center py-12">
+                        <div
+                            class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"
+                        ></div>
+                    </div>
+                {:else if user}
+                    <!-- Profile Section -->
+                    <section class="mb-10">
+                        <h2
+                            class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
+                        >
+                            プロフィール設定
+                        </h2>
+                        <div
+                            class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100"
+                        >
+                            <!-- Avatar -->
+                            <div class="p-6 flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    {#if user.photoURL}
+                                        <img
+                                            src={user.photoURL}
+                                            alt="Avatar"
+                                            class="w-16 h-16 rounded-full border border-slate-100 shadow-sm"
+                                        />
+                                    {:else}
+                                        <div
+                                            class="w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl font-bold"
+                                        >
+                                            {displayName
+                                                ? displayName[0].toUpperCase()
+                                                : "U"}
+                                        </div>
+                                    {/if}
+                                    <div>
+                                        <p
+                                            class="font-bold text-slate-900 text-lg"
+                                        >
+                                            {displayName || "未設定"}
+                                        </p>
+                                        <p class="text-sm text-slate-500">
+                                            {email}
+                                        </p>
                                     </div>
-                                {/if}
-                                <div>
-                                    <p class="font-bold text-slate-900 text-lg">
-                                        {displayName || "未設定"}
-                                    </p>
-                                    <p class="text-sm text-slate-500">
-                                        {email}
-                                    </p>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Nickname Input -->
-                        <div
-                            class="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
-                        >
-                            <label
-                                for="nickname"
-                                class="w-32 text-sm font-medium text-slate-600"
-                                >ニックネーム</label
+                            <!-- Nickname Input -->
+                            <div
+                                class="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
                             >
-                            <input
-                                id="nickname"
-                                type="text"
-                                bind:value={displayName}
-                                class="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 font-medium placeholder-slate-400 p-0"
-                                placeholder="名前を入力"
-                            />
-                        </div>
+                                <label
+                                    for="nickname"
+                                    class="w-32 text-sm font-medium text-slate-600"
+                                    >ニックネーム</label
+                                >
+                                <input
+                                    id="nickname"
+                                    type="text"
+                                    bind:value={displayName}
+                                    class="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 font-medium placeholder-slate-400 p-0"
+                                    placeholder="名前を入力"
+                                />
+                            </div>
 
-                        <!-- University Input -->
-                        <div
-                            class="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
-                        >
-                            <label
-                                for="university"
-                                class="w-32 text-sm font-medium text-slate-600"
-                                >所属大学</label
+                            <!-- University Input -->
+                            <div
+                                class="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors"
                             >
-                            <input
-                                id="university"
-                                type="text"
-                                bind:value={university}
-                                class="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 font-medium placeholder-slate-400 p-0"
-                                placeholder="大学名を入力"
-                            />
+                                <label
+                                    for="university"
+                                    class="w-32 text-sm font-medium text-slate-600"
+                                    >所属大学</label
+                                >
+                                <input
+                                    id="university"
+                                    type="text"
+                                    bind:value={university}
+                                    class="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 font-medium placeholder-slate-400 p-0"
+                                    placeholder="大学名を入力"
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div class="mt-4 flex justify-end">
-                        <button
-                            onclick={handleUpdateProfile}
-                            class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-sm hover:shadow-md hover:bg-indigo-700 transition-all"
-                        >
-                            変更を保存
-                        </button>
-                    </div>
-                </section>
-
-                <!-- Enrolled Courses Section -->
-                <section class="mb-10">
-                    <h2
-                        class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
-                    >
-                        履修講義 (Enrolled Courses)
-                    </h2>
-                    <div
-                        class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6"
-                    >
-                        <div class="flex gap-2 mb-4">
-                            <input
-                                type="text"
-                                bind:value={newCourseInput}
-                                placeholder="講義名（例: 経済学入門）"
-                                class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-                                onkeydown={(e) =>
-                                    e.key === "Enter" && addCourse()}
-                            />
+                        <div class="mt-4 flex justify-end">
                             <button
-                                onclick={addCourse}
-                                disabled={!newCourseInput.trim()}
-                                class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                onclick={handleUpdateProfile}
+                                class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-sm hover:shadow-md hover:bg-indigo-700 transition-all"
                             >
-                                追加
+                                変更を保存
                             </button>
                         </div>
+                    </section>
 
-                        {#if enrolledCourses.length === 0}
-                            <p class="text-slate-400 text-sm text-center py-4">
-                                履修中の講義を登録すると、同じ講義のノートを共有・閲覧できます。
-                            </p>
-                        {:else}
-                            <div class="flex flex-wrap gap-2">
-                                {#each enrolledCourses as course}
-                                    <div
-                                        class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-100 flex items-center gap-2 group animate-in fade-in zoom-in-95"
-                                    >
-                                        {course}
-                                        <button
-                                            onclick={() => removeCourse(course)}
-                                            class="text-indigo-400 hover:text-red-500 transition-colors"
-                                            aria-label="{course}を削除"
-                                        >
-                                            <svg
-                                                class="w-4 h-4"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                ><path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M6 18L18 6M6 6l12 12"
-                                                /></svg
-                                            >
-                                        </button>
-                                    </div>
-                                {/each}
-                            </div>
-                        {/if}
-                    </div>
-                </section>
-
-                <!-- Plan Section -->
-                <section class="mb-10">
-                    <h2
-                        class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
-                    >
-                        プラン・お支払い
-                    </h2>
-                    <div
-                        class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100"
-                    >
-                        <button
-                            class="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group"
-                            onclick={() => goto("/settings/subscription")}
+                    <!-- Enrolled Courses Section -->
+                    <section class="mb-10">
+                        <h2
+                            class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
                         >
-                            <div class="flex items-center gap-4">
-                                <div
-                                    class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all"
+                            履修講義 (Enrolled Courses)
+                        </h2>
+                        <div
+                            class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6"
+                        >
+                            <div class="flex gap-2 mb-4">
+                                <input
+                                    type="text"
+                                    bind:value={newCourseInput}
+                                    placeholder="講義名（例: 経済学入門）"
+                                    class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                                    onkeydown={(e) =>
+                                        e.key === "Enter" && addCourse()}
+                                />
+                                <button
+                                    onclick={addCourse}
+                                    disabled={!newCourseInput.trim()}
+                                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
-                                    <svg
-                                        class="w-5 h-5"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        ><path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                                        /></svg
-                                    >
-                                </div>
-                                <div class="text-left">
-                                    <p class="font-bold text-slate-900">
-                                        サブスクリプション管理
-                                    </p>
-                                    <p class="text-sm text-slate-500">
-                                        現在のプラン: {userData?.plan ===
-                                            "pro" ||
-                                        userData?.plan === "premium" ||
-                                        userData?.plan === "season"
-                                            ? "PRO"
-                                            : "FREE"}
-                                    </p>
-                                </div>
+                                    追加
+                                </button>
                             </div>
+
+                            {#if enrolledCourses.length === 0}
+                                <p
+                                    class="text-slate-400 text-sm text-center py-4"
+                                >
+                                    履修中の講義を登録すると、同じ講義のノートを共有・閲覧できます。
+                                </p>
+                            {:else}
+                                <div class="flex flex-wrap gap-2">
+                                    {#each enrolledCourses as course}
+                                        <div
+                                            class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-indigo-100 flex items-center gap-2 group animate-in fade-in zoom-in-95"
+                                        >
+                                            {course}
+                                            <button
+                                                onclick={() =>
+                                                    removeCourse(course)}
+                                                class="text-indigo-400 hover:text-red-500 transition-colors"
+                                                aria-label="{course}を削除"
+                                            >
+                                                <svg
+                                                    class="w-4 h-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                    ><path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    /></svg
+                                                >
+                                            </button>
+                                        </div>
+                                    {/each}
+                                </div>
+                            {/if}
+                        </div>
+                    </section>
+
+                    <!-- Plan Section -->
+                    <section class="mb-10">
+                        <h2
+                            class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
+                        >
+                            プラン・お支払い
+                        </h2>
+                        <div
+                            class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100"
+                        >
+                            <button
+                                class="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group"
+                                onclick={() => goto("/settings/subscription")}
+                            >
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all"
+                                    >
+                                        <svg
+                                            class="w-5 h-5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            ><path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                                            /></svg
+                                        >
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="font-bold text-slate-900">
+                                            サブスクリプション管理
+                                        </p>
+                                        <p class="text-sm text-slate-500">
+                                            現在のプラン: {userData?.plan ===
+                                                "pro" ||
+                                            userData?.plan === "premium" ||
+                                            userData?.plan === "season"
+                                                ? "PRO"
+                                                : "FREE"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <svg
+                                    class="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    ><path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M9 5l7 7-7 7"
+                                    /></svg
+                                >
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- Data Management -->
+                    <section class="mb-10">
+                        <h2
+                            class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
+                        >
+                            データ管理
+                        </h2>
+                        <div
+                            class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100"
+                        >
+                            <button
+                                class="w-full text-left p-4 flex items-center justify-between hover:bg-red-50 transition-colors group"
+                                onclick={handleDeleteAccount}
+                            >
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-100 transition-colors"
+                                    >
+                                        <svg
+                                            class="w-4 h-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            ><path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                            /></svg
+                                        >
+                                    </div>
+                                    <p class="font-medium text-red-600">
+                                        アカウントを削除
+                                    </p>
+                                </div>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 ml-1">
+                            ※アカウントを削除すると、すべてのデータが完全に消去されます。この操作は元に戻せません。
+                        </p>
+                    </section>
+
+                    <!-- Logout -->
+                    <div class="flex justify-center mt-12 pb-12">
+                        <button
+                            onclick={handleLogout}
+                            class="text-slate-400 font-bold hover:text-slate-600 transition-colors flex items-center gap-2"
+                        >
                             <svg
-                                class="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform"
+                                class="w-5 h-5"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -499,77 +490,14 @@
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="2"
-                                    d="M9 5l7 7-7 7"
+                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                                 /></svg
                             >
+                            ログアウト
                         </button>
                     </div>
-                </section>
-
-                <!-- Data Management -->
-                <section class="mb-10">
-                    <h2
-                        class="text-sm font-bold text-slate-500 uppercase tracking-wide mb-3 ml-1"
-                    >
-                        データ管理
-                    </h2>
-                    <div
-                        class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100"
-                    >
-                        <button
-                            class="w-full text-left p-4 flex items-center justify-between hover:bg-red-50 transition-colors group"
-                            onclick={handleDeleteAccount}
-                        >
-                            <div class="flex items-center gap-4">
-                                <div
-                                    class="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-100 transition-colors"
-                                >
-                                    <svg
-                                        class="w-4 h-4"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        ><path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                        /></svg
-                                    >
-                                </div>
-                                <p class="font-medium text-red-600">
-                                    アカウントを削除
-                                </p>
-                            </div>
-                        </button>
-                    </div>
-                    <p class="text-xs text-slate-400 mt-2 ml-1">
-                        ※アカウントを削除すると、すべてのデータが完全に消去されます。この操作は元に戻せません。
-                    </p>
-                </section>
-
-                <!-- Logout -->
-                <div class="flex justify-center mt-12 pb-12">
-                    <button
-                        onclick={handleLogout}
-                        class="text-slate-400 font-bold hover:text-slate-600 transition-colors flex items-center gap-2"
-                    >
-                        <svg
-                            class="w-5 h-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            ><path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                            /></svg
-                        >
-                        ログアウト
-                    </button>
-                </div>
-            {/if}
-        </main>
-    </div>
+                {/if}
+            </main>
+        </div>
+    {/if}
 </div>

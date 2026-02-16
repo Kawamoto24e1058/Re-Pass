@@ -128,12 +128,38 @@
 
     clearTimeout(courseInputTimer);
     courseInputTimer = setTimeout(async () => {
+      console.log("Current University State:", userData?.university);
+
+      // Fallback: If university is missing in state, try a hard fetch
+      if (!userData?.university && auth.currentUser) {
+        console.log("University missing in state, attempting hard fetch...");
+        try {
+          const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+          if (userDoc.exists()) {
+            userData = userDoc.data();
+            console.log(
+              "Hard fetch successful, university:",
+              userData.university,
+            );
+          }
+        } catch (e) {
+          console.error("Hard fetch for university failed:", e);
+        }
+      }
+
       if (!userData?.university) {
+        console.warn("No university set, skipping suggestion fetch");
         suggestedCourses = [];
         return;
       }
 
       const normalized = normalizeCourseName(input);
+      console.log("🔍 Fetching suggestions:", {
+        input: normalized,
+        university: userData.university,
+        universityType: typeof userData.university,
+        authUid: auth.currentUser?.uid,
+      });
       try {
         const q = query(
           collection(db, "masterCourses"),
@@ -146,9 +172,20 @@
 
         const snapshot = await getDocs(q);
         suggestedCourses = snapshot.docs.map((d: any) => d.data());
+        console.log(
+          "✨ Suggestions found:",
+          suggestedCourses.length,
+          suggestedCourses,
+        );
+        if (suggestedCourses.length === 0) {
+          console.warn(
+            "⚠️ No suggestions found. Check if 'masterCourses' has documents with university:",
+            userData.university,
+          );
+        }
         showSuggestions = true;
       } catch (e) {
-        console.error("Autocomplete error", e);
+        console.error("❌ Autocomplete error", e);
       }
     }, 300);
   }
@@ -436,6 +473,8 @@
         unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
           if (docSnap.exists()) {
             userData = docSnap.data();
+            console.log("User Data Loaded:", userData);
+            console.log("University:", userData?.university);
             console.log(
               `👤 User Plan Updated: ${userData.plan || "free"} (isPro: ${userData.isPro || false})`,
             );
@@ -2179,24 +2218,6 @@
   {/snippet}
 
   {#if user}
-    <Sidebar
-      {user}
-      lectures={$lectures}
-      subjects={$subjects}
-      {currentLectureId}
-      {selectedSubjectId}
-      onLoadLecture={(lecture) => {
-        loadLecture(lecture);
-      }}
-      onSelectSubject={(id) => {
-        handleSelectSubject(id);
-      }}
-      onSignOut={() => signOut(auth)}
-      onDragStart={(id: string) => (draggingLectureId = id)}
-      onDragEnd={handleDragEnd}
-      {draggingLectureId}
-      onLogoClick={handleLogoClick}
-    />
     <UpgradeModal
       isOpen={showUpgradeModal}
       onClose={() => (showUpgradeModal = false)}
@@ -3187,7 +3208,7 @@
                         <!-- Custom Autocomplete Dropdown -->
                         {#if showSuggestions && suggestedCourses.length > 0}
                           <div
-                            class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1"
+                            class="absolute z-[100] w-full bg-white border-2 border-indigo-200 rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] max-h-60 overflow-y-auto mt-1"
                           >
                             {#each suggestedCourses as course}
                               <button

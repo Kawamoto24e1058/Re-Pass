@@ -13,6 +13,7 @@
 	} from "firebase/firestore";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/stores";
+	import Sidebar from "$lib/components/Sidebar.svelte";
 	import { subjects, lectures, isSidebarOpen } from "$lib/stores";
 	import {
 		user as userStore,
@@ -244,7 +245,39 @@
 	</header>
 
 	<div class="flex-1 flex flex-col relative pt-16 lg:pt-0">
-		{@render children()}
+		<!-- Sidebar Component & Overlay -->
+		{#if $isSidebarOpen}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
+				onclick={() => isSidebarOpen.set(false)}
+			></div>
+		{/if}
+
+		{#if user}
+			<Sidebar
+				{user}
+				lectures={$lectures}
+				subjects={$subjects}
+				onClose={() => isSidebarOpen.set(false)}
+				onLoadLecture={(lecture: any) => {
+					// Handle lecture load - might need to dispatch or rely on store
+					isSidebarOpen.set(false);
+				}}
+				onSelectSubject={(subjectId: string | null) => {
+					isSidebarOpen.set(false);
+				}}
+				onSignOut={async () => {
+					await auth.signOut();
+					goto("/login");
+				}}
+			/>
+		{/if}
+
+		<main class="flex-1">
+			{@render children()}
+		</main>
 
 		<!-- Global Footer -->
 		<footer

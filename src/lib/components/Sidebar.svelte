@@ -434,12 +434,12 @@
     <!-- Mobile Close Button -->
     {#if $isSidebarOpen}
         <button
-            onclick={props.onClose}
-            class="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-indigo-600 transition-colors"
-            aria-label="サイドバーを閉じる"
+            onclick={() => isSidebarOpen.set(false)}
+            class="lg:hidden absolute top-4 right-4 p-4 -m-2 text-slate-400 hover:text-indigo-600 transition-colors z-50"
+            aria-label="メニューを閉じる"
         >
             <svg
-                class="w-6 h-6"
+                class="w-8 h-8"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
