@@ -310,7 +310,7 @@
                 disabled={isLoading !== ""}
                 class="w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all disabled:opacity-50"
             >
-                {#if isLoading === "Premium"}処理中...{:else}Premiumを選択{/if}
+                {#if isLoading === "Premium"}処理中...{:else}PREMIUMを選択{/if}
             </button>
         </div>
 
@@ -459,11 +459,11 @@
     <div
         class="mt-12 flex items-center gap-6 opacity-60 grayscale hover:grayscale-0 transition-all"
     >
-        <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/PayPay_logo.svg/1200px-PayPay_logo.svg.png"
-            alt="PayPay"
-            class="h-6 object-contain"
-        />
+        <div
+            class="h-6 w-16 bg-white rounded border border-slate-200 flex items-center justify-center p-1"
+        >
+            <span class="text-[10px] font-bold text-red-600">PayPay</span>
+        </div>
         <div class="flex gap-2">
             <div
                 class="h-6 w-10 bg-slate-200 rounded flex items-center justify-center text-[10px] font-bold text-slate-500"

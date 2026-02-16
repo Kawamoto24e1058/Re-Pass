@@ -216,7 +216,9 @@
   });
   // Duplicate removed
   let isUltimate = $derived(
-    userData?.plan === "season" || userData?.plan === "ultimate",
+    userData?.plan === "season" ||
+      userData?.plan === "ultimate" ||
+      userData?.isUltimate === true,
   );
   let lectureTitle = $state("");
   let unsubscribeUser: () => void;

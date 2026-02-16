@@ -396,27 +396,33 @@
     }
 
     // Derived state for plan
-    let planName = $derived(
-        userData?.plan === "pro" ||
-            userData?.plan === "premium" ||
-            userData?.plan === "season"
-            ? "Pro Plan"
-            : "Free Plan",
+    let planLevel = $derived.by(() => {
+        const p = userData?.plan;
+        if (p === "season" || p === "ultimate" || userData?.isUltimate)
+            return "ULTIMATE";
+        if (
+            p === "premium" ||
+            p === "premium_season" ||
+            p === "pro" ||
+            userData?.isPro
+        )
+            return "PREMIUM";
+        return "FREE";
+    });
+
+    let planColor = $derived(
+        planLevel === "ULTIMATE"
+            ? "bg-gradient-to-r from-amber-400 to-yellow-600"
+            : planLevel === "PREMIUM"
+              ? "bg-gradient-to-r from-indigo-500 to-pink-500"
+              : "bg-slate-300",
     );
-    let usagePercent = $derived(
-        userData?.plan === "pro" ||
-            userData?.plan === "premium" ||
-            userData?.plan === "season"
-            ? 100
-            : 33,
-    ); // Mock usage logic for now
-    let usageText = $derived(
-        userData?.plan === "pro" ||
-            userData?.plan === "premium" ||
-            userData?.plan === "season"
-            ? "Unlimited"
-            : "1 / 3 used",
-    );
+
+    let planName = $derived(planLevel + " PLAN");
+
+    let usagePercent = $derived(planLevel === "FREE" ? 33 : 100);
+
+    let usageText = $derived(planLevel === "FREE" ? "残り 3回/日" : "無制限");
 </script>
 
 <!-- Sidebar -->
@@ -854,28 +860,20 @@
             <div
                 class="flex items-center justify-between text-xs font-semibold mb-2"
             >
-                <span class="text-slate-700"
-                    >{userData?.plan === "pro" ||
-                    userData?.plan === "premium" ||
-                    userData?.plan === "season"
-                        ? "プロプラン"
-                        : "フリープラン"}</span
+                <span
+                    class="{planLevel === 'ULTIMATE'
+                        ? 'text-amber-600'
+                        : 'text-slate-700'} tracking-wider">{planName}</span
                 >
-                <span class="text-slate-400"
-                    >{userData?.plan === "pro" ||
-                    userData?.plan === "premium" ||
-                    userData?.plan === "season"
-                        ? "無制限"
-                        : `残り ${3}枠`}</span
-                >
+                <span class="text-slate-400">{usageText}</span>
             </div>
             <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div
-                    class="h-full bg-gradient-to-r from-indigo-500 to-pink-500 rounded-full"
+                    class="h-full rounded-full {planColor}"
                     style="width: {usagePercent}%"
                 ></div>
             </div>
-            {#if userData?.plan === "premium" || userData?.plan === "season"}
+            {#if planLevel !== "FREE"}
                 <a
                     href="/settings/subscription"
                     class="w-full mt-3 text-[10px] font-bold text-center text-slate-600 bg-slate-50 hover:bg-slate-100 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
@@ -900,7 +898,7 @@
                     href="/pricing"
                     class="w-full mt-3 text-[10px] font-bold text-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 py-1.5 rounded-lg transition-colors block"
                 >
-                    プロにアップグレード
+                    PREMIUMにアップグレード
                 </a>
             {/if}
         </div>
