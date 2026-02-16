@@ -214,6 +214,10 @@
   $effect(() => {
     selectedSubjectId = $currentBinder;
   });
+  // Duplicate removed
+  let isUltimate = $derived(
+    userData?.plan === "season" || userData?.plan === "ultimate",
+  );
   let lectureTitle = $state("");
   let unsubscribeUser: () => void;
   // unsubscribeLectures removed as it is now managed via list
@@ -727,7 +731,7 @@
 
     // Usage Quota Check
     console.log(
-      `🚀 HandleAnalyze - Plan: ${userData?.plan || "free"}, isPremium: ${isPremium}`,
+      `🚀 HandleAnalyze - Plan: ${userData?.plan || "free"}, isPremium: ${isPremium}, isUltimate: ${isUltimate}`,
     );
 
     const usageCount = userData?.usageCount || 0;
@@ -755,9 +759,19 @@
       return;
     }
 
-    // Feature Gating: Video Length/Size (Premium Only)
-    // Limit free users to < 100MB or implement duration check if metadata available.
-    // For now, using file size as proxy (approx 10 mins 1080p ~ 100-200MB, but depends on compression)
+    // Feature Gating: Video / Audio / URL (Ultimate Only)
+    if ((videoFile || audioFile || targetUrl) && !isUltimate) {
+      showUpgradeModal = true;
+      toastMessage = "動画・URL解析はUltimateプラン限定です";
+      return;
+    }
+
+    // Feature Gating: Video Length/Size (Ultimate Only - though already blocked above, strictly enforced here)
+    if (videoFile && !isUltimate) {
+      // Redundant but safe
+      showUpgradeModal = true;
+      return;
+    }
     // Let's set a conservative limit for free tier: 200MB
     if (videoFile && !isPremium && videoFile.size > 200 * 1024 * 1024) {
       showUpgradeModal = true;
@@ -3389,7 +3403,10 @@
             onclick={() => goto("/pricing")}
             class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-slate-200 hover:-translate-y-0.5 active:scale-95"
           >
-            学割プラン ¥480 で始める
+            onclick={() => goto("/pricing")}
+            class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4
+            rounded-2xl transition-all shadow-xl shadow-slate-200 hover:-translate-y-0.5
+            active:scale-95" > プランを見てみる
           </button>
           <button
             onclick={() => (showUpgradeModal = false)}

@@ -384,10 +384,9 @@
                                             />PROプランへのアップグレードが必要です。
                                         </p>
                                         <button
-                                            onclick={() =>
-                                                goto("/settings/subscription")}
-                                            class="bg-amber-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg shadow-amber-500/30 hover:bg-amber-600 transition-all"
-                                            >アップグレード</button
+                                            onclick={() => goto("/pricing")}
+                                            class="bg-gradient-to-r from-indigo-500 to-pink-500 text-white px-8 py-3 rounded-full text-base font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 transition-all"
+                                            >Season Passでアンロック</button
                                         >
                                     {:else}
                                         <div

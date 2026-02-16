@@ -62,14 +62,32 @@ export async function POST({ request }) {
         const customerId = session.customer as string;
         const subscriptionId = (session.subscription as string) || session.id;
 
-        // Season Pass Specific Logic (4 months duration)
+        // Price IDs (Should preferably be in env, but hardcoding for safety/clarity in this block if env is missing)
         const SEASON_PASS_PRICE_ID = 'price_1T0d6PRuwTinsDU9aJjf0JW1';
-        let expiresAt = null;
+        // These placeholders must match what is in .env or what Stripe actually sends. 
+        // Since we are using placeholders in .env, we should use the same here or load from env.
+        // However, the user asked to "reflect the new price IDs" which are currently placeholders.
+        const ULTIMATE_MONTHLY_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_MONTHLY || 'price_ultimate_monthly_placeholder';
+        const ULTIMATE_SEASON_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_SEASON || 'price_ultimate_season_placeholder';
 
-        if (priceId === SEASON_PASS_PRICE_ID) {
-            // 4 months = approx 120 days
+        let expiresAt = null;
+        let finalPlan = plan; // Default from metadata, usually 'pro'
+        let isUltimate = false;
+
+        // Determine Plan & Expiry based on Price ID
+        if (priceId === ULTIMATE_SEASON_PRICE_ID) {
+            finalPlan = 'season'; // Maps to isUltimate in frontend
+            isUltimate = true;
             const createdMs = session.created * 1000;
             expiresAt = new Date(createdMs + (120 * 24 * 60 * 60 * 1000));
+        } else if (priceId === ULTIMATE_MONTHLY_PRICE_ID) {
+            finalPlan = 'ultimate';
+            isUltimate = true;
+        } else if (priceId === SEASON_PASS_PRICE_ID) {
+            // This is the original "Premium Season Pass"
+            finalPlan = 'premium_season'; // Use a distinct plan name for Premium Season
+            const createdMs = session.created * 1000;
+            expiresAt = new Date(createdMs + (120 * 24 * 60 * 60 * 1000)); // 4 months
         }
 
         // Robust User Lookup via Email if ID is missing
@@ -89,28 +107,26 @@ export async function POST({ request }) {
 
         try {
             const updateData: any = {
-                plan: 'pro',
+                plan: finalPlan, // Use the determined plan
+                isUltimate: isUltimate, // Explicitly set flag
                 stripeCustomerId: customerId,
                 stripeSubscriptionId: subscriptionId,
                 updatedAt: FieldValue.serverTimestamp()
             };
 
             if (expiresAt) {
-                updateData.expiresAt = expiresAt;
-                // Season Pass Logic
-                updateData.plan = 'season';
-                updateData.isUltimate = true;
-                updateData.ultimateExpiresAt = expiresAt; // Same as expiresAt for now
-                console.log(`Setting expiration to ${expiresAt.toISOString()} for Season Pass.`);
+                updateData.ultimateExpiresAt = expiresAt; // User requested 'ultimateExpiresAt'
+                updateData.expiresAt = expiresAt; // Keep generic one too for compatibility
             }
 
             await adminDb.collection('users').doc(userId).set(updateData, { merge: true });
-
-            console.log(`User ${userId} upgraded to 'pro' plan successfully. (Price: ${priceId || 'Unknown'})`);
+            console.log(`Successfully updated user ${userId} to plan ${finalPlan}`);
         } catch (error) {
-            console.error('Error updating user plan in Firestore:', error);
-            return json({ error: 'Firestore update failed' }, { status: 500 });
+            console.error('Error updating user in Firestore:', error);
+            return json({ error: 'Database update failed' }, { status: 500 });
         }
+
+        return json({ received: true });
     }
 
     return json({ received: true });
