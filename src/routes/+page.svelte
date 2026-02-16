@@ -2859,11 +2859,12 @@
                     </div>
                   </div>
 
-
                   <!-- 2. Rich Media (Video / Audio / URL) - Ultimate Only -->
                   <div>
                     <h3
-                      class="text-xs font-bold {isUltimate ? 'text-indigo-500' : 'text-slate-400'} uppercase tracking-wider mb-3 flex items-center gap-2"
+                      class="text-xs font-bold {isUltimate
+                        ? 'text-indigo-500'
+                        : 'text-slate-400'} uppercase tracking-wider mb-3 flex items-center gap-2"
                     >
                       <svg
                         class="w-4 h-4"
@@ -2884,46 +2885,52 @@
                       >
                       Ultimate限定 (自動文字起こし)
                       {#if !isUltimate}
-                        <span class="bg-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded-full ml-auto">🔒Locked</span>
+                        <span
+                          class="bg-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded-full ml-auto"
+                          >🔒Locked</span
+                        >
                       {/if}
                     </h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <!-- Video -->
                       <button
                         onclick={() => {
-                            if(!isUltimate) {
-                                showUltimateModal = true;
-                                return;
-                            }
-                            // Trigger file input click
-                            document.getElementById('video-upload')?.click();
+                          if (!isUltimate) {
+                            showUltimateModal = true;
+                            return;
+                          }
+                          // Trigger file input click
+                          document.getElementById("video-upload")?.click();
                         }}
                         class="text-left w-full group block relative focus:outline-none"
                       >
                         <div
                           class="{videoFile
                             ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200'
-                            : isUltimate 
-                                ? 'border-slate-200 hover:border-indigo-300' 
-                                : 'border-slate-200 bg-slate-50 opacity-60'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
+                            : isUltimate
+                              ? 'border-slate-200 hover:border-indigo-300'
+                              : 'border-slate-200 bg-slate-50 opacity-60'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
                         >
                           <div
-                            class="w-8 h-8 rounded-full {isUltimate ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-200 text-slate-400'} flex items-center justify-center relative z-10 flex-shrink-0"
+                            class="w-8 h-8 rounded-full {isUltimate
+                              ? 'bg-indigo-100 text-indigo-600'
+                              : 'bg-slate-200 text-slate-400'} flex items-center justify-center relative z-10 flex-shrink-0"
                           >
                             {#if isUltimate}
-                                <svg
+                              <svg
                                 class="w-4 h-4"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
                                 ><path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                /></svg>
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                /></svg
+                              >
                             {:else}
-                                <span>🔒</span>
+                              <span>🔒</span>
                             {/if}
                           </div>
                           <div class="relative z-10 flex-1 min-w-0">
@@ -2935,7 +2942,11 @@
                             <div
                               class="text-xs font-bold text-slate-700 truncate"
                             >
-                              {videoFile ? videoFile.name : (isUltimate ? "動画ファイル" : "Unlock Ultimate")}
+                              {videoFile
+                                ? videoFile.name
+                                : isUltimate
+                                  ? "動画ファイル"
+                                  : "Unlock Ultimate"}
                             </div>
                           </div>
                           <input
@@ -2951,12 +2962,12 @@
 
                       <!-- Audio -->
                       <button
-                         onclick={() => {
-                            if(!isUltimate) {
-                                showUltimateModal = true;
-                                return;
-                            }
-                            document.getElementById('audio-upload')?.click();
+                        onclick={() => {
+                          if (!isUltimate) {
+                            showUltimateModal = true;
+                            return;
+                          }
+                          document.getElementById("audio-upload")?.click();
                         }}
                         class="text-left w-full group block relative focus:outline-none"
                       >
@@ -2964,27 +2975,30 @@
                           class="{audioFile
                             ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-200'
                             : isUltimate
-                                ? 'border-slate-200 hover:border-pink-300'
-                                : 'border-slate-200 bg-slate-50 opacity-60'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
+                              ? 'border-slate-200 hover:border-pink-300'
+                              : 'border-slate-200 bg-slate-50 opacity-60'} flex items-center gap-3 p-3 rounded-xl bg-white border shadow-sm transition-all relative overflow-hidden h-full"
                         >
                           <div
-                            class="w-8 h-8 rounded-full {isUltimate ? 'bg-pink-100 text-pink-600' : 'bg-slate-200 text-slate-400'} flex items-center justify-center relative z-10 flex-shrink-0"
+                            class="w-8 h-8 rounded-full {isUltimate
+                              ? 'bg-pink-100 text-pink-600'
+                              : 'bg-slate-200 text-slate-400'} flex items-center justify-center relative z-10 flex-shrink-0"
                           >
-                             {#if isUltimate}
-                                <svg
+                            {#if isUltimate}
+                              <svg
                                 class="w-4 h-4"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
                                 ><path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                                /></svg>
-                             {:else}
-                                <span>🔒</span>
-                             {/if}
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                                /></svg
+                              >
+                            {:else}
+                              <span>🔒</span>
+                            {/if}
                           </div>
                           <div class="relative z-10 flex-1 min-w-0">
                             <div
@@ -2995,7 +3009,11 @@
                             <div
                               class="text-xs font-bold text-slate-700 truncate"
                             >
-                              {audioFile ? audioFile.name : (isUltimate ? "音声ファイル" : "Unlock Ultimate")}
+                              {audioFile
+                                ? audioFile.name
+                                : isUltimate
+                                  ? "音声ファイル"
+                                  : "Unlock Ultimate"}
                             </div>
                           </div>
                           <input
@@ -3012,20 +3030,25 @@
 
                     <!-- URL Input -->
                     <div class="mt-4 relative">
-                        {#if !isUltimate}
-                            <button 
-                                onclick={() => {
-                                    showUltimateModal = true;
-                                }}
-                                class="absolute inset-0 z-20 cursor-pointer w-full h-full"
-                            aria-label="Unlock feature"></button>
-                        {/if}
+                      {#if !isUltimate}
+                        <button
+                          onclick={() => {
+                            showUltimateModal = true;
+                          }}
+                          class="absolute inset-0 z-20 cursor-pointer w-full h-full"
+                          aria-label="Unlock feature"
+                        ></button>
+                      {/if}
                       <input
                         type="text"
                         bind:value={targetUrl}
-                        placeholder={isUltimate ? "WebサイトのURLを入力 (https://...)" : "URL入力 (Ultimate限定 - 🔒Locked)"}
+                        placeholder={isUltimate
+                          ? "WebサイトのURLを入力 (https://...)"
+                          : "URL入力 (Ultimate限定 - 🔒Locked)"}
                         disabled={!isUltimate}
-                        class="w-full bg-white border border-slate-200 rounded-xl p-4 pl-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all {isUltimate ? '' : 'opacity-60 bg-slate-50 text-slate-400'}"
+                        class="w-full bg-white border border-slate-200 rounded-xl p-4 pl-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all {isUltimate
+                          ? ''
+                          : 'opacity-60 bg-slate-50 text-slate-400'}"
                       />
                       <svg
                         class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2"
@@ -3043,226 +3066,13 @@
                     </div>
                   </div>
 
-                <!-- 3. Course Info (Mandatory) -->
-                <div class="mt-6">
-                  <h3
-                    class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2"
-                  >
-                    <svg
-                      class="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      ><path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                      /></svg
+                  <!-- 3. Course Info (Mandatory) -->
+                  <div class="mt-6">
+                    <h3
+                      class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2"
                     >
-                    講義情報 (必須)
-                  </h3>
-                  <div
-                    class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
-                  >
-                    <div class="mb-4">
-                      <label
-                        for="courseNameInput"
-                        class="block text-xs font-bold text-slate-500 mb-1"
-                        >講義名</label
-                      >
-                      <input
-                        id="courseNameInput"
-                        type="text"
-                        bind:value={courseName}
-                        list="enrolled-courses"
-                        placeholder="講義名を入力 (例: 経済学入門)"
-                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none {showCourseNameError
-                          ? 'border-red-500 ring-1 ring-red-500'
-                          : ''}"
-                        oninput={handleCourseInput}
-                        onfocus={() => {
-                          if (suggestedCourses.length > 0)
-                            showSuggestions = true;
-                        }}
-                        onblur={() =>
-                          setTimeout(() => (showSuggestions = false), 200)}
-                      />
-
-                      <!-- Custom Autocomplete Dropdown -->
-                      {#if showSuggestions && suggestedCourses.length > 0}
-                        <div
-                          class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1"
-                        >
-                          {#each suggestedCourses as course}
-                            <button
-                              class="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-slate-50 last:border-0"
-                              onclick={() => selectCourse(course)}
-                              onmousedown={(e) => e.preventDefault()}
-                            >
-                              <div class="font-bold text-slate-800 text-sm">
-                                {course.courseName}
-                              </div>
-                              {#if course.teacherName || course.faculty}
-                                <div
-                                  class="text-xs text-slate-500 mt-0.5 flex gap-2"
-                                >
-                                  {#if course.faculty}<span
-                                      class="bg-slate-100 px-1.5 rounded"
-                                      >{course.faculty}</span
-                                    >{/if}
-                                  {#if course.teacherName}<span
-                                      >{course.teacherName}</span
-                                    >{/if}
-                                </div>
-                              {/if}
-                              {#if course.evaluationCriteria}
-                                <div
-                                  class="text-[10px] text-indigo-500 mt-1 truncate opacity-70"
-                                >
-                                  評価: {course.evaluationCriteria}
-                                </div>
-                              {/if}
-                            </button>
-                          {/each}
-                        </div>
-                      {:else if userData?.enrolledCourses && !courseName}
-                        <!-- Fallback to Enrolled Courses suggestions if empty? Or just rely on typing? -->
-                        <!-- Let's keep the datalist as a fallback or just show enrolled as suggestions initially? -->
-                        <!-- The user requested "From masterCourses", so let's stick to that. -->
-                        <!-- But seeing enrolled courses is nice. Let's merge? -->
-                        <!-- For now, we only show Master Course suggestions when typing. -->
-                      {/if}
-
-                      {#if selectedSyllabus}
-                        <div
-                          class="mt-2 bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-800 animate-in fade-in slide-in-from-top-1"
-                        >
-                          <div class="font-bold mb-1 flex items-center gap-1">
-                            <svg
-                              class="w-3 h-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                              ><path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              /></svg
-                            >
-                            シラバス連携中
-                          </div>
-                          <div class="opacity-80">
-                            評価方法: {selectedSyllabus.evaluationCriteria}
-                          </div>
-                        </div>
-                      {/if}
-                      {#if showCourseNameError}
-                        <p class="text-red-500 text-xs mt-1">
-                          ※講義名の入力は必須です
-                        </p>
-                      {/if}
-                    </div>
-
-                    <div class="flex items-center justify-between">
-                      <div>
-                        <p class="text-sm font-bold text-slate-700">
-                          コミュニティ共有
-                        </p>
-                        <p class="text-xs text-slate-500">
-                          同じ講義を履修する学生にノートを共有します
-                        </p>
-                      </div>
-                      <label
-                        class="relative inline-flex items-center cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          bind:checked={isShared}
-                          class="sr-only peer"
-                        />
-                        <div
-                          class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"
-                        ></div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex justify-end items-center gap-4 p-4 pt-0 mt-8">
-                  {#if analyzing}
-                    <button
-                      onclick={handleCancelAnalysis}
-                      class="text-slate-500 text-sm font-bold hover:text-red-500 underline transition-colors"
-                    >
-                      キャンセル
-                    </button>
-                  {/if}
-
-                  <button
-                    onclick={handleAnalyze}
-                    disabled={analyzing || isExtractingAudio}
-                    class="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  >
-                    {#if analyzing}
                       <svg
-                        class="animate-spin h-4 w-4 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          class="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          stroke-width="4"
-                        ></circle>
-                        <path
-                          class="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      解析中...
-                    {:else if isExtractingAudio}
-                      <svg
-                        class="animate-spin h-4 w-4 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          class="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          stroke-width="4"
-                        ></circle>
-                        <path
-                          class="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      音声処理中...
-                    {:else}
-                      まず {analysisMode === "note"
-                        ? "ノート"
-                        : analysisMode === "thoughts"
-                          ? "感想文"
-                          : "レポート"} を生成
-                      {#if selectedSummary}
-                        <span
-                          class="ml-2 bg-white/20 px-2 py-0.5 rounded text-xs font-normal opacity-90"
-                          >{selectedSummary}</span
-                        >
-                      {/if}
-                      <svg
-                        class="w-4 h-4 ml-1"
+                        class="w-4 h-4"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -3270,62 +3080,275 @@
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           stroke-width="2"
-                          d="M14 5l7 7m0 0l-7 7m7-7H3"
+                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                         /></svg
                       >
-                    {/if}
-                  </button>
-                </div>
-
-
-              {#if isExtractingAudio}
-                <div
-                  class="p-8 text-center animate-in fade-in flex flex-col items-center bg-indigo-50/50 rounded-2xl border border-indigo-100 mb-4"
-                >
-                  <div class="mb-6 relative">
+                      講義情報 (必須)
+                    </h3>
                     <div
-                      class="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-indigo-600"
+                      class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
                     >
-                      <svg
-                        class="w-10 h-10 animate-bounce"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                      <div class="mb-4">
+                        <label
+                          for="courseNameInput"
+                          class="block text-xs font-bold text-slate-500 mb-1"
+                          >講義名</label
+                        >
+                        <input
+                          id="courseNameInput"
+                          type="text"
+                          bind:value={courseName}
+                          list="enrolled-courses"
+                          placeholder="講義名を入力 (例: 経済学入門)"
+                          class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none {showCourseNameError
+                            ? 'border-red-500 ring-1 ring-red-500'
+                            : ''}"
+                          oninput={handleCourseInput}
+                          onfocus={() => {
+                            if (suggestedCourses.length > 0)
+                              showSuggestions = true;
+                          }}
+                          onblur={() =>
+                            setTimeout(() => (showSuggestions = false), 200)}
                         />
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="w-full max-w-md mb-4 text-left">
-                    <p
-                      class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1"
-                    >
-                      {extractionProgress?.stage || "Processing"}
-                    </p>
-                    <div
-                      class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"
-                    >
-                      <div
-                        class="bg-indigo-500 h-2 rounded-full transition-all duration-300 ease-out"
-                        style="width: {extractionProgress?.progress || 0}%"
-                      ></div>
-                    </div>
-                  </div>
-                  <p class="text-slate-700 font-bold text-sm tracking-wide">
-                    {extractionProgress?.message || "動画を最適化中..."}
-                  </p>
-                  <p class="text-[10px] text-slate-400 mt-2 italic">
-                    ※
-                    解析の前に、動画から音声を抽出し、サイズを約90%削減しています。
-                  </p>
-                </div>
-              {/if}
 
+                        <!-- Custom Autocomplete Dropdown -->
+                        {#if showSuggestions && suggestedCourses.length > 0}
+                          <div
+                            class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-y-auto mt-1"
+                          >
+                            {#each suggestedCourses as course}
+                              <button
+                                class="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors border-b border-slate-50 last:border-0"
+                                onclick={() => selectCourse(course)}
+                                onmousedown={(e) => e.preventDefault()}
+                              >
+                                <div class="font-bold text-slate-800 text-sm">
+                                  {course.courseName}
+                                </div>
+                                {#if course.teacherName || course.faculty}
+                                  <div
+                                    class="text-xs text-slate-500 mt-0.5 flex gap-2"
+                                  >
+                                    {#if course.faculty}<span
+                                        class="bg-slate-100 px-1.5 rounded"
+                                        >{course.faculty}</span
+                                      >{/if}
+                                    {#if course.teacherName}<span
+                                        >{course.teacherName}</span
+                                      >{/if}
+                                  </div>
+                                {/if}
+                                {#if course.evaluationCriteria}
+                                  <div
+                                    class="text-[10px] text-indigo-500 mt-1 truncate opacity-70"
+                                  >
+                                    評価: {course.evaluationCriteria}
+                                  </div>
+                                {/if}
+                              </button>
+                            {/each}
+                          </div>
+                        {:else if userData?.enrolledCourses && !courseName}
+                          <!-- Fallback to Enrolled Courses suggestions if empty? Or just rely on typing? -->
+                          <!-- Let's keep the datalist as a fallback or just show enrolled as suggestions initially? -->
+                          <!-- The user requested "From masterCourses", so let's stick to that. -->
+                          <!-- But seeing enrolled courses is nice. Let's merge? -->
+                          <!-- For now, we only show Master Course suggestions when typing. -->
+                        {/if}
+
+                        {#if selectedSyllabus}
+                          <div
+                            class="mt-2 bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-xs text-indigo-800 animate-in fade-in slide-in-from-top-1"
+                          >
+                            <div class="font-bold mb-1 flex items-center gap-1">
+                              <svg
+                                class="w-3 h-3"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                ><path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                /></svg
+                              >
+                              シラバス連携中
+                            </div>
+                            <div class="opacity-80">
+                              評価方法: {selectedSyllabus.evaluationCriteria}
+                            </div>
+                          </div>
+                        {/if}
+                        {#if showCourseNameError}
+                          <p class="text-red-500 text-xs mt-1">
+                            ※講義名の入力は必須です
+                          </p>
+                        {/if}
+                      </div>
+
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-sm font-bold text-slate-700">
+                            コミュニティ共有
+                          </p>
+                          <p class="text-xs text-slate-500">
+                            同じ講義を履修する学生にノートを共有します
+                          </p>
+                        </div>
+                        <label
+                          class="relative inline-flex items-center cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            bind:checked={isShared}
+                            class="sr-only peer"
+                          />
+                          <div
+                            class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"
+                          ></div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="flex justify-end items-center gap-4 p-4 pt-0 mt-8"
+                  >
+                    {#if analyzing}
+                      <button
+                        onclick={handleCancelAnalysis}
+                        class="text-slate-500 text-sm font-bold hover:text-red-500 underline transition-colors"
+                      >
+                        キャンセル
+                      </button>
+                    {/if}
+
+                    <button
+                      onclick={handleAnalyze}
+                      disabled={analyzing || isExtractingAudio}
+                      class="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      {#if analyzing}
+                        <svg
+                          class="animate-spin h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                          ></circle>
+                          <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        解析中...
+                      {:else if isExtractingAudio}
+                        <svg
+                          class="animate-spin h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                          ></circle>
+                          <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        音声処理中...
+                      {:else}
+                        まず {analysisMode === "note"
+                          ? "ノート"
+                          : analysisMode === "thoughts"
+                            ? "感想文"
+                            : "レポート"} を生成
+                        {#if selectedSummary}
+                          <span
+                            class="ml-2 bg-white/20 px-2 py-0.5 rounded text-xs font-normal opacity-90"
+                            >{selectedSummary}</span
+                          >
+                        {/if}
+                        <svg
+                          class="w-4 h-4 ml-1"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M14 5l7 7m0 0l-7 7m7-7H3"
+                          /></svg
+                        >
+                      {/if}
+                    </button>
+                  </div>
+
+                  {#if isExtractingAudio}
+                    <div
+                      class="p-8 text-center animate-in fade-in flex flex-col items-center bg-indigo-50/50 rounded-2xl border border-indigo-100 mb-4"
+                    >
+                      <div class="mb-6 relative">
+                        <div
+                          class="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-indigo-600"
+                        >
+                          <svg
+                            class="w-10 h-10 animate-bounce"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                      <div class="w-full max-w-md mb-4 text-left">
+                        <p
+                          class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1"
+                        >
+                          {extractionProgress?.stage || "Processing"}
+                        </p>
+                        <div
+                          class="w-full bg-slate-100 rounded-full h-2 overflow-hidden"
+                        >
+                          <div
+                            class="bg-indigo-500 h-2 rounded-full transition-all duration-300 ease-out"
+                            style="width: {extractionProgress?.progress || 0}%"
+                          ></div>
+                        </div>
+                      </div>
+                      <p class="text-slate-700 font-bold text-sm tracking-wide">
+                        {extractionProgress?.message || "動画を最適化中..."}
+                      </p>
+                      <p class="text-[10px] text-slate-400 mt-2 italic">
+                        ※
+                        解析の前に、動画から音声を抽出し、サイズを約90%削減しています。
+                      </p>
+                    </div>
+                  {/if}
                 </div>
               {/if}
 
@@ -3368,7 +3391,7 @@
                   </p>
                 </div>
               {/if}
-
+            </div>
           {/if}
         </div>
 
