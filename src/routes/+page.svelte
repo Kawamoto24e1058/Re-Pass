@@ -52,7 +52,17 @@
   let audioUploadPromise = $state<Promise<string> | null>(null);
   let targetUrl = $state("");
   let analyzing = $state(false);
-  let result = $state("");
+
+  type AnalysisResult =
+    | {
+        title?: string;
+        category?: string;
+        summary: string;
+        glossary?: { term: string; definition: string }[];
+      }
+    | string;
+
+  let result = $state<AnalysisResult>("");
   let cancellationController = $state<AbortController | null>(null); // Global cancellation controller
   let categoryTag = $state(""); // AI generated category
   let videoPlayer = $state<HTMLVideoElement | null>(null);
@@ -183,20 +193,16 @@
   let isResultCopied = $state(false); // Feedback state for individual results
 
   // --- Derivative Generation State ---
-  let lectureAnalyses = $state<Record<string, string>>({}); // Store different modes for current lecture
+  let lectureAnalyses = $state<Record<string, AnalysisResult>>({}); // Store different modes for current lecture
   let initialGenerationDone = $state(false);
   let derivativeAnalyzing = $state(false);
 
-  // Copy result to clipboard
-
-  // Copy result to clipboard
+  // Copy result to clipboard (AnalysisResult aware)
   function copyToClipboard() {
     if (!finalResultContainer) return;
 
-    // Use innerText to get the rendered, clean text (strips Markdown symbols)
+    // Use innerText as a fallback, but ideally we reconstruct from data if available
     const rawText = finalResultContainer.innerText;
-
-    // Basic cleaning: remove excessive vertical spacing and trim each line
     const cleanText = rawText
       .split("\n")
       .map((line) => line.trim())
@@ -210,19 +216,35 @@
     });
   }
 
-  // Copy individual lecture note to clipboard
+  // Copy individual lecture note to clipboard (AnalysisResult aware)
   function copyResultToClipboard() {
-    if (!resultTextContainer) return;
+    let cleanText = "";
 
-    // Use innerText to get the rendered, clean text
-    const rawText = resultTextContainer.innerText;
+    // If we have structured data, construct a nice report
+    const currentData = lectureAnalyses[analysisMode] || result;
 
-    const cleanText = rawText
-      .split("\n")
-      .map((line) => line.trim())
-      .join("\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    if (typeof currentData === "object" && currentData !== null) {
+      const { title, category, summary, glossary } = currentData;
+      cleanText += `${title || "無題"}\n`;
+      if (category) cleanText += `カテゴリ: ${category}\n`;
+      cleanText += `\n${summary}\n`;
+
+      if (glossary && glossary.length > 0) {
+        cleanText += `\n【用語辞典】\n`;
+        glossary.forEach((item) => {
+          cleanText += `・${item.term}: ${item.definition}\n`;
+        });
+      }
+    } else {
+      // Legacy or string fallback
+      if (!resultTextContainer) return;
+      cleanText = resultTextContainer.innerText
+        .split("\n")
+        .map((line) => line.trim())
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
 
     navigator.clipboard.writeText(cleanText).then(() => {
       isResultCopied = true;
@@ -756,33 +778,30 @@
           }
         }
 
-        let finalMarkdown = summary || "";
+        // Store Structured Data
+        const structuredResult = { title, category, summary, glossary };
 
-        if (glossary && Array.isArray(glossary) && glossary.length > 0) {
-          finalMarkdown +=
-            `\n\n<div class="card-glossary mt-8">\n<h3 class="text-lg font-bold mb-4">【用語辞典】</h3>\n<dl class="space-y-4">\n` +
-            glossary
-              .map(
-                (item: any) =>
-                  `<div class="border-l-4 border-indigo-200 pl-4 py-1">
-                      <dt class="font-bold text-indigo-900">${item.term}</dt>
-                      <dd class="text-sm text-slate-600 mt-1">${item.definition}</dd>
-                    </div>`,
-              )
-              .join("\n") +
-            `\n</dl>\n</div>`;
-        }
-        result = finalMarkdown;
-        lectureAnalyses = { [analysisMode]: finalMarkdown };
+        // Update State
+        lectureAnalyses = {
+          ...lectureAnalyses,
+          [analysisMode]: structuredResult,
+        };
+        // Save the structured object as the primary result
+        result = structuredResult;
+
         initialGenerationDone = true;
       } else {
         // Fallback handling
-        result = data.text || data.result;
+        const textRes = data.text || data.result || "";
+        lectureAnalyses = { ...lectureAnalyses, [analysisMode]: textRes };
+        result = textRes;
       }
 
       // Legacy extraction fallback (if not in JSON)
       if (!lectureTitle || lectureTitle.startsWith("講義 20")) {
-        const firstLine = result.split("\n")[0].trim();
+        const textToCheck =
+          typeof result === "string" ? result : result.summary;
+        const firstLine = textToCheck.split("\n")[0].trim();
         if (firstLine.startsWith("# ")) {
           const extractedTitle = firstLine
             .replace(/^#\s*/, "")
@@ -865,8 +884,8 @@
     }
 
     // Must have a source to derive from
-    const sourceAnalysis = result;
-    if (!sourceAnalysis) return;
+    const sourceContent = typeof result === "object" ? result.summary : result;
+    if (!sourceContent) return;
 
     derivativeAnalyzing = true;
     analysisMode = targetMode;
@@ -881,7 +900,7 @@
       const response = await fetch("/api/analyze-derivative", {
         method: "POST",
         body: JSON.stringify({
-          sourceAnalysis,
+          sourceAnalysis: sourceContent,
           targetMode,
           targetLength,
         }),
@@ -1314,7 +1333,13 @@
     }
   }
 
-  let parsedHtml = $derived(result ? marked.parse(result) : "");
+  let parsedHtml = $derived(
+    result
+      ? typeof result === "object"
+        ? marked.parse(result.summary)
+        : marked.parse(result)
+      : "",
+  );
 
   function handleDragStartToSidebar(e: DragEvent, lectureId: string) {
     if (e.dataTransfer) {
@@ -1659,26 +1684,30 @@
   {/snippet}
 
   {#snippet ResultDisplay()}
-    {#if result}
+    {@const currentAnalysis = lectureAnalyses[analysisMode] || result}
+    {#if currentAnalysis}
       <div
         bind:this={resultContainer}
-        class="relative bg-white rounded-3xl shadow-sm border border-slate-100 p-10 md:p-14 animate-in fade-in slide-in-from-bottom-8 duration-700 overflow-hidden {analysisMode ===
+        class="relative bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-12 animate-in fade-in slide-in-from-bottom-8 duration-700 overflow-hidden {analysisMode ===
         'note'
-          ? 'bg-graph-paper'
+          ? 'bg-article-paper'
           : ''}"
       >
-        <div class="absolute top-8 right-8 flex items-center gap-4 z-20">
-          {#if result && !derivativeAnalyzing}
+        <div class="absolute top-6 right-6 flex items-center gap-4 z-20">
+          {#if !derivativeAnalyzing}
             <button
               onclick={copyResultToClipboard}
-              class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200 text-slate-500 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm active:scale-95"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/80 backdrop-blur-sm border border-slate-200 text-slate-500 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm active:scale-95 group"
             >
               {#if isResultCopied}
-                <span class="text-[10px] font-bold text-emerald-600"
+                <span
+                  class="text-[10px] font-bold text-emerald-600 animate-in fade-in"
                   >✅ コピー完了</span
                 >
               {:else}
-                <span class="text-xs">📋</span>
+                <span class="text-xs group-hover:scale-110 transition-transform"
+                  >📋</span
+                >
                 <span class="text-[10px] font-bold uppercase tracking-wider"
                   >コピー</span
                 >
@@ -1689,19 +1718,20 @@
 
         {#if derivativeAnalyzing}
           <div class="py-20 text-center animate-in fade-in">
-            <!-- ... -->
+            <!-- ... existing loading ... -->
+            <p class="text-slate-400">生成中...</p>
           </div>
         {:else}
           <!-- Video Player (Sticky) -->
           {#if previewVideoUrl && analysisMode === "note"}
             <div
-              class="mb-8 sticky top-4 z-30 bg-white/90 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-indigo-100 transition-all"
+              class="mb-8 sticky top-4 z-30 bg-white/95 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-indigo-50 transition-all max-w-2xl mx-auto ring-1 ring-slate-900/50"
             >
               <video
                 bind:this={videoPlayer}
                 src={previewVideoUrl}
                 controls
-                class="w-full h-auto max-h-[300px] rounded-xl bg-black"
+                class="w-full h-auto max-h-[300px] rounded-xl bg-black shadow-inner"
               >
                 <track kind="captions" />
               </video>
@@ -1714,16 +1744,101 @@
             </div>
           {/if}
 
-          <article
-            bind:this={resultTextContainer}
-            onclick={handleTimestampClick}
-            class="prose prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-800 prose-p:text-slate-600 prose-li:text-slate-600 prose-a:text-indigo-600 prose-strong:text-indigo-700 prose-strong:font-bold prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:rounded prose-pre:bg-slate-900 prose-pre:rounded-2xl prose-img:rounded-2xl prose-hr:border-slate-100 marker:text-indigo-400"
-          >
-            {@html (marked(result) as string).replace(
-              /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
-              '<button class="timestamp-link inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md text-xs font-bold hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer select-none" data-timestamp="$1">▶ $1</button>',
-            )}
-          </article>
+          <!-- Rich Structured Display -->
+          {#if typeof currentAnalysis === "object"}
+            <!-- Header Section -->
+            <header class="mb-8 border-b border-indigo-50 pb-6">
+              <div class="flex flex-wrap gap-2 mb-3">
+                {#if currentAnalysis.category}
+                  <span
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-100"
+                  >
+                    {currentAnalysis.category}
+                  </span>
+                {/if}
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-wider"
+                >
+                  {analysisMode === "note"
+                    ? "Lecture Note"
+                    : analysisMode === "thoughts"
+                      ? "Reflections"
+                      : "Academic Report"}
+                </span>
+              </div>
+
+              <h1
+                class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight"
+              >
+                {currentAnalysis.title || analyzedTitle || "Analysis Result"}
+              </h1>
+            </header>
+
+            <!-- Main Content (Summary) -->
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+            <article
+              bind:this={resultTextContainer}
+              onclick={handleTimestampClick}
+              class="prose prose-slate max-w-none
+                  prose-p:text-slate-700 prose-p:leading-8 prose-p:text-[17px]
+                  prose-headings:font-bold prose-headings:text-slate-900 prose-headings:tracking-tight
+                  prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:border-l-4 prose-h2:border-indigo-500 prose-h2:pl-3
+                  prose-h3:text-lg prose-h3:text-indigo-900
+                  prose-ul:my-6 prose-li:my-1 prose-li:text-slate-700
+                  prose-strong:text-indigo-900 prose-strong:font-bold
+                  prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
+                  prose-blockquote:border-l-indigo-300 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg"
+            >
+              {@html (marked(currentAnalysis.summary) as string).replace(
+                /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
+                '<button class="timestamp-link inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md text-xs font-bold hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer select-none border border-indigo-100/50" data-timestamp="$1">▶ $1</button>',
+              )}
+            </article>
+
+            <!-- Glossary Section (Conditional) -->
+            {#if currentAnalysis.glossary && currentAnalysis.glossary.length > 0}
+              <section class="mt-16 pt-10 border-t border-slate-200/60">
+                <h3
+                  class="flex items-center gap-2 text-lg font-bold text-slate-900 mb-6"
+                >
+                  <span class="text-xl">📚</span> 用語辞典
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {#each currentAnalysis.glossary as item}
+                    <div
+                      class="bg-slate-50/80 rounded-xl p-4 border border-slate-100 hover:border-indigo-100 hover:shadow-sm transition-all group"
+                    >
+                      <dt
+                        class="font-bold text-indigo-900 text-[15px] mb-1 group-hover:text-indigo-700 flex items-baseline justify-between"
+                      >
+                        {item.term}
+                      </dt>
+                      <dd
+                        class="text-sm text-slate-600 leading-relaxed text-[13px]"
+                      >
+                        {item.definition}
+                      </dd>
+                    </div>
+                  {/each}
+                </div>
+              </section>
+            {/if}
+          {:else}
+            <!-- Legacy String Rendering -->
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+            <article
+              bind:this={resultTextContainer}
+              onclick={handleTimestampClick}
+              class="prose prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-800 prose-p:text-slate-600 prose-li:text-slate-600 prose-a:text-indigo-600 prose-strong:text-indigo-700 prose-strong:font-bold prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:rounded prose-pre:bg-slate-900 prose-pre:rounded-2xl prose-img:rounded-2xl prose-hr:border-slate-100 marker:text-indigo-400"
+            >
+              {@html (marked(currentAnalysis as string) as string).replace(
+                /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
+                '<button class="timestamp-link inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md text-xs font-bold hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer select-none" data-timestamp="$1">▶ $1</button>',
+              )}
+            </article>
+          {/if}
 
           <div class="mt-12 pt-8 border-t border-slate-100">
             <p
