@@ -70,42 +70,50 @@ export async function POST({ request }) {
         const subscriptionId = (session.subscription as string) || session.id;
 
         // Price IDs from static public env (aligned with frontend)
-        const PREMIUM_MONTHLY_PRICE_ID = PUBLIC_STRIPE_PRICE_PREMIUM;
-        const PREMIUM_SEASON_PRICE_ID = PUBLIC_STRIPE_PRICE_SEASON;
-        const ULTIMATE_MONTHLY_PRICE_ID = PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY;
-        const ULTIMATE_SEASON_PRICE_ID = PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON;
+        const PREMIUM_MONTHLY = PUBLIC_STRIPE_PRICE_PREMIUM;
+        const PREMIUM_SEASON = PUBLIC_STRIPE_PRICE_SEASON;
+        const ULTIMATE_MONTHLY = PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY;
+        const ULTIMATE_SEASON = PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON;
 
-        let finalPlan = plan.toLowerCase().trim();
+        console.log('--- Price ID Configuration ---');
+        console.log('ULTIMATE_MONTHLY:', ULTIMATE_MONTHLY);
+        console.log('ULTIMATE_SEASON:', ULTIMATE_SEASON);
+        console.log('PREMIUM_MONTHLY:', PREMIUM_MONTHLY);
+        console.log('PREMIUM_SEASON:', PREMIUM_SEASON);
 
-        console.log('--- Plan Detection ---');
-        console.log('Initial plan from metadata:', finalPlan);
-        console.log('PriceId from metadata:', priceId);
+        let finalPlan = 'free';
 
-        // --- Plan Detection Fallback (Priority: metadata.plan > priceId) ---
-        if (finalPlan === 'ultimate') {
-            // Already set
-        } else if (finalPlan === 'premium' || finalPlan === 'pro') {
+        console.log('--- Plan Detection Analysis ---');
+        console.log('Input Metadata Plan:', plan);
+        console.log('Input Metadata PriceId:', priceId);
+
+        // 1. Prioritize Price ID mapping (Independent of metadata.plan)
+        if (priceId === ULTIMATE_MONTHLY || priceId === ULTIMATE_SEASON) {
+            finalPlan = 'ultimate';
+            console.log('>> [MATCH] PriceId maps to ULTIMATE');
+        } else if (priceId === PREMIUM_MONTHLY || priceId === PREMIUM_SEASON) {
             finalPlan = 'premium';
-        } else if (priceId) {
-            // Map priceId to plan if metadata.plan was missing or invalid
-            if (priceId === ULTIMATE_MONTHLY_PRICE_ID || priceId === ULTIMATE_SEASON_PRICE_ID) {
-                finalPlan = 'ultimate';
-            } else if (priceId === PREMIUM_MONTHLY_PRICE_ID || priceId === PREMIUM_SEASON_PRICE_ID) {
-                finalPlan = 'premium';
-            }
+            console.log('>> [MATCH] PriceId maps to PREMIUM');
+        }
+        // 2. Fallback to metadata.plan if Price ID didn't match
+        else if (plan.toLowerCase().trim() === 'ultimate') {
+            finalPlan = 'ultimate';
+            console.log('>> [MATCH] Metadata Plan maps to ULTIMATE');
+        } else if (plan.toLowerCase().trim() === 'premium' || plan.toLowerCase().trim() === 'pro' || plan.toLowerCase().trim() === 'season') {
+            finalPlan = 'premium';
+            console.log('>> [MATCH] Metadata Plan maps to PREMIUM');
+        } else {
+            console.warn('>> [NO MATCH] Defaulting to FREE. Please check Price ID mappings.');
         }
 
         console.log('Final determined plan:', finalPlan);
-
-        // Final safety fallback
-        if (!finalPlan) finalPlan = 'free';
 
         // Set Ultimate flag (legacy support but derived from finalPlan)
         const isUltimate = finalPlan === 'ultimate';
 
         // Handle Expiry for Season Passes (6 months / 180 days as per requirement)
         let expiresAt = null;
-        if (priceId === ULTIMATE_SEASON_PRICE_ID || priceId === PREMIUM_SEASON_PRICE_ID) {
+        if (priceId === ULTIMATE_SEASON || priceId === PREMIUM_SEASON) {
             const createdMs = session.created * 1000;
             expiresAt = new Date(createdMs + (180 * 24 * 60 * 60 * 1000)); // 6 months
         }
