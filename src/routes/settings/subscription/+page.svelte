@@ -15,6 +15,7 @@
     let portalLoading = $state(false);
     let showConfetti = $state(false);
     let successMessage = $state(false);
+    let isSlowSync = $state(false);
     let planLevel = $derived.by(() => {
         const p = String(userData?.plan || "")
             .toLowerCase()
@@ -38,6 +39,10 @@
                         if (docSnap.exists()) {
                             userData = docSnap.data();
                             userProfile.set(userData); // Keep global store in sync
+                            console.log(
+                                "Profile snapshot update received:",
+                                userData.plan,
+                            );
                         }
                     },
                 );
@@ -140,6 +145,23 @@
         goto("/login");
     }
 
+    async function forceRefresh() {
+        if (!authUser) return;
+        loading = true;
+        try {
+            const docSnap = await getDoc(doc(db, "users", authUser.uid));
+            if (docSnap.exists()) {
+                userData = docSnap.data();
+                userProfile.set(userData);
+                console.log("Force refresh successful:", userData.plan);
+            }
+        } catch (e) {
+            console.error("Force refresh failed:", e);
+        } finally {
+            loading = false;
+        }
+    }
+
     // --- Redirection & Timeout Logic ---
     let showHomeButton = $state(false);
 
@@ -148,10 +170,15 @@
             showHomeButton = true;
         }, 3000);
 
+        const slowTimeout = setTimeout(() => {
+            isSlowSync = true;
+        }, 10000);
+
         const unsub = $effect.root(() => {
             $effect(() => {
                 if (planLevel !== "FREE") {
                     clearTimeout(timeout);
+                    clearTimeout(slowTimeout);
                     setTimeout(() => goto("/"), 500); // Fast redirection
                 }
             });
@@ -160,6 +187,7 @@
         return {
             destroy() {
                 clearTimeout(timeout);
+                clearTimeout(slowTimeout);
                 unsub();
             },
         };
@@ -320,6 +348,15 @@
                     >
                         画面が切り替わらない場合はこちら
                     </button>
+
+                    {#if isSlowSync}
+                        <button
+                            onclick={forceRefresh}
+                            class="mt-4 px-6 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100 animate-in fade-in slide-in-from-top-2"
+                        >
+                            🔄 同期が遅れています（手動で更新を確認）
+                        </button>
+                    {/if}
                 </div>
             </div>
         {:else}

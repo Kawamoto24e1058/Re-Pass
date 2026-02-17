@@ -52,9 +52,19 @@ export async function POST({ request }) {
         console.log('metadata.priceId:', session.metadata?.priceId);
 
         // Priority: metadata.userId > client_reference_id
+        console.log('--- UID Identification ---');
+        console.log('session.metadata?.userId:', session.metadata?.userId);
+        console.log('session.client_reference_id:', session.client_reference_id);
+
         let userId = session.metadata?.userId || session.client_reference_id;
+        if (userId) {
+            console.log(`Found UID: ${userId}`);
+        } else {
+            console.warn('UID not found in metadata or client_reference_id. Attempting email lookup...');
+        }
+
         const customerEmail = session.customer_details?.email;
-        const plan = session.metadata?.plan || ''; // No default 'pro'
+        const plan = session.metadata?.plan || '';
         const priceId = session.metadata?.priceId;
         const customerId = session.customer as string;
         const subscriptionId = (session.subscription as string) || session.id;
@@ -66,6 +76,10 @@ export async function POST({ request }) {
         const ULTIMATE_SEASON_PRICE_ID = PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON;
 
         let finalPlan = plan.toLowerCase().trim();
+
+        console.log('--- Plan Detection ---');
+        console.log('Initial plan from metadata:', finalPlan);
+        console.log('PriceId from metadata:', priceId);
 
         // --- Plan Detection Fallback (Priority: metadata.plan > priceId) ---
         if (finalPlan === 'ultimate') {
@@ -80,6 +94,8 @@ export async function POST({ request }) {
                 finalPlan = 'premium';
             }
         }
+
+        console.log('Final determined plan:', finalPlan);
 
         // Final safety fallback
         if (!finalPlan) finalPlan = 'free';
@@ -101,6 +117,9 @@ export async function POST({ request }) {
             const snapshot = await usersRef.where('email', '==', customerEmail).limit(1).get();
             if (!snapshot.empty) {
                 userId = snapshot.docs[0].id;
+                console.log(`Identified user via email: ${userId}`);
+            } else {
+                console.error(`User with email ${customerEmail} not found in Firestore.`);
             }
         }
 
