@@ -410,6 +410,7 @@
         .trim()
         .toLowerCase() === "premium",
   );
+  let isFree = $derived(!isPremium);
 
   let dailyRemaining = $derived.by(() => {
     if (isPremium) return Infinity;
@@ -492,11 +493,7 @@
         unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
           if (docSnap.exists()) {
             userData = docSnap.data();
-            console.log("User Data Loaded:", userData);
-            console.log("University:", userData?.university);
-            console.log(
-              `👤 User Plan Updated: ${userData.plan || "free"} (isPro: ${userData.isPro || false})`,
-            );
+            console.log(`👤 User Plan Updated: ${userData.plan || "free"}`);
           }
         });
       } else {
@@ -687,9 +684,23 @@
 
     if (!isPremium && val > 500) {
       showUpgradeModal = true;
+      upgradeModalTitle = "プレミアムプラン限定";
+      upgradeModalMessage =
+        "フリープランの解析上限は500文字です。<br />プレミアムプランなら2000文字、アルティメットプランなら4000文字まで拡張されます。";
       toastMessage = "フリープランは500文字までです";
       setTimeout(() => (toastMessage = null), 3000);
       targetLength = 500; // Force back
+      return;
+    }
+
+    if (!isUltimate && val > 2000) {
+      showUpgradeModal = true;
+      upgradeModalTitle = "アルティメットプラン限定";
+      upgradeModalMessage =
+        "アルティメットプランなら、最大4000文字（原稿用紙10枚分）の超ロング解析が可能です。";
+      toastMessage = "2000文字以上はアルティメット限定です";
+      setTimeout(() => (toastMessage = null), 3000);
+      targetLength = 2000; // Force back
       return;
     }
     targetLength = val;
@@ -2098,7 +2109,7 @@
                   {#if isPremium}
                     <span
                       class="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded text-amber-50 font-normal"
-                      >Pro Only</span
+                      >{isUltimate ? "Ultimate" : "Premium"}</span
                     >
                   {/if}
                 </div>
@@ -2136,7 +2147,7 @@
                           onclick={() => (showUpgradeModal = true)}
                           class="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:shadow-xl hover:-translate-y-0.5 transition-all"
                         >
-                          Proプランにアップグレード
+                          プレミアムプランにアップグレード
                         </button>
                       </div>
                     </div>
@@ -2767,9 +2778,23 @@
                           </svg>
                         {/if}
                       </span>
-                      <span class="absolute right-0 text-[10px] text-slate-400"
-                        >4000</span
-                      >
+                      <span
+                        class="absolute right-0 text-[10px] text-slate-400 flex items-center gap-1"
+                        >4000
+                        {#if !isUltimate}
+                          <svg
+                            class="w-2.5 h-2.5 text-amber-500 inline-block"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        {/if}
+                      </span>
                     </div>
                   </div>
                 </div>

@@ -5,6 +5,13 @@ import { env } from '$env/dynamic/private';
 import { adminDb } from '$lib/server/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
+import {
+    PUBLIC_STRIPE_PRICE_PREMIUM,
+    PUBLIC_STRIPE_PRICE_SEASON,
+    PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY,
+    PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON
+} from '$env/static/public';
+
 const stripe = new Stripe(env.STRIPE_SECRET_KEY as string);
 const endpointSecret = env.STRIPE_WEBHOOK_SECRET;
 
@@ -24,23 +31,11 @@ export async function POST({ request }) {
     console.log(`Request Body Length: ${body.length}`);
 
     try {
-        console.log('Attempting to verify Stripe signature...');
         event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
         console.log('Stripe signature verification SUCCESS. Event Type:', event.type);
     } catch (err: any) {
         console.error(`!!! Stripe signature verification FAILED: ${err.message}`);
-
-        // --- EMERGENCY DEBUG SKIP (TEST ONLY) ---
-        // If signature fails, we try to parse the body manually to test DB logic
-        // WARNING: This should be disabled in production!
-        try {
-            console.warn('--- FALLBACK: Attempting manual parse for DB logic debugging ---');
-            event = JSON.parse(body) as Stripe.Event;
-            console.warn(`Manual parse SUCCESS. Proceeding with unverified event: ${event.type}`);
-        } catch (parseErr) {
-            console.error('Manual parse also failed. Aborting.');
-            return json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
-        }
+        return json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
     }
 
     // Handle the event
@@ -57,25 +52,24 @@ export async function POST({ request }) {
         // Priority: metadata.userId > client_reference_id
         let userId = session.metadata?.userId || session.client_reference_id;
         const customerEmail = session.customer_details?.email;
-        const plan = session.metadata?.plan || 'pro';
+        const plan = session.metadata?.plan || ''; // No default 'pro'
         const priceId = session.metadata?.priceId;
         const customerId = session.customer as string;
         const subscriptionId = (session.subscription as string) || session.id;
 
-        // Price IDs from env
-        const PREMIUM_MONTHLY_PRICE_ID = env.STRIPE_PRICE_PREMIUM || 'price_1T0d6rRuwTinsDU9cqaomb4f';
-        const PREMIUM_SEASON_PRICE_ID = env.STRIPE_PRICE_SEASON || 'price_1T0d6PRuwTinsDU9aJjf0JW1';
-        const ULTIMATE_MONTHLY_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_MONTHLY || 'price_1T1TRSRuwTinsDU9kUdRZQxo';
-        const ULTIMATE_SEASON_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_SEASON || 'price_1T1TS9RuwTinsDU9NeJ4CwL3';
+        // Price IDs from static public env (aligned with frontend)
+        const PREMIUM_MONTHLY_PRICE_ID = PUBLIC_STRIPE_PRICE_PREMIUM;
+        const PREMIUM_SEASON_PRICE_ID = PUBLIC_STRIPE_PRICE_SEASON;
+        const ULTIMATE_MONTHLY_PRICE_ID = PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY;
+        const ULTIMATE_SEASON_PRICE_ID = PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON;
 
-        let finalPlan = plan.toLowerCase();
-        if (finalPlan === 'pro') finalPlan = 'premium'; // Legacy sync
-
-        let isUltimate = false;
+        let finalPlan = plan.toLowerCase().trim();
 
         // --- Plan Detection Fallback (Priority: metadata.plan > priceId) ---
-        if (session.metadata?.plan) {
-            finalPlan = session.metadata.plan.toLowerCase();
+        if (finalPlan === 'ultimate') {
+            // Already set
+        } else if (finalPlan === 'premium' || finalPlan === 'pro') {
+            finalPlan = 'premium';
         } else if (priceId) {
             if (priceId === ULTIMATE_MONTHLY_PRICE_ID || priceId === ULTIMATE_SEASON_PRICE_ID) {
                 finalPlan = 'ultimate';
@@ -84,10 +78,11 @@ export async function POST({ request }) {
             }
         }
 
-        // Set Ultimate flag
-        if (finalPlan === 'ultimate') {
-            isUltimate = true;
-        }
+        // Final safety fallback
+        if (!finalPlan) finalPlan = 'free';
+
+        // Set Ultimate flag (legacy support but derived from finalPlan)
+        const isUltimate = finalPlan === 'ultimate';
 
         // Handle Expiry for Season Passes
         let expiresAt = null;
@@ -119,6 +114,8 @@ export async function POST({ request }) {
                 stripeSubscriptionId: subscriptionId,
                 updatedAt: FieldValue.serverTimestamp()
             };
+            // Explicitly REMOVE/RESET isPro to avoid confusion
+            updateData.isPro = false;
 
             if (expiresAt) {
                 updateData.ultimateExpiresAt = expiresAt; // User requested 'ultimateExpiresAt'

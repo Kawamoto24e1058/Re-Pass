@@ -5,6 +5,8 @@ import { env } from '$env/dynamic/private';
 import { adminAuth } from '$lib/server/firebase-admin';
 import {
     PUBLIC_STRIPE_PRICE_SEASON,
+    PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY,
+    PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON,
     PUBLIC_BASE_URL
 } from "$env/static/public";
 
@@ -43,6 +45,10 @@ export async function POST({ request, url }) {
         }
 
         const mode = 'subscription';
+        // Determine target plan for metadata
+        const ULTIMATE_MONTHLY = PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY;
+        const ULTIMATE_SEASON = PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON;
+        const targetPlan = (priceId === ULTIMATE_MONTHLY || priceId === ULTIMATE_SEASON) ? 'ultimate' : 'premium';
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -60,7 +66,7 @@ export async function POST({ request, url }) {
             client_reference_id: userId,
             metadata: {
                 userId: userId,
-                plan: 'premium',
+                plan: targetPlan,
                 priceId: priceId
             }
         } as any);

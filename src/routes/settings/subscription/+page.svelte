@@ -223,6 +223,53 @@
                 <div
                     class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"
                 ></div>
+                <p class="mt-4 text-slate-500 font-medium animate-pulse">
+                    読み込み中...
+                </p>
+            </div>
+        {:else if isSuccess && (!userData?.plan || userData?.plan === "free")}
+            <!-- Improved Sync UX: Waiting for Webhook -->
+            <div
+                class="text-center py-24 bg-white rounded-[2rem] border border-indigo-100 shadow-sm animate-in fade-in zoom-in"
+            >
+                <div class="relative w-24 h-24 mx-auto mb-8">
+                    <div
+                        class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"
+                    ></div>
+                    <div
+                        class="relative bg-white rounded-full w-24 h-24 flex items-center justify-center border-4 border-indigo-500 shadow-inner"
+                    >
+                        <span class="text-4xl animate-bounce">⏳</span>
+                    </div>
+                </div>
+                <h2 class="text-2xl font-black text-slate-900 mb-2">
+                    プランを有効化しています...
+                </h2>
+                <p class="text-slate-500 mb-8 max-w-sm mx-auto px-4">
+                    決済が完了しました。現在プランを反映させています。このまま数秒お待ちください。
+                </p>
+                <div class="flex flex-col items-center gap-4">
+                    <div
+                        class="flex items-center gap-2 text-indigo-600 font-bold text-sm"
+                    >
+                        <div
+                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"
+                        ></div>
+                        <div
+                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.2s]"
+                        ></div>
+                        <div
+                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.4s]"
+                        ></div>
+                        同期中
+                    </div>
+                    <button
+                        onclick={() => window.location.reload()}
+                        class="text-xs text-slate-400 font-medium underline hover:text-indigo-500 transition-colors"
+                    >
+                        画面が切り替わらない場合はこちら
+                    </button>
+                </div>
             </div>
         {:else}
             <div class="space-y-6">

@@ -19,6 +19,7 @@ export const POST = async ({ request }) => {
     // --- Auth & Usage Check ---
     let uid: string | null = null;
     let isPremium = false;
+    let isUltimate = false; // New flag
     let userData: any = null;
 
     const authHeader = request.headers.get('Authorization');
@@ -30,7 +31,9 @@ export const POST = async ({ request }) => {
 
         const userDoc = await adminDb.collection('users').doc(uid).get();
         userData = userDoc.data();
-        isPremium = userData?.plan === 'pro' || userData?.plan === 'premium' || userData?.plan === 'season' || userData?.isPro === true;
+        const plan = String(userData?.plan || '').trim().toLowerCase();
+        isPremium = ['premium', 'ultimate', 'season', 'pro'].includes(plan);
+        isUltimate = plan === 'ultimate';
       } catch (e) {
         console.warn('Auth token verification failed:', e);
       }
@@ -53,7 +56,7 @@ export const POST = async ({ request }) => {
       if (currentCount >= 3) {
         return json({
           error: "本日の上限に達しました",
-          details: "無料プランの1日あたりの解析上限（3回）に達しました。明日また試すか、Proプランへアップグレードしてください。"
+          details: "無料プランの1日あたりの解析上限（3回）に達しました。明日また試すか、アルティメットプランへアップグレードしてください。"
         }, { status: 403 });
       }
     } else if (!isPremium && !uid) {
@@ -63,16 +66,31 @@ export const POST = async ({ request }) => {
     const formData = await request.formData();
     const mode = formData.get('mode') as string || "note";
     const targetLengthRaw = formData.get('targetLength');
-    const targetLength = parseInt(targetLengthRaw as string || "1000");
+    let targetLength = parseInt(targetLengthRaw as string || "1000");
     let transcript = formData.get('transcript') as string || "";
     const targetUrl = formData.get('url') as string;
     const evaluationCriteria = formData.get('evaluationCriteria') as string || "";
 
+    // --- Hard Logic Gating ---
+    if (!isPremium && targetLength > 500) {
+      console.warn('⚠️ Character Limit Gating: Free user attempted > 500 chars');
+      targetLength = 500; // Force down in backend
+    }
+
+    if (!isUltimate && (formData.has('videoUrl') || formData.has('audioUrl') || targetUrl)) {
+      console.warn('⚠️ Plan Gating: Non-Ultimate user attempted Video/URL analysis');
+      return json({ error: "動画・URL解析はアルティメットプラン限定です" }, { status: 403 });
+    }
+
+    if (!isPremium && (mode === 'thoughts' || mode === 'report')) {
+      console.warn('⚠️ Feature Gating: Free user attempted premium mode');
+      return json({ error: "この機能はプレミアム限定です" }, { status: 403 });
+    }
+
     // --- Validation & Logging ---
     console.log('--- 🤖 Analysis Request Received ---');
     console.log('Mode:', mode);
-    console.log('TargetLength (Raw):', targetLengthRaw);
-    console.log('TargetLength (Parsed):', targetLength);
+    console.log('TargetLength:', targetLength);
     console.log('URL:', targetUrl || 'None');
     console.log('Transcript Length:', transcript.length);
     console.log('Files:', {
@@ -82,16 +100,10 @@ export const POST = async ({ request }) => {
       image: formData.has('image') || formData.has('imageUrl'),
       video: formData.has('video') || formData.has('videoUrl')
     });
-    console.log('Storage URLs:', {
-      audio: formData.get('audioUrl') ? '✅' : '❌',
-      video: formData.get('videoUrl') ? '✅' : '❌',
-      pdf: formData.get('pdfUrl') ? '✅' : '❌',
-      image: formData.get('imageUrl') ? '✅' : '❌'
-    });
 
     if (isNaN(targetLength) || targetLength <= 0) {
       console.error('❌ Validation Failed: Invalid targetLength');
-      return json({ error: "無効な文字数指定です (targetLength must be a positive number)" }, { status: 400 });
+      return json({ error: "無効な文字数指定です" }, { status: 400 });
     }
 
     const hasInput =
@@ -101,12 +113,7 @@ export const POST = async ({ request }) => {
       formData.get('audioUrl') || formData.get('videoUrl') || formData.get('pdfUrl') || formData.get('imageUrl');
     if (!hasInput) {
       console.error('❌ Validation Failed: No input data provided');
-      return json({ error: "解析対象となるデータ（テキスト、URL、またはファイル）が必要です" }, { status: 400 });
-    }
-
-    if (!isPremium && (mode === 'thoughts' || mode === 'report')) {
-      console.warn('⚠️ Feature Gating: Free user attempted premium mode');
-      return json({ error: "この機能はプレミアム限定です" }, { status: 403 });
+      return json({ error: "解析対象となるデータが必要です" }, { status: 400 });
     }
 
     // --- Input Processing ---
