@@ -33,17 +33,40 @@
                 authUser = currentUser;
 
                 // Set up real-time listener for user profile to handle instant updates
+                console.log(
+                    "🔔 Starting snapshot listener for UID:",
+                    currentUser.uid,
+                );
+                console.log("🔔 Document path: users/" + currentUser.uid);
+
                 const unsubProfile = onSnapshot(
                     doc(db, "users", currentUser.uid),
                     (docSnap) => {
                         if (docSnap.exists()) {
-                            userData = docSnap.data();
+                            const data = docSnap.data();
+                            console.log(
+                                "📦 Firestore snapshot received for users/" +
+                                    currentUser.uid +
+                                    ":",
+                                data,
+                            );
+                            console.log("📦 Incoming plan value:", data.plan);
+
+                            userData = data;
                             userProfile.set(userData); // Keep global store in sync
                             console.log(
                                 "Profile snapshot update received:",
                                 userData.plan,
                             );
+                        } else {
+                            console.warn(
+                                "⚠️ Snapshot received but document does not exist for UID:",
+                                currentUser.uid,
+                            );
                         }
+                    },
+                    (error) => {
+                        console.error("❌ Snapshot listener error:", error);
                     },
                 );
 

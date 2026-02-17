@@ -130,23 +130,25 @@ export async function POST({ request }) {
 
         try {
             const updateData: any = {
-                plan: finalPlan, // Use the determined plan
-                isUltimate: isUltimate, // Explicitly set flag
+                plan: finalPlan,
+                isUltimate: isUltimate,
                 stripeCustomerId: customerId,
                 stripeSubscriptionId: subscriptionId,
                 updatedAt: FieldValue.serverTimestamp()
             };
-            // Explicitly REMOVE/RESET isPro to avoid confusion
             updateData.isPro = false;
 
             if (expiresAt) {
-                updateData.ultimateExpiresAt = expiresAt; // User requested 'ultimateExpiresAt'
-                updateData.expiresAt = expiresAt; // Keep generic one too for compatibility
+                updateData.ultimateExpiresAt = expiresAt;
+                updateData.expiresAt = expiresAt;
             }
 
+            const docPath = `users/${userId.trim()}`;
+            console.log("Updating Firestore Document:", docPath, "with data:", { plan: finalPlan, isUltimate });
             console.log("Updating Plan for User:", userId, "to:", finalPlan);
-            await adminDb.collection('users').doc(userId).set(updateData, { merge: true });
-            console.log(`Successfully updated user ${userId} to plan ${finalPlan}`);
+
+            await adminDb.collection('users').doc(userId.trim()).set(updateData, { merge: true });
+            console.log(`Successfully updated document ${docPath} to plan ${finalPlan}`);
         } catch (error) {
             console.error('Error updating user in Firestore:', error);
             return json({ error: 'Database update failed' }, { status: 500 });
