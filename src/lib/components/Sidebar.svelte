@@ -397,7 +397,9 @@
 
     // Derived state for plan
     let planLevel = $derived.by(() => {
-        const p = userData?.plan?.toLowerCase();
+        const p = String(userData?.plan || "")
+            .trim()
+            .toLowerCase();
         if (p === "ultimate") return "ULTIMATE";
         if (p === "premium" || p === "pro") return "PREMIUM";
         return "FREE";

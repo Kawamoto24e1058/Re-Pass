@@ -410,9 +410,17 @@
                                             サブスクリプション管理
                                         </p>
                                         <p class="text-sm text-slate-500">
-                                            現在のプラン: {#if userData?.plan === "ultimate"}
+                                            現在のプラン: {#if String(userData?.plan || "")
+                                                .trim()
+                                                .toLowerCase() === "ultimate"}
                                                 アルティメットプラン
-                                            {:else if userData?.plan === "premium" || userData?.plan === "pro" || userData?.plan === "season"}
+                                            {:else if String(userData?.plan || "")
+                                                .trim()
+                                                .toLowerCase() === "premium" || String(userData?.plan || "")
+                                                    .trim()
+                                                    .toLowerCase() === "pro" || String(userData?.plan || "")
+                                                    .trim()
+                                                    .toLowerCase() === "season"}
                                                 プレミアムプラン
                                             {:else}
                                                 フリープラン

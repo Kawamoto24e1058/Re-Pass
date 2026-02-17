@@ -35,12 +35,17 @@
     let upgradeModalMessage = $state("");
 
     // Derived
-    let isPremium = $derived(
-        userData?.plan?.toLowerCase() === "premium" ||
-            userData?.plan?.toLowerCase() === "ultimate",
+    let isUltimate = $derived(
+        String(userData?.plan || "")
+            .trim()
+            .toLowerCase() === "ultimate",
     );
-
-    let isUltimate = $derived(userData?.plan?.toLowerCase() === "ultimate");
+    let isPremium = $derived(
+        isUltimate ||
+            String(userData?.plan || "")
+                .trim()
+                .toLowerCase() === "premium",
+    );
 
     // Calculate Academic Year threshold (April 1st)
     const today = new Date();
@@ -49,21 +54,16 @@
     // If Jan-Mar, academic year started previous year. If Apr-Dec, started this year.
     const academicYearStart = new Date(currentYear, 3, 1); // April 1st of current academic year
 
+    import { user as userStore, userProfile } from "$lib/userStore";
+    $effect(() => {
+        user = $userStore;
+        userData = $userProfile;
+    });
+
     onMount(() => {
         const unsub = auth.onAuthStateChanged(async (currentUser) => {
             if (currentUser) {
                 user = currentUser;
-                // We rely on the layout or a direct fetch to get userData if not available in store
-                // For this page, let's fetch strictly to ensure we have enrolledCourses
-                const docRef = await import("firebase/firestore").then((m) =>
-                    m.doc(db, "users", user.uid),
-                );
-                const docSnap = await import("firebase/firestore").then((m) =>
-                    m.getDoc(docRef),
-                );
-                if (docSnap.exists()) {
-                    userData = docSnap.data();
-                }
             } else {
                 goto("/login");
             }
@@ -829,3 +829,12 @@
     title={upgradeModalTitle}
     message={upgradeModalMessage}
 />
+
+<!-- Debug Footer (Temporary for verification) -->
+<div
+    class="fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-2 text-[10px] font-mono flex gap-4 z-[9999] opacity-80 pointer-events-none"
+>
+    <span>DB Plan: {userData?.plan || "N/A"}</span>
+    <span>isUltimate: {isUltimate}</span>
+    <span class="text-slate-400 opacity-50 ml-auto">Debug Mode ON</span>
+</div>

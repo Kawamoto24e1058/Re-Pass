@@ -144,7 +144,7 @@
           const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
           if (userDoc.exists()) {
             const freshData = userDoc.data();
-            userData = freshData;
+            // Removed manual userData override to maintain onSnapshot reactivity
             const refetchedUniv = freshData.university
               ? freshData.university.trim()
               : "";
@@ -399,11 +399,17 @@
   let manuscriptPages = $derived(Math.ceil(targetLength / 400));
   let thumbPosition = $derived((targetLength / 4000) * 100);
 
-  let isPremium = $derived(
-    userData?.plan?.toLowerCase() === "premium" ||
-      userData?.plan?.toLowerCase() === "ultimate",
+  let isUltimate = $derived(
+    String(userData?.plan || "")
+      .trim()
+      .toLowerCase() === "ultimate",
   );
-  let isUltimate = $derived(userData?.plan?.toLowerCase() === "ultimate");
+  let isPremium = $derived(
+    isUltimate ||
+      String(userData?.plan || "")
+        .trim()
+        .toLowerCase() === "premium",
+  );
 
   let dailyRemaining = $derived.by(() => {
     if (isPremium) return Infinity;
@@ -3571,6 +3577,15 @@
       </button>
     </div>
   {/if}
+
+  <!-- Debug Footer (Temporary for verification) -->
+  <div
+    class="fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-2 text-[10px] font-mono flex gap-4 z-[9999] opacity-80 pointer-events-none"
+  >
+    <span>DB Plan: {userData?.plan || "N/A"}</span>
+    <span>isUltimate: {isUltimate}</span>
+    <span class="text-slate-400 opacity-50 ml-auto">Debug Mode ON</span>
+  </div>
 
   <!-- Global Styles for Waveform Animations -->
   <style>
