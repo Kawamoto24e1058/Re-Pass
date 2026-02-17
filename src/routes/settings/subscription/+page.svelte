@@ -256,7 +256,7 @@
                                 <p
                                     class="text-4xl font-black text-slate-900 tracking-tight"
                                 >
-                                    {#if userData?.plan === "ultimate" || userData?.isUltimate}
+                                    {#if userData?.plan === "ultimate"}
                                         アルティメットプラン
                                     {:else if userData?.plan === "premium" || userData?.plan === "pro"}
                                         プレミアムプラン
@@ -316,7 +316,7 @@
                                             >✓</span
                                         > 授業分析（無制限）
                                     </li>
-                                    {#if userData?.plan === "ultimate" || userData?.isUltimate}
+                                    {#if userData?.plan === "ultimate"}
                                         <li
                                             class="flex items-center gap-2 text-sm text-slate-600"
                                         >

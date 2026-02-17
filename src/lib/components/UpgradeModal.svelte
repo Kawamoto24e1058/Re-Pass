@@ -5,8 +5,8 @@
     let {
         isOpen = false,
         onClose,
-        title = "ULTIMATE限定機能",
-        message = "動画解析・URL読み込み・共有ノートの閲覧は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>限定の機能です。",
+        title = "アルティメットプラン限定機能",
+        message = "動画解析・URL読み込み・共有ノートの閲覧は<br /><span class='text-indigo-900 font-bold'>アルティメットプラン</span>限定の機能です。",
     } = $props();
 
     function handleUpgrade() {

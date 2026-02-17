@@ -819,7 +819,7 @@
     // Feature Gating: Video / Audio / URL (Ultimate Only)
     if ((videoFile || audioFile || targetUrl) && !isUltimate) {
       showUpgradeModal = true;
-      toastMessage = "動画・URL解析はUltimateプラン限定です";
+      toastMessage = "動画・URL解析はアルティメットプラン限定です";
       return;
     }
 
@@ -835,7 +835,7 @@
       // but meaningful if we allow Premium video in future.
       // Current rule: Video/URL is Ultimate ONLY.
       showUpgradeModal = true;
-      toastMessage = "動画・URL解析はUltimateプラン限定です";
+      toastMessage = "動画・URL解析はアルティメットプラン限定です";
       return;
     }
 
@@ -2948,7 +2948,7 @@
                           d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         /></svg
                       >
-                      Ultimate限定 (自動文字起こし)
+                      アルティメットプラン限定 (自動文字起こし)
                     </h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <!-- Video -->
@@ -2957,7 +2957,7 @@
                           if (!isUltimate) {
                             upgradeModalTitle = "動画解析をアンロック";
                             upgradeModalMessage =
-                              "動画ファイルからの文字起こし・自動解析は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>専用の機能です。<br /><br />Zoom録画や講義動画をそのままドラッグするだけで、試験対策ノートが完成します。";
+                              "動画ファイルからの文字起こし・自動解析は<br /><span class='text-indigo-900 font-bold'>アルティメットプラン</span>専用の機能です。<br /><br />Zoom録画や講義動画をそのままドラッグするだけで、試験対策ノートが完成します。";
                             showUpgradeModal = true;
                             return;
                           }
@@ -3035,7 +3035,7 @@
                           if (!isUltimate) {
                             upgradeModalTitle = "音声解析をアンロック";
                             upgradeModalMessage =
-                              "音声ファイルからの文字起こし・自動解析は<br /><span class='text-indigo-900 font-bold'>Ultimateプラン</span>専用の機能です。<br /><br />長時間の講義録音も、AIが瞬時に構造化してノートにまとめます。";
+                              "音声ファイルからの文字起こし・自動解析は<br /><span class='text-indigo-900 font-bold'>アルティメットプラン</span>専用の機能です。<br /><br />長時間の講義録音も、AIが瞬時に構造化してノートにまとめます。";
                             showUpgradeModal = true;
                             return;
                           }

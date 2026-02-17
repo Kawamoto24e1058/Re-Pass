@@ -31,22 +31,15 @@
     let showUltimateModal = $state(false);
     let searchError = $state<string | null>(null);
     let selectedLecture = $state<any>(null);
-    let upgradeModalTitle = $state("ULTIMATE限定機能");
+    let upgradeModalTitle = $state("アルティメットプラン限定機能");
     let upgradeModalMessage = $state("");
 
     // Derived
     let isPremium = $derived(
-        userData?.plan === "pro" ||
-            userData?.plan === "premium" ||
-            userData?.plan === "season" ||
-            userData?.isPro === true,
+        userData?.plan === "premium" || userData?.plan === "ultimate",
     );
 
-    let isUltimate = $derived(
-        userData?.plan === "season" ||
-            userData?.plan === "ultimate" ||
-            userData?.isUltimate === true,
-    );
+    let isUltimate = $derived(userData?.plan === "ultimate");
 
     // Calculate Academic Year threshold (April 1st)
     const today = new Date();
