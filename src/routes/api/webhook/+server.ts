@@ -13,7 +13,7 @@ import {
 } from '$env/static/public';
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY as string);
-const endpointSecret = env.STRIPE_WEBHOOK_SECRET;
+const endpointSecret = env.STRIPE_WEBHOOK_SECRET?.trim();
 
 export async function POST({ request }) {
     const signature = request.headers.get('stripe-signature');
@@ -22,7 +22,9 @@ export async function POST({ request }) {
     }
 
     let event: Stripe.Event;
-    const body = await request.text();
+    // Use arrayBuffer and Buffer for reliable raw body handling in SvelteKit
+    const arrayBuffer = await request.arrayBuffer();
+    const body = Buffer.from(arrayBuffer);
 
     console.log('--- Webhook Debug Log Start ---');
     console.log(`Received Webhook POST request`);
