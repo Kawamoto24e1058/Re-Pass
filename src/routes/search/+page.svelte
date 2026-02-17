@@ -445,14 +445,14 @@
                             >
                                 {#if lecture.analysis && typeof lecture.analysis === "object" && lecture.analysis.summary}
                                     <!-- Sanitized Display: Only showing summary -->
-                                    {@html marked(
+                                    {@html marked.parse(
                                         lecture.analysis.summary.substring(
                                             0,
                                             150,
                                         ) + "...",
                                     )}
                                 {:else if typeof lecture.analysis === "string"}
-                                    {@html marked(
+                                    {@html marked.parse(
                                         lecture.analysis.substring(0, 150) +
                                             "...",
                                     )}
@@ -755,7 +755,7 @@
                                 ? "filter blur-sm select-none pointer-events-none opacity-60"
                                 : ""}
                         >
-                            {@html marked(
+                            {@html marked.parse(
                                 typeof selectedLecture.analysis === "string"
                                     ? selectedLecture.analysis
                                     : selectedLecture.analysis.summary +

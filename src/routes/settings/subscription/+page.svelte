@@ -137,13 +137,16 @@
     function redirectionTimer(node: HTMLElement) {
         const timeout = setTimeout(() => {
             showHomeButton = true;
-        }, 5000);
+        }, 3000);
 
         const unsub = $effect.root(() => {
             $effect(() => {
-                if (userData?.plan && userData.plan !== "free") {
+                const currentPlan = String(userData?.plan || "")
+                    .toLowerCase()
+                    .trim();
+                if (currentPlan && currentPlan !== "free") {
                     clearTimeout(timeout);
-                    setTimeout(() => goto("/"), 2000); // 2s delay after success for confetti feel
+                    setTimeout(() => goto("/"), 500); // Fast redirection
                 }
             });
         });

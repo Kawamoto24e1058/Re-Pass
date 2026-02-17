@@ -49,7 +49,7 @@ export async function GET({ request }) {
             subscribed: true,
             status: sub.status,
             current_period_end: sub.current_period_end, // Unix timestamp
-            plan: (sub.metadata?.plan === 'pro') ? 'premium' : (sub.metadata?.plan || 'premium'),
+            plan: (sub.metadata?.plan === 'pro') ? 'premium' : (sub.metadata?.plan || 'free'),
             cancel_at_period_end: sub.cancel_at_period_end
         });
     } catch (error: any) {

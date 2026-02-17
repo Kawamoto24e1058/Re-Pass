@@ -2077,7 +2077,7 @@
                 prose-blockquote:border-l-indigo-300 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg"
             >
               {@html (
-                marked(
+                marked.parse(
                   isVideoSource
                     ? displaySummary
                     : displaySummary.replace(
@@ -2121,7 +2121,7 @@
                       ? ''
                       : 'blur-sm select-none opacity-50 pointer-events-none'}"
                   >
-                    {@html marked(strategyContent)}
+                    {@html marked.parse(strategyContent)}
                   </div>
 
                   <!-- Lock Overlay for Free Users -->
@@ -2193,7 +2193,9 @@
               onclick={handleTimestampClick}
               class="prose prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-800 prose-p:text-slate-600 prose-li:text-slate-600 prose-a:text-indigo-600 prose-strong:text-indigo-700 prose-strong:font-bold prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:rounded prose-pre:bg-slate-900 prose-pre:rounded-2xl prose-img:rounded-2xl prose-hr:border-slate-100 marker:text-indigo-400"
             >
-              {@html (marked(currentAnalysis as string) as string).replace(
+              {@html (
+                marked.parse(currentAnalysis as string) as string
+              ).replace(
                 /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
                 '<button class="timestamp-link inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md text-xs font-bold hover:bg-indigo-100 hover:text-indigo-800 transition-colors cursor-pointer select-none" data-timestamp="$1">▶ $1</button>',
               )}

@@ -71,6 +71,7 @@ export async function POST({ request }) {
         } else if (finalPlan === 'premium' || finalPlan === 'pro') {
             finalPlan = 'premium';
         } else if (priceId) {
+            // Map priceId to plan if metadata.plan was missing or invalid
             if (priceId === ULTIMATE_MONTHLY_PRICE_ID || priceId === ULTIMATE_SEASON_PRICE_ID) {
                 finalPlan = 'ultimate';
             } else if (priceId === PREMIUM_MONTHLY_PRICE_ID || priceId === PREMIUM_SEASON_PRICE_ID) {
@@ -84,11 +85,11 @@ export async function POST({ request }) {
         // Set Ultimate flag (legacy support but derived from finalPlan)
         const isUltimate = finalPlan === 'ultimate';
 
-        // Handle Expiry for Season Passes
+        // Handle Expiry for Season Passes (6 months / 180 days as per requirement)
         let expiresAt = null;
         if (priceId === ULTIMATE_SEASON_PRICE_ID || priceId === PREMIUM_SEASON_PRICE_ID) {
             const createdMs = session.created * 1000;
-            expiresAt = new Date(createdMs + (120 * 24 * 60 * 60 * 1000)); // 4 months
+            expiresAt = new Date(createdMs + (180 * 24 * 60 * 60 * 1000)); // 6 months
         }
 
         // Robust User Lookup via Email if ID is missing
