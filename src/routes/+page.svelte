@@ -278,9 +278,9 @@
     userData = $userProfile;
     selectedSubjectId = $currentBinder;
 
-    // Debug Logs for Data Sync
-    if (user) console.log("✅ [+page] User synced:", user.uid);
-    if (userData) console.log("✅ [+page] UserData synced:", userData);
+    // Debug Logs for Data Sync (Use store values to avoid self-dependency)
+    if ($userStore) console.log("✅ [+page] User synced:", $userStore.uid);
+    if ($userProfile) console.log("✅ [+page] UserData synced:", $userProfile);
     if ($lectures) console.log("✅ [+page] Lectures count:", $lectures.length);
   });
 
