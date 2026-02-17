@@ -502,7 +502,7 @@
                             props.onSelectSubject(null);
                             currentBinder.set(null);
                             toggleSubject("unassigned");
-                            if ($page.url.pathname !== "/") goto("/");
+                            goto("/?view=history");
                             isSidebarOpen.set(false);
                         }}
                         ondragover={(e) => handleDragOver(e, "unassigned")}

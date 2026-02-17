@@ -276,6 +276,13 @@
     userData = $userProfile;
     selectedSubjectId = $currentBinder;
   });
+
+  $effect(() => {
+    if ($page.url.searchParams.get("view") === "history") {
+      if (isEditing) isEditing = false;
+      if (currentLectureId) currentLectureId = null;
+    }
+  });
   // Duplicate removed
   let lectureTitle = $state("");
   let unsubscribeUser: () => void;
