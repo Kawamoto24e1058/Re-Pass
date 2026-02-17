@@ -398,27 +398,27 @@
     // Derived state for plan
     let planLevel = $derived.by(() => {
         const p = userData?.plan;
-        if (p === "season" || p === "ultimate" || userData?.isUltimate)
-            return "ULTIMATE";
-        if (
-            p === "premium" ||
-            p === "premium_season" ||
-            p === "pro" ||
-            userData?.isPro
-        )
+        if (p === "ultimate" || userData?.isUltimate) return "ULTIMATE";
+        if (p === "premium" || userData?.isPremium || userData?.isPro)
             return "PREMIUM";
         return "FREE";
     });
 
     let planColor = $derived(
         planLevel === "ULTIMATE"
-            ? "bg-gradient-to-r from-amber-400 to-yellow-600"
+            ? "bg-gradient-to-r from-amber-400 to-yellow-600 shadow-lg shadow-amber-500/20"
             : planLevel === "PREMIUM"
-              ? "bg-gradient-to-r from-indigo-500 to-pink-500"
+              ? "bg-gradient-to-r from-indigo-500 to-pink-500 shadow-lg shadow-indigo-500/20"
               : "bg-slate-300",
     );
 
-    let planName = $derived(planLevel + " PLAN");
+    let planName = $derived(
+        planLevel === "ULTIMATE"
+            ? "アルティメットプラン"
+            : planLevel === "PREMIUM"
+              ? "プレミアムプラン"
+              : "フリープラン",
+    );
 
     let usagePercent = $derived(planLevel === "FREE" ? 33 : 100);
 

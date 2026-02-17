@@ -7,7 +7,7 @@ interface UserProfile {
     email: string | null;
     displayName: string | null;
     photoURL: string | null;
-    plan: 'free' | 'premium' | 'season' | 'pro';
+    plan: 'free' | 'premium' | 'ultimate';
     usageCount?: number;
     createdAt: any;
 }

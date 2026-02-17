@@ -256,13 +256,15 @@
                                 <p
                                     class="text-4xl font-black text-slate-900 tracking-tight"
                                 >
-                                    {#if userData?.plan === "pro" || userData?.plan === "premium" || userData?.plan === "season"}
-                                        プロプラン
+                                    {#if userData?.plan === "ultimate" || userData?.isUltimate}
+                                        アルティメットプラン
                                     {:else}
-                                        フリープラン
+                                        {userData?.plan === "free"
+                                            ? "フリープラン"
+                                            : "プレミアムプラン"}
                                     {/if}
                                 </p>
-                                {#if userData?.plan === "pro" || userData?.plan === "premium" || userData?.plan === "season"}
+                                {#if userData?.plan && userData.plan !== "free"}
                                     <span
                                         class="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider"
                                         >Active</span
@@ -314,6 +316,16 @@
                                             >✓</span
                                         > 授業分析（無制限）
                                     </li>
+                                    {#if userData?.plan === "ultimate" || userData?.isUltimate}
+                                        <li
+                                            class="flex items-center gap-2 text-sm text-slate-600"
+                                        >
+                                            <span
+                                                class="text-indigo-500 font-bold"
+                                                >✓</span
+                                            > 動画・オーディオ分析
+                                        </li>
+                                    {/if}
                                     <li
                                         class="flex items-center gap-2 text-sm text-slate-600"
                                     >

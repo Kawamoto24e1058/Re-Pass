@@ -71,12 +71,12 @@ export async function POST({ request }) {
         const ULTIMATE_SEASON_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_SEASON || 'price_ultimate_season_placeholder';
 
         let expiresAt = null;
-        let finalPlan = plan; // Default from metadata, usually 'pro'
+        let finalPlan = plan === 'pro' ? 'premium' : plan; // Default 'pro' -> 'premium'
         let isUltimate = false;
 
         // Determine Plan & Expiry based on Price ID
         if (priceId === ULTIMATE_SEASON_PRICE_ID) {
-            finalPlan = 'season'; // Maps to isUltimate in frontend
+            finalPlan = 'ultimate';
             isUltimate = true;
             const createdMs = session.created * 1000;
             expiresAt = new Date(createdMs + (120 * 24 * 60 * 60 * 1000));
@@ -84,10 +84,13 @@ export async function POST({ request }) {
             finalPlan = 'ultimate';
             isUltimate = true;
         } else if (priceId === SEASON_PASS_PRICE_ID) {
-            // This is the original "Premium Season Pass"
-            finalPlan = 'premium_season'; // Use a distinct plan name for Premium Season
+            // This is the original "Premium Season Pass" -> map to premium
+            finalPlan = 'premium';
             const createdMs = session.created * 1000;
             expiresAt = new Date(createdMs + (120 * 24 * 60 * 60 * 1000)); // 4 months
+        } else if (priceId === ULTIMATE_SEASON_PRICE_ID || priceId === ULTIMATE_MONTHLY_PRICE_ID) {
+            finalPlan = 'ultimate';
+            isUltimate = true;
         }
 
         // Robust User Lookup via Email if ID is missing

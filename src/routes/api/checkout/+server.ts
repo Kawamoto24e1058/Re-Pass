@@ -75,7 +75,7 @@ export async function POST({ request, url }) {
             client_reference_id: userId,
             metadata: {
                 userId: userId,
-                plan: 'pro',
+                plan: 'premium',
                 priceId: priceId
             }
         } as any);
