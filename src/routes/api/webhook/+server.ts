@@ -144,6 +144,7 @@ export async function POST({ request }) {
                 updateData.expiresAt = expiresAt; // Keep generic one too for compatibility
             }
 
+            console.log("Updating Plan for User:", userId, "to:", finalPlan);
             await adminDb.collection('users').doc(userId).set(updateData, { merge: true });
             console.log(`Successfully updated user ${userId} to plan ${finalPlan}`);
         } catch (error) {

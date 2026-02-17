@@ -177,6 +177,11 @@
         const unsub = $effect.root(() => {
             $effect(() => {
                 if (planLevel !== "FREE") {
+                    console.log(
+                        "Plan update detected (",
+                        planLevel,
+                        "). Triggering automatic redirection to Home.",
+                    );
                     clearTimeout(timeout);
                     clearTimeout(slowTimeout);
                     setTimeout(() => goto("/"), 500); // Fast redirection
