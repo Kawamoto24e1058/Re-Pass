@@ -51,10 +51,29 @@ export const POST = async ({ request }) => {
             return json({ error: "No analysis data provided" }, { status: 400 });
         }
 
+        // --- Data Sanitization ---
+        const sanitizedAnalyses = analyses.map((item: any, index: number) => {
+            let safeAnalysis = "";
+            try {
+                if (typeof item.analysis === 'string') {
+                    safeAnalysis = item.analysis;
+                } else if (typeof item.analysis === 'object' && item.analysis !== null) {
+                    // Try to extract content if it looks like a structure we know, or just stringify
+                    safeAnalysis = (item.analysis as any).content || (item.analysis as any).summary || JSON.stringify(item.analysis);
+                } else {
+                    safeAnalysis = String(item.analysis || "");
+                }
+            } catch (e) {
+                console.warn(`⚠️ [Analyze-Final] Failed to sanitize item ${index}:`, e);
+                safeAnalysis = "";
+            }
+            return { ...item, analysis: safeAnalysis };
+        });
+
         // --- Hybrid Summary Logic ---
 
         // 1. Estimate total length and chunk if necessary
-        const totalLength = analyses.reduce((acc: number, cur: any) => acc + cur.analysis.length, 0);
+        const totalLength = sanitizedAnalyses.reduce((acc: number, cur: any) => acc + (cur.analysis?.length || 0), 0);
         const CHUNK_THRESHOLD = 30000; // Approx 15k-20k tokens for Japanese
 
         let finalContext = "";
@@ -68,13 +87,14 @@ export const POST = async ({ request }) => {
             let currentChunkIndex = 0;
             let currentChunkLength = 0;
 
-            analyses.forEach((item: any) => {
-                if (currentChunkLength > CHUNK_THRESHOLD && currentChunkIndex < numChunks - 1) {
+            sanitizedAnalyses.forEach((item: any) => {
+                const len = item.analysis?.length || 0;
+                if (currentChunkLength + len > CHUNK_THRESHOLD && currentChunkIndex < numChunks - 1) {
                     currentChunkIndex++;
                     currentChunkLength = 0;
                 }
                 chunks[currentChunkIndex].push(item);
-                currentChunkLength += item.analysis.length;
+                currentChunkLength += len;
             });
 
             // Stage 1: Parallel Intermediate Summaries (Gemini 2.0 Flash)
@@ -97,17 +117,24 @@ export const POST = async ({ request }) => {
 データ:
 ${chunkContext}
 `;
-                const result = await flashModel.generateContent(intermediatePrompt);
-                return result.response.text();
+                try {
+                    const result = await flashModel.generateContent(intermediatePrompt);
+                    return result.response.text();
+                } catch (chunkError) {
+                    console.error(`⚠️ [Analyze-Final] Chunk ${i} generation failed:`, chunkError);
+                    return ""; // Skip this chunk if it fails
+                }
             }));
 
             finalContext = intermediateSummaries.join("\n\n--- Next Section ---\n\n");
         } else {
             // Standard small processing
             let context = `Subject: ${subjectName}\n\n`;
-            analyses.forEach((item: any, index: number) => {
+            sanitizedAnalyses.forEach((item: any, index: number) => {
                 context += `--- Lecture ${index + 1}: ${item.title} ---\n`;
-                context += `Summary/Notes: ${item.analysis.slice(0, 5000)}\n\n`;
+                // Safe slice
+                const content = item.analysis || "";
+                context += `Summary/Notes: ${content.slice(0, 5000)}\n\n`;
             });
             finalContext = context;
         }
