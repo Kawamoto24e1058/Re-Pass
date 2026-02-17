@@ -874,7 +874,7 @@
                     style="width: {usagePercent}%"
                 ></div>
             </div>
-            {#if planLevel !== "FREE"}
+            {#if planLevel === "ULTIMATE"}
                 <a
                     href="/settings/subscription"
                     class="w-full mt-3 text-[10px] font-bold text-center text-slate-600 bg-slate-50 hover:bg-slate-100 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
@@ -893,6 +893,13 @@
                         />
                     </svg>
                     プラン管理
+                </a>
+            {:else if planLevel === "PREMIUM"}
+                <a
+                    href="/pricing"
+                    class="w-full mt-3 text-[10px] font-bold text-center text-amber-600 bg-amber-50 hover:bg-amber-100 py-1.5 rounded-lg transition-colors block border border-amber-100"
+                >
+                    ULTIMATEにアップグレード
                 </a>
             {:else}
                 <a

@@ -505,7 +505,7 @@
     const sessionId = $page.url.searchParams.get("session_id");
     if (sessionId) {
       toastMessage =
-        "✨ プレミアムプランへようこそ！全ての講義を資産に変えましょう。";
+        "✨ アップグレードありがとうございます！全ての講義を資産に変えましょう。";
       setTimeout(() => (toastMessage = null), 6000);
 
       // Clean up the URL parameter

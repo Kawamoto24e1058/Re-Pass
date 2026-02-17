@@ -130,6 +130,36 @@
         await auth.signOut();
         goto("/login");
     }
+
+    // --- Redirection & Timeout Logic ---
+    let showHomeButton = $state(false);
+
+    function redirectionTimer(node: HTMLElement) {
+        const timeout = setTimeout(() => {
+            showHomeButton = true;
+        }, 5000);
+
+        const unsub = $effect.root(() => {
+            $effect(() => {
+                if (userData?.plan && userData.plan !== "free") {
+                    clearTimeout(timeout);
+                    setTimeout(() => goto("/"), 2000); // 2s delay after success for confetti feel
+                }
+            });
+        });
+
+        return {
+            destroy() {
+                clearTimeout(timeout);
+                unsub();
+            },
+        };
+    }
+
+    function triggerConfetti(node: HTMLElement) {
+        showConfetti = true;
+        setTimeout(() => (showConfetti = false), 5000);
+    }
 </script>
 
 <!-- Confetti Effect (Simple CSS and Svelte) -->
@@ -227,51 +257,69 @@
                     読み込み中...
                 </p>
             </div>
-        {:else if isSuccess && (!userData?.plan || userData?.plan === "free")}
-            <!-- Improved Sync UX: Waiting for Webhook -->
-            <div
-                class="text-center py-24 bg-white rounded-[2rem] border border-indigo-100 shadow-sm animate-in fade-in zoom-in"
-            >
-                <div class="relative w-24 h-24 mx-auto mb-8">
-                    <div
-                        class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"
-                    ></div>
-                    <div
-                        class="relative bg-white rounded-full w-24 h-24 flex items-center justify-center border-4 border-indigo-500 shadow-inner"
-                    >
-                        <span class="text-4xl animate-bounce">⏳</span>
+        {:else if isSuccess}
+            {@const isWaiting = !userData?.plan || userData?.plan === "free"}
+            {#if isWaiting}
+                <!-- Redirection Logic with Timeout -->
+                <div use:redirectionTimer></div>
+                <!-- Improved Sync UX: Waiting for Webhook -->
+                <div
+                    class="text-center py-24 bg-white rounded-[2rem] border border-indigo-100 shadow-sm animate-in fade-in zoom-in"
+                >
+                    <div class="relative w-24 h-24 mx-auto mb-8">
+                        <div
+                            class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"
+                        ></div>
+                        <div
+                            class="relative bg-white rounded-full w-24 h-24 flex items-center justify-center border-4 border-indigo-500 shadow-inner"
+                        >
+                            <span class="text-4xl animate-bounce">⏳</span>
+                        </div>
+                    </div>
+                    <h2 class="text-2xl font-black text-slate-900 mb-2">
+                        プランを有効化しています...
+                    </h2>
+                    <p class="text-slate-500 mb-8 max-w-sm mx-auto px-4">
+                        決済が完了しました。現在プランを反映させています。このまま数秒お待ちください。
+                    </p>
+                    <div class="flex flex-col items-center gap-4">
+                        <div
+                            class="flex items-center gap-2 text-indigo-600 font-bold text-sm"
+                        >
+                            <div
+                                class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"
+                            ></div>
+                            <div
+                                class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.2s]"
+                            ></div>
+                            <div
+                                class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.4s]"
+                            ></div>
+                            同期中
+                        </div>
+
+                        {#if showHomeButton}
+                            <button
+                                onclick={() => goto("/")}
+                                class="w-full max-w-xs py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg animate-in slide-in-from-bottom-2"
+                            >
+                                ホームへ戻る
+                            </button>
+                        {/if}
+
+                        <button
+                            onclick={() => window.location.reload()}
+                            class="text-xs text-slate-400 font-medium underline hover:text-indigo-500 transition-colors"
+                        >
+                            画面が切り替わらない場合はこちら
+                        </button>
                     </div>
                 </div>
-                <h2 class="text-2xl font-black text-slate-900 mb-2">
-                    プランを有効化しています...
-                </h2>
-                <p class="text-slate-500 mb-8 max-w-sm mx-auto px-4">
-                    決済が完了しました。現在プランを反映させています。このまま数秒お待ちください。
-                </p>
-                <div class="flex flex-col items-center gap-4">
-                    <div
-                        class="flex items-center gap-2 text-indigo-600 font-bold text-sm"
-                    >
-                        <div
-                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"
-                        ></div>
-                        <div
-                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.2s]"
-                        ></div>
-                        <div
-                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.4s]"
-                        ></div>
-                        同期中
-                    </div>
-                    <button
-                        onclick={() => window.location.reload()}
-                        class="text-xs text-slate-400 font-medium underline hover:text-indigo-500 transition-colors"
-                    >
-                        画面が切り替わらない場合はこちら
-                    </button>
-                </div>
-            </div>
-        {:else}
+            {:else}
+                <!-- Fallback to normal settings view if not waiting -->
+                <div use:triggerConfetti></div>
+                <!-- This part is handled by the main content below, so we just let it fall through -->
+            {/if}
             <div class="space-y-6">
                 <!-- Current Plan Card -->
                 <div

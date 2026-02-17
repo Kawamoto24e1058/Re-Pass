@@ -5,8 +5,16 @@
     let {
         isOpen = false,
         onClose,
-        title = "アルティメットプラン限定機能",
-        message = "動画解析・URL読み込み・共有ノートの閲覧は<br /><span class='text-indigo-900 font-bold'>アルティメットプラン</span>限定の機能です。",
+        title = "機能をアンロック",
+        message = "この機能を利用するにはプランのアップグレードが必要です。",
+        features = [
+            {
+                title: "高度な解析モード",
+                desc: "レポートや感想文形式での書き出し",
+            },
+            { title: "上限の拡張", desc: "文字数制限や回数制限の解除" },
+            { title: "優先サポート", desc: "不具合対応や要望の優先受領" },
+        ],
     } = $props();
 
     function handleUpgrade() {
@@ -57,7 +65,7 @@
                     <div
                         class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-md border border-white/20 shadow-inner"
                     >
-                        <span class="text-3xl">🔒</span>
+                        <span class="text-3xl">✨</span>
                     </div>
                     <h2
                         class="text-2xl font-black text-white tracking-tight mb-1"
@@ -79,87 +87,36 @@
                 </p>
 
                 <ul class="space-y-4 mb-8">
-                    <li class="flex items-start gap-3">
-                        <div
-                            class="bg-indigo-100 p-1 rounded-full text-indigo-600 mt-0.5"
-                        >
-                            <svg
-                                class="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
+                    {#each features as feature}
+                        <li class="flex items-start gap-3">
+                            <div
+                                class="bg-indigo-100 p-1 rounded-full text-indigo-600 mt-0.5"
                             >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="3"
-                                    d="M5 13l4 4L19 7"
-                                />
-                            </svg>
-                        </div>
-                        <div>
-                            <span class="block text-sm font-bold text-slate-900"
-                                >動画・音声・URL解析</span
-                            >
-                            <span class="text-xs text-slate-500"
-                                >動画ファイルやwebサイトを解析</span
-                            >
-                        </div>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <div
-                            class="bg-indigo-100 p-1 rounded-full text-indigo-600 mt-0.5"
-                        >
-                            <svg
-                                class="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="3"
-                                    d="M5 13l4 4L19 7"
-                                />
-                            </svg>
-                        </div>
-                        <div>
-                            <span class="block text-sm font-bold text-slate-900"
-                                >共有ノート閲覧 無制限</span
-                            >
-                            <span class="text-xs text-slate-500"
-                                >先輩や友人のノートが見放題</span
-                            >
-                        </div>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <div
-                            class="bg-indigo-100 p-1 rounded-full text-indigo-600 mt-0.5"
-                        >
-                            <svg
-                                class="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="3"
-                                    d="M5 13l4 4L19 7"
-                                />
-                            </svg>
-                        </div>
-                        <div>
-                            <span class="block text-sm font-bold text-slate-900"
-                                >優先サポート & 最新機能</span
-                            >
-                            <span class="text-xs text-slate-500"
-                                >新機能をいち早く体験</span
-                            >
-                        </div>
-                    </li>
+                                <svg
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="3"
+                                        d="M5 13l4 4L19 7"
+                                    />
+                                </svg>
+                            </div>
+                            <div>
+                                <span
+                                    class="block text-sm font-bold text-slate-900"
+                                    >{feature.title}</span
+                                >
+                                <span class="text-xs text-slate-500"
+                                    >{feature.desc}</span
+                                >
+                            </div>
+                        </li>
+                    {/each}
                 </ul>
 
                 <div class="flex flex-col gap-3">
