@@ -12,13 +12,15 @@ class RecognitionService {
             if (SpeechRecognition) {
                 this.recognition = new SpeechRecognition();
                 this.recognition.continuous = true;
-                this.recognition.interimResults = true;
+                this.recognition.interimResults = true; // Confirm realtime updates
+                this.recognition.maxAlternatives = 3;   // Capture multiple candidates
                 this.recognition.lang = 'ja-JP';
 
                 this.recognition.onresult = (event: any) => {
                     let currentInterim = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         if (event.results[i].isFinal) {
+                            // Use the first alternative (highest confidence) for final
                             finalTranscript.update(prev => prev + event.results[i][0].transcript);
                         } else {
                             currentInterim += event.results[i][0].transcript;
@@ -32,8 +34,12 @@ class RecognitionService {
                     if (event.error === 'not-allowed') {
                         alert('マイクの使用が許可されていません。');
                         isRecording.set(false);
+                    } else if (event.error === 'no-speech') {
+                        // Ignore no-speech error during recording (just silence)
+                        console.log('No speech detected, continuing...');
+                    } else {
+                        // For other errors (network, aborted), we rely on onend to restart
                     }
-                    // 'aborted' is common when tab is hidden or network drops
                 };
 
                 this.recognition.onend = () => {
@@ -44,6 +50,7 @@ class RecognitionService {
                         if (this.restartTimer) clearTimeout(this.restartTimer);
 
                         // Add a small delay before restart to avoid browser throttling
+                        // Retry loop for silence or network drops
                         this.restartTimer = setTimeout(() => {
                             if (get(isRecording)) {
                                 try {
@@ -51,6 +58,12 @@ class RecognitionService {
                                     console.log('Recognition restarted');
                                 } catch (e) {
                                     console.error('Failed to restart recognition:', e);
+                                    // Retry once more if immediate start fails
+                                    setTimeout(() => {
+                                        if (get(isRecording) && this.recognition) {
+                                            try { this.recognition.start(); } catch (e2) { console.error("Retry restart failed", e2); }
+                                        }
+                                    }, 1000);
                                 }
                             }
                         }, 300);
