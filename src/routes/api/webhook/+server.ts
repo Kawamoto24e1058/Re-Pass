@@ -13,34 +13,42 @@ import {
 } from '$env/static/public';
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY as string);
-const endpointSecret = env.STRIPE_WEBHOOK_SECRET?.trim();
 
 export async function POST({ request }) {
     const signature = request.headers.get('stripe-signature');
+
+    // Robust secret retrieval with trimming (safe for Vercel/Node)
+    const endpointSecret = (env.STRIPE_WEBHOOK_SECRET || '').trim();
+
     if (!signature || !endpointSecret) {
+        console.error("Missing signature or secret");
         return json({ error: 'Missing signature or secret' }, { status: 400 });
     }
 
     let event: Stripe.Event;
-    // Use arrayBuffer and Buffer for reliable raw body handling in SvelteKit
-    const arrayBuffer = await request.arrayBuffer();
-    const body = Buffer.from(arrayBuffer);
+
+    // 1. Get Raw Text -> 2. Convert to Buffer (Best practice for Vercel/SvelteKit)
+    const payload = await request.text();
+    const body = Buffer.from(payload);
 
     console.log('--- Webhook Debug Log Start ---');
-    console.log(`Received Webhook POST request`);
-    console.log(`Signature Header: ${signature ? signature.substring(0, 20) + '...' : 'MISSING'}`);
-    console.log(`Endpoint Secret: ${endpointSecret ? endpointSecret.substring(0, 10) + '...' : 'MISSING'}`);
-    console.log(`Request Body Length: ${body.length}`);
+    console.log(`Signature Header: ${signature.substring(0, 15)}...`);
+    console.log(`Endpoint Secret: ${endpointSecret.substring(0, 5)}... (len: ${endpointSecret.length})`);
+    console.log(`Payload Length: ${body.length}`);
 
     try {
         event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
         console.log('Stripe signature verification SUCCESS. Event Type:', event.type);
     } catch (err: any) {
-        console.error(`!!! Stripe signature verification FAILED: ${err.message}`);
+        console.error(`!!! Signature Verification FAILED: ${err.message}`);
+
+        // Vercel Debugging Aid: Show masked comparison
+        const secretStart = endpointSecret.substring(0, 4);
+        const sigStart = signature.substring(0, 4);
+        console.error(`DEBUG: Secret starts with [${secretStart}***], Signature starts with [${sigStart}***]`);
+
         return json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
     }
-
-    // Handle the event
     if (event.type === 'checkout.session.completed') {
         console.log(`Processing checkout.session.completed for event ID: ${event.id}`);
         const session = event.data.object as Stripe.Checkout.Session;
