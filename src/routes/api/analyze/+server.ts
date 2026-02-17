@@ -23,19 +23,31 @@ export const POST = async ({ request }) => {
     let userData: any = null;
 
     const authHeader = request.headers.get('Authorization');
+    console.log(`🔑 Auth Header Present: ${!!authHeader}`); // Debug Log
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const idToken = authHeader.split('Bearer ')[1];
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         uid = decodedToken.uid;
+        console.log(`✅ Auth Verified for UID: ${uid}`); // Debug Log
 
         const userDoc = await adminDb.collection('users').doc(uid).get();
-        userData = userDoc.data();
+        if (userDoc.exists) {
+          userData = userDoc.data();
+          console.log(`👤 User Data Found: Plan=${userData?.plan}`); // Debug Log
+        } else {
+          console.warn(`⚠️ User Document not found for UID: ${uid}`);
+        }
+
         const plan = String(userData?.plan || '').trim().toLowerCase();
         isPremium = ['premium', 'ultimate', 'season', 'pro'].includes(plan);
         isUltimate = plan === 'ultimate';
-      } catch (e) {
-        console.warn('Auth token verification failed:', e);
+        console.log(`💎 Plan Logic Resolved: isPremium=${isPremium}, isUltimate=${isUltimate}`); // Debug Log
+
+      } catch (e: any) {
+        console.warn('⚠️ Auth token verification logic failed:', e);
+        // Don't crash here, strictly, but user might be treated as guest/free if logic fails
       }
     }
 
@@ -405,13 +417,20 @@ ${evaluationCriteria ? `
 
         // Update usage count
         if (!isPremium && uid) {
-          const today = new Date().toISOString().split('T')[0];
-          const usageRef = adminDb.collection('users').doc(uid).collection('usage').doc('daily');
-          const usageDoc = await usageRef.get();
-          const usageData = usageDoc.data() || { count: 0, lastResetDate: today };
-          let newCount = (usageData.lastResetDate !== today) ? 1 : usageData.count + 1;
-          await usageRef.set({ count: newCount, lastResetDate: today, updatedAt: new Date().toISOString() }, { merge: true });
-          await adminDb.collection('users').doc(uid).set({ usageCount: (userData?.usageCount || 0) + 1 }, { merge: true });
+          try {
+            const today = new Date().toISOString().split('T')[0];
+            const usageRef = adminDb.collection('users').doc(uid).collection('usage').doc('daily');
+            const usageDoc = await usageRef.get();
+            const usageData = usageDoc.data() || { count: 0, lastResetDate: today };
+            let newCount = (usageData.lastResetDate !== today) ? 1 : usageData.count + 1;
+            await usageRef.set({ count: newCount, lastResetDate: today, updatedAt: new Date().toISOString() }, { merge: true });
+
+            // Safe update for global usage count
+            const currentGlobalCount = userData?.usageCount || 0;
+            await adminDb.collection('users').doc(uid).set({ usageCount: currentGlobalCount + 1 }, { merge: true });
+          } catch (usageError) {
+            console.error("⚠️ Failed to update usage stats (non-fatal):", usageError);
+          }
         }
 
         try {
@@ -460,8 +479,14 @@ ${evaluationCriteria ? `
     }
     return json({ error: "リトライ上限に達しました" }, { status: 500 });
   } catch (globalError: any) {
-    console.error("🚨 Global Error:", globalError);
-    if (globalError.stack) console.error(globalError.stack);
-    return json({ error: "サーバー内で致命的なエラーが発生しました", details: globalError.message, stack: globalError.stack }, { status: 500 });
+    console.error("🚨 Global Server Error in /api/analyze:");
+    console.error("Message:", globalError.message);
+    console.error("Stack:", globalError.stack);
+
+    return json({
+      error: "サーバー処理中に予期せぬエラーが発生しました。",
+      details: globalError.message,
+      debug_stack: process.env.NODE_ENV === 'development' ? globalError.stack : undefined
+    }, { status: 500 });
   }
 };

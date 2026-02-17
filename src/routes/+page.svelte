@@ -35,6 +35,7 @@
   import { goto } from "$app/navigation";
   import { signOut } from "firebase/auth";
   import { subjects, lectures, currentBinder } from "$lib/stores";
+  import { user as userStore, userProfile } from "$lib/userStore";
   import {
     isRecording,
     transcript,
@@ -44,6 +45,7 @@
   } from "$lib/stores/recordingStore";
   import { recognitionService } from "$lib/services/recognitionService";
   import { page } from "$app/stores";
+  import UpgradeModal from "$lib/components/UpgradeModal.svelte";
 
   // --- State Variables (Runes) ---
   let pdfFile = $state<File | null>(null);
@@ -244,7 +246,7 @@
   let analyzedTitle = $state(""); // AI generated title
   let analyzedCategory = $state(""); // AI generated category raw
   let draggingLectureId = $state<string | null>(null);
-  import UpgradeModal from "$lib/components/UpgradeModal.svelte";
+
   let showUpgradeModal = $state(false);
   let showUltimateModal = $state(false); // New modal for Ultimate features
   let isDragOverMainTarget = $state(false);
@@ -270,11 +272,16 @@
   let selectedSubjectId = $state<string | null>(null);
 
   // Sync state with store
-  import { user as userStore, userProfile } from "$lib/userStore";
+
   $effect(() => {
     user = $userStore;
     userData = $userProfile;
     selectedSubjectId = $currentBinder;
+
+    // Debug Logs for Data Sync
+    if (user) console.log("✅ [+page] User synced:", user.uid);
+    if (userData) console.log("✅ [+page] UserData synced:", userData);
+    if ($lectures) console.log("✅ [+page] Lectures count:", $lectures.length);
   });
 
   $effect(() => {

@@ -67,6 +67,10 @@
 				path: d.ref.path,
 				...d.data(),
 			}));
+			console.log(
+				"📚 [+layout] Root lectures fetched:",
+				lecturesMap["root"].length,
+			);
 		});
 		lectureUnsubscribes.push(unsubRoot);
 
