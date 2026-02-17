@@ -47,29 +47,44 @@ export const POST = async ({ request }) => {
 
       } catch (e: any) {
         console.warn('⚠️ Auth token verification logic failed:', e);
-        // Don't crash here, strictly, but user might be treated as guest/free if logic fails
+        // Ensure uid is null if verification failed to prevent undefined behavior downstream
+        if (!uid) {
+          console.warn('⚠️ UID not set after auth failure, treating as guest');
+        }
       }
     }
 
-    // Daily Usage Check for Free Plan
+    // --- Safe Usage Check with Try-Catch ---
     if (!isPremium && uid) {
-      const today = new Date().toISOString().split('T')[0];
-      const usageDoc = await adminDb.collection('users').doc(uid).collection('usage').doc('daily').get();
-      const usageData = usageDoc.data() || { count: 0, lastResetDate: today };
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const usageRef = adminDb.collection('users').doc(uid).collection('usage').doc('daily');
+        const usageDoc = await usageRef.get();
+        const usageData = usageDoc.data() || { count: 0, lastResetDate: today };
 
-      let currentCount = usageData.count;
-      let lastResetDate = usageData.lastResetDate;
+        let currentCount = usageData.count;
+        let lastResetDate = usageData.lastResetDate;
 
-      if (lastResetDate !== today) {
-        currentCount = 0;
-        lastResetDate = today;
-      }
+        if (lastResetDate !== today) {
+          currentCount = 0;
+          lastResetDate = today;
+        }
 
-      if (currentCount >= 3) {
-        return json({
-          error: "本日の上限に達しました",
-          details: "無料プランの1日あたりの解析上限（3回）に達しました。明日また試すか、アルティメットプランへアップグレードしてください。"
-        }, { status: 403 });
+        console.log(`📊 Usage Check: ${currentCount}/3 (Premium: ${isPremium})`);
+
+        if (currentCount >= 3) {
+          return json({
+            error: "本日の上限に達しました",
+            details: "無料プランの1日あたりの解析上限（3回）に達しました。明日また試すか、アルティメットプランへアップグレードしてください。"
+          }, { status: 403 });
+        }
+      } catch (usageError: any) {
+        console.error("🚨 Usage Check Failed:", usageError);
+        // OPTIONAL: Fail open or closed?
+        // For now, let's NOT crash the request, but log it.
+        // If we return, we stop. If we continue, we allow analysis.
+        // Let's allow analysis if DB check fails to avoid blocking users due to system error.
+        console.warn("⚠️ Allowing analysis despite usage check failure due to DB error.");
       }
     } else if (!isPremium && !uid) {
       return json({ error: "解析にはログインが必要です" }, { status: 401 });

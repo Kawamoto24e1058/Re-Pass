@@ -933,6 +933,15 @@
       formData.append("plan", userData?.plan || "free");
       formData.append("targetLength", targetLength.toString());
 
+      // --- DEBUG LOGGING START ---
+      console.log("🚀 [Frontend] Sending Analyze Request:");
+      console.log("Plan (userData):", userData?.plan);
+      console.log("Plan (Sent):", formData.get("plan"));
+      console.log("Transcript Length:", $transcript?.length);
+      console.log("Mode:", analysisMode);
+      console.log("Target Length:", targetLength);
+      // --- DEBUG LOGGING END ---
+
       // Initialize AbortController for this session
       cancellationController = new AbortController();
       const signal = cancellationController.signal;
