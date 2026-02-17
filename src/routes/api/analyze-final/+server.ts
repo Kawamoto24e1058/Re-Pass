@@ -12,8 +12,13 @@ export const POST = async ({ request }) => {
     try {
         const { subjectName, analyses, customInstructions } = await request.json();
 
-        // --- Auth Check ---
+        // --- Auth & Data Check ---
         let uid: string | null = null;
+        let userData: any = null;
+        let isPremium = false;
+        let isUltimate = false;
+
+        console.log(`🚀 [Analyze-Final] Start processing for subject: ${subjectName}`);
 
         const authHeader = request.headers.get('Authorization');
         if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -21,12 +26,28 @@ export const POST = async ({ request }) => {
                 const idToken = authHeader.split('Bearer ')[1];
                 const decodedToken = await adminAuth.verifyIdToken(idToken);
                 uid = decodedToken.uid;
+                console.log(`✅ [Analyze-Final] Auth Verified for UID: ${uid}`);
+
+                // Fetch latest user data for plan verification
+                try {
+                    const userDoc = await adminDb.collection('users').doc(uid).get();
+                    if (userDoc.exists) {
+                        userData = userDoc.data();
+                        const plan = String(userData?.plan || '').trim().toLowerCase();
+                        isPremium = ['premium', 'ultimate', 'season', 'pro'].includes(plan);
+                        isUltimate = plan === 'ultimate';
+                        console.log(`💎 [Analyze-Final] Plan: ${plan} (Premium: ${isPremium}, Ultimate: ${isUltimate})`);
+                    }
+                } catch (dbError) {
+                    console.warn("⚠️ [Analyze-Final] Failed to fetch user data:", dbError);
+                }
             } catch (e) {
-                console.warn('Auth token verification failed:', e);
+                console.warn('⚠️ [Analyze-Final] Auth token verification failed:', e);
             }
         }
 
         if (!analyses || analyses.length === 0) {
+            console.error("❌ [Analyze-Final] No analysis data provided");
             return json({ error: "No analysis data provided" }, { status: 400 });
         }
 
@@ -150,7 +171,12 @@ ${finalContext}
         return json({ result: responseText });
 
     } catch (e: any) {
-        console.error("Final Analysis Error:", e);
-        return json({ error: "Failed to generate final summary", details: e.message }, { status: 500 });
+        console.error("🚨 [Analyze-Final] Critical Error:", e);
+        console.error("Stack:", e.stack);
+        return json({
+            error: "Failed to generate final summary",
+            details: e.message,
+            debug: process.env.NODE_ENV === 'development' ? e.stack : undefined
+        }, { status: 500 });
     }
 };
