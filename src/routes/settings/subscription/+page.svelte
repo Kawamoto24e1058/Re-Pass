@@ -258,10 +258,10 @@
                                 >
                                     {#if userData?.plan === "ultimate" || userData?.isUltimate}
                                         アルティメットプラン
+                                    {:else if userData?.plan === "premium" || userData?.plan === "pro"}
+                                        プレミアムプラン
                                     {:else}
-                                        {userData?.plan === "free"
-                                            ? "フリープラン"
-                                            : "プレミアムプラン"}
+                                        フリープラン
                                     {/if}
                                 </p>
                                 {#if userData?.plan && userData.plan !== "free"}

@@ -410,12 +410,13 @@
                                             サブスクリプション管理
                                         </p>
                                         <p class="text-sm text-slate-500">
-                                            現在のプラン: {userData?.plan ===
-                                                "pro" ||
-                                            userData?.plan === "premium" ||
-                                            userData?.plan === "season"
-                                                ? "PRO"
-                                                : "FREE"}
+                                            現在のプラン: {#if userData?.plan === "ultimate"}
+                                                アルティメットプラン
+                                            {:else if userData?.plan === "premium" || userData?.plan === "pro" || userData?.plan === "season"}
+                                                プレミアムプラン
+                                            {:else}
+                                                フリープラン
+                                            {/if}
                                         </p>
                                     </div>
                                 </div>

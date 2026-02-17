@@ -277,11 +277,6 @@
     selectedSubjectId = $currentBinder;
   });
   // Duplicate removed
-  let isUltimate = $derived(
-    userData?.plan === "season" ||
-      userData?.plan === "ultimate" ||
-      userData?.isUltimate === true,
-  );
   let lectureTitle = $state("");
   let unsubscribeUser: () => void;
   // unsubscribeLectures removed as it is now managed via list
@@ -405,11 +400,9 @@
   let thumbPosition = $derived((targetLength / 4000) * 100);
 
   let isPremium = $derived(
-    userData?.plan === "pro" ||
-      userData?.plan === "premium" ||
-      userData?.plan === "season" ||
-      userData?.isPro === true,
+    userData?.plan === "premium" || userData?.plan === "ultimate",
   );
+  let isUltimate = $derived(userData?.plan === "ultimate");
 
   let dailyRemaining = $derived.by(() => {
     if (isPremium) return Infinity;
@@ -2638,7 +2631,7 @@
                         : 'text-slate-500 hover:text-indigo-600'}"
                     >
                       感想
-                      {#if userData?.plan === "free"}
+                      {#if !isPremium}
                         <svg
                           class="w-3 h-3 text-amber-500 inline-block ml-1 mb-0.5"
                           fill="currentColor"
@@ -2660,7 +2653,7 @@
                         : 'text-slate-500 hover:text-indigo-600'}"
                     >
                       レポート
-                      {#if userData?.plan === "free"}
+                      {#if !isPremium}
                         <svg
                           class="w-3 h-3 text-amber-500 inline-block ml-1 mb-0.5"
                           fill="currentColor"
@@ -2734,7 +2727,7 @@
                         style="left: 12.5%"
                       >
                         500
-                        {#if userData?.plan === "free"}
+                        {#if !isPremium}
                           <svg
                             class="w-2.5 h-2.5 text-amber-500 inline-block ml-1 mb-0.5"
                             fill="currentColor"
@@ -2753,7 +2746,7 @@
                         style="left: 50%"
                       >
                         2000
-                        {#if userData?.plan === "free"}
+                        {#if !isPremium}
                           <svg
                             class="w-2.5 h-2.5 text-amber-500 inline-block ml-0.5 mb-0.5"
                             fill="currentColor"

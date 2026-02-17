@@ -42,31 +42,16 @@ export async function POST({ request, url }) {
             return json({ error: 'Missing required parameters' }, { status: 400 });
         }
 
-        // Determine mode based on priceId
-        // The Season plan is a one-time payment ('payment'), while others are subscriptions
-        const isSeason = priceId === PUBLIC_STRIPE_PRICE_SEASON;
-        const mode = isSeason ? 'payment' : 'subscription';
+        const mode = 'subscription';
 
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: isSeason ? ['card', 'paypay'] : ['card'],
+            payment_method_types: ['card'],
             currency: 'jpy',
             line_items: [
-                isSeason
-                    ? {
-                        price_data: {
-                            currency: 'jpy',
-                            product_data: {
-                                name: 'Season Pass (4 Months)',
-                                description: '1学期（4ヶ月）フルサポート・一括払い',
-                            },
-                            unit_amount: 2480,
-                        },
-                        quantity: 1,
-                    }
-                    : {
-                        price: priceId,
-                        quantity: 1,
-                    },
+                {
+                    price: priceId,
+                    quantity: 1,
+                },
             ],
             mode: mode as any,
             success_url: `${baseUrl}/settings/subscription?success=true`,
