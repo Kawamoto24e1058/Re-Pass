@@ -4,7 +4,6 @@
     import { doc, getDoc, onSnapshot } from "firebase/firestore";
     import { page } from "$app/stores";
     import { goto } from "$app/navigation";
-    import Sidebar from "$lib/components/Sidebar.svelte";
     import { subjects, lectures } from "$lib/stores";
     import { userProfile } from "$lib/userStore";
     import { fade, scale } from "svelte/transition";
@@ -16,7 +15,6 @@
     let portalLoading = $state(false);
     let showConfetti = $state(false);
     let successMessage = $state(false);
-    let isMobileOpen = $state(false);
 
     const isSuccess = $page.url.searchParams.get("success") === "true";
 
@@ -192,346 +190,214 @@
     </div>
 {/if}
 
-<div
-    class="flex h-screen overflow-hidden bg-[#F9FAFB] text-slate-800 font-sans selection:bg-indigo-100 relative"
->
-    <!-- Mobile Header -->
-    <header
-        class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/70 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
-    >
-        <button
-            onclick={() => (isMobileOpen = true)}
-            class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
-            aria-label="メニューを開く"
+<div class="flex-1 relative overflow-y-auto bg-slate-50 pt-16 lg:pt-0">
+    <main class="max-w-3xl mx-auto py-8 lg:py-12 px-4 lg:px-12">
+        <nav
+            class="flex items-center gap-2 text-sm font-medium text-slate-500 mb-6"
         >
+            <button
+                onclick={() => goto("/settings")}
+                class="hover:text-slate-800 transition-colors">設定</button
+            >
             <svg
-                class="w-6 h-6"
+                class="w-4 h-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
-            >
-                <path
+                ><path
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     stroke-width="2"
-                    d="M4 6h16M4 12h16M4 18h16"
-                />
-            </svg>
-        </button>
-
-        <a
-            href="/"
-            class="font-bold text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent"
-            >Re-Pass</a
-        >
-
-        <div
-            class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 overflow-hidden"
-        >
-            {#if authUser?.photoURL}
-                <img
-                    src={authUser.photoURL}
-                    alt="User"
-                    class="w-full h-full object-cover"
-                />
-            {:else}
-                {userData?.nickname?.substring(0, 1).toUpperCase() || "U"}
-            {/if}
-        </div>
-    </header>
-
-    <!-- Sidebar Component & Overlay -->
-    {#if isMobileOpen}
-        <div
-            class="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
-            onclick={() => (isMobileOpen = false)}
-            onkeydown={(e) => e.key === "Escape" && (isMobileOpen = false)}
-            role="button"
-            tabindex="0"
-        ></div>
-    {/if}
-
-    {#if authUser}
-        <Sidebar
-            user={authUser}
-            lectures={$lectures}
-            subjects={$subjects}
-            currentLectureId={null}
-            selectedSubjectId={null}
-            {isMobileOpen}
-            onClose={() => (isMobileOpen = false)}
-            onLoadLecture={() => {
-                goto("/");
-                isMobileOpen = false;
-            }}
-            onSelectSubject={() => {
-                goto("/");
-                isMobileOpen = false;
-            }}
-            onSignOut={handleLogout}
-        />
-    {/if}
-
-    <div class="flex-1 relative overflow-y-auto bg-slate-50 pt-16 lg:pt-0">
-        <main class="max-w-3xl mx-auto py-8 lg:py-12 px-4 lg:px-12">
-            <nav
-                class="flex items-center gap-2 text-sm font-medium text-slate-500 mb-6"
+                    d="M9 5l7 7-7 7"
+                /></svg
             >
-                <button
-                    onclick={() => goto("/settings")}
-                    class="hover:text-slate-800 transition-colors">設定</button
-                >
-                <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    ><path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 5l7 7-7 7"
-                    /></svg
-                >
-                <span class="text-slate-900">サブスクリプション</span>
-            </nav>
+            <span class="text-slate-900">サブスクリプション</span>
+        </nav>
 
-            <h1 class="text-3xl font-bold text-slate-900 mb-8 tracking-tight">
-                サブスクリプション管理
-            </h1>
+        <h1 class="text-3xl font-bold text-slate-900 mb-8 tracking-tight">
+            サブスクリプション管理
+        </h1>
 
-            {#if loading}
-                <div class="text-center py-24">
+        {#if loading}
+            <div class="text-center py-24">
+                <div
+                    class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"
+                ></div>
+            </div>
+        {:else}
+            <div class="space-y-6">
+                <!-- Current Plan Card -->
+                <div
+                    class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 relative overflow-hidden"
+                >
+                    {#if userData?.plan && userData.plan !== "free"}
+                        <div class="absolute top-0 right-0 p-6 opacity-10">
+                            <svg
+                                class="w-24 h-24"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                                ><path
+                                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"
+                                /></svg
+                            >
+                        </div>
+                    {/if}
+
                     <div
-                        class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"
-                    ></div>
-                </div>
-            {:else}
-                <div class="space-y-6">
-                    <!-- Current Plan Card -->
-                    <div
-                        class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 relative overflow-hidden"
+                        class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10"
                     >
-                        {#if userData?.plan && userData.plan !== "free"}
-                            <div class="absolute top-0 right-0 p-6 opacity-10">
-                                <svg
-                                    class="w-24 h-24"
-                                    fill="currentColor"
-                                    viewBox="0 0 24 24"
-                                    ><path
-                                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"
-                                    /></svg
+                        <div>
+                            <h3
+                                class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1"
+                            >
+                                現在のプラン
+                            </h3>
+                            <div class="flex items-center gap-3">
+                                <p
+                                    class="text-4xl font-black text-slate-900 tracking-tight"
                                 >
-                            </div>
-                        {/if}
-
-                        <div
-                            class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10"
-                        >
-                            <div>
-                                <h3
-                                    class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1"
-                                >
-                                    現在のプラン
-                                </h3>
-                                <div class="flex items-center gap-3">
-                                    <p
-                                        class="text-4xl font-black text-slate-900 tracking-tight"
-                                    >
-                                        {#if userData?.plan === "pro" || userData?.plan === "premium" || userData?.plan === "season"}
-                                            プロプラン
-                                        {:else}
-                                            フリープラン
-                                        {/if}
-                                    </p>
                                     {#if userData?.plan === "pro" || userData?.plan === "premium" || userData?.plan === "season"}
-                                        <span
-                                            class="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider"
-                                            >Active</span
-                                        >
+                                        プロプラン
+                                    {:else}
+                                        フリープラン
                                     {/if}
-                                </div>
+                                </p>
+                                {#if userData?.plan === "pro" || userData?.plan === "premium" || userData?.plan === "season"}
+                                    <span
+                                        class="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider"
+                                        >Active</span
+                                    >
+                                {/if}
                             </div>
-
-                            {#if userData?.plan === "free"}
-                                <button
-                                    onclick={() => goto("/pricing")}
-                                    class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:translate-y-0"
-                                >
-                                    プレミアムにアップグレード
-                                </button>
-                            {/if}
                         </div>
 
-                        <div
-                            class="mt-8 pt-8 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8"
-                        >
+                        {#if userData?.plan === "free"}
+                            <button
+                                onclick={() => goto("/pricing")}
+                                class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:translate-y-0"
+                            >
+                                プレミアムにアップグレード
+                            </button>
+                        {/if}
+                    </div>
+
+                    <div
+                        class="mt-8 pt-8 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8"
+                    >
+                        <div>
+                            <h4
+                                class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
+                            >
+                                利用可能機能
+                            </h4>
+                            <ul class="space-y-2">
+                                {#if userData?.plan === "free"}
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > 授業分析（月5回まで）
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > 文字数制限（500文字）
+                                    </li>
+                                {:else}
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > 授業分析（無制限）
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > 高度な分析モード
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > 長文サポート
+                                    </li>
+                                {/if}
+                            </ul>
+                        </div>
+
+                        {#if subDetails?.subscribed}
                             <div>
                                 <h4
                                     class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
                                 >
-                                    利用可能機能
+                                    {subDetails.cancel_at_period_end
+                                        ? "利用終了予定日"
+                                        : "次回の支払い予定日"}
                                 </h4>
-                                <ul class="space-y-2">
-                                    {#if userData?.plan === "free"}
-                                        <li
-                                            class="flex items-center gap-2 text-sm text-slate-600"
-                                        >
-                                            <span
-                                                class="text-indigo-500 font-bold"
-                                                >✓</span
-                                            > 授業分析（月5回まで）
-                                        </li>
-                                        <li
-                                            class="flex items-center gap-2 text-sm text-slate-600"
-                                        >
-                                            <span
-                                                class="text-indigo-500 font-bold"
-                                                >✓</span
-                                            > 文字数制限（500文字）
-                                        </li>
-                                    {:else}
-                                        <li
-                                            class="flex items-center gap-2 text-sm text-slate-600"
-                                        >
-                                            <span
-                                                class="text-indigo-500 font-bold"
-                                                >✓</span
-                                            > 授業分析（無制限）
-                                        </li>
-                                        <li
-                                            class="flex items-center gap-2 text-sm text-slate-600"
-                                        >
-                                            <span
-                                                class="text-indigo-500 font-bold"
-                                                >✓</span
-                                            > 高度な分析モード
-                                        </li>
-                                        <li
-                                            class="flex items-center gap-2 text-sm text-slate-600"
-                                        >
-                                            <span
-                                                class="text-indigo-500 font-bold"
-                                                >✓</span
-                                            > 長文サポート
-                                        </li>
-                                    {/if}
-                                </ul>
-                            </div>
-
-                            {#if subDetails?.subscribed}
-                                <div>
-                                    <h4
-                                        class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
+                                <p class="text-lg font-bold text-slate-800">
+                                    {formatDate(subDetails.current_period_end)}
+                                </p>
+                                {#if subDetails.cancel_at_period_end}
+                                    <p
+                                        class="text-xs text-amber-600 font-medium mt-1 italic"
                                     >
-                                        {subDetails.cancel_at_period_end
-                                            ? "利用終了予定日"
-                                            : "次回の支払い予定日"}
-                                    </h4>
-                                    <p class="text-lg font-bold text-slate-800">
-                                        {formatDate(
-                                            subDetails.current_period_end,
-                                        )}
+                                        ※解約予約済みです
                                     </p>
-                                    {#if subDetails.cancel_at_period_end}
-                                        <p
-                                            class="text-xs text-amber-600 font-medium mt-1 italic"
-                                        >
-                                            ※解約予約済みです
-                                        </p>
-                                    {/if}
-                                </div>
-                            {/if}
-                        </div>
-                    </div>
-
-                    <!-- Actions Area -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {#if userData?.plan !== "free"}
-                            <button
-                                onclick={handlePortal}
-                                disabled={portalLoading}
-                                class="flex items-center justify-between p-6 bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all group disabled:opacity-50"
-                            >
-                                <div class="flex items-center gap-4">
-                                    <div
-                                        class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-white group-hover:shadow-sm transition-all"
-                                    >
-                                        {#if portalLoading}
-                                            <div
-                                                class="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"
-                                            ></div>
-                                        {:else}
-                                            <svg
-                                                class="w-5 h-5"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                ><path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                                                /><path
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    stroke-width="2"
-                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                                /></svg
-                                            >
-                                        {/if}
-                                    </div>
-                                    <div class="text-left">
-                                        <p class="font-bold text-slate-800">
-                                            支払い・解約の管理
-                                        </p>
-                                        <p class="text-xs text-slate-400">
-                                            Stripeポータルへ移動します
-                                        </p>
-                                    </div>
-                                </div>
-                                <svg
-                                    class="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    ><path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M9 5l7 7-7 7"
-                                    /></svg
-                                >
-                            </button>
+                                {/if}
+                            </div>
                         {/if}
+                    </div>
+                </div>
 
+                <!-- Actions Area -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {#if userData?.plan !== "free"}
                         <button
-                            onclick={() => goto("/pricing")}
-                            class="flex items-center justify-between p-6 bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all group"
+                            onclick={handlePortal}
+                            disabled={portalLoading}
+                            class="flex items-center justify-between p-6 bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all group disabled:opacity-50"
                         >
                             <div class="flex items-center gap-4">
                                 <div
                                     class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-white group-hover:shadow-sm transition-all"
                                 >
-                                    <svg
-                                        class="w-5 h-5"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        ><path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
-                                        /></svg
-                                    >
+                                    {#if portalLoading}
+                                        <div
+                                            class="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"
+                                        ></div>
+                                    {:else}
+                                        <svg
+                                            class="w-5 h-5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            ><path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                                            /><path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                            /></svg
+                                        >
+                                    {/if}
                                 </div>
                                 <div class="text-left">
                                     <p class="font-bold text-slate-800">
-                                        プラン一覧を表示
+                                        支払い・解約の管理
                                     </p>
                                     <p class="text-xs text-slate-400">
-                                        料金プランを確認します
+                                        Stripeポータルへ移動します
                                     </p>
                                 </div>
                             </div>
@@ -548,16 +414,60 @@
                                 /></svg
                             >
                         </button>
-                    </div>
+                    {/if}
 
-                    <p class="text-center text-xs text-slate-400 py-8">
-                        決済はすべて Stripe を通じて安全に行われます。<br />
-                        ご不明な点はサポートまでお問い合わせください。
-                    </p>
+                    <button
+                        onclick={() => goto("/pricing")}
+                        class="flex items-center justify-between p-6 bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all group"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-white group-hover:shadow-sm transition-all"
+                            >
+                                <svg
+                                    class="w-5 h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    ><path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                                    /></svg
+                                >
+                            </div>
+                            <div class="text-left">
+                                <p class="font-bold text-slate-800">
+                                    プラン一覧を表示
+                                </p>
+                                <p class="text-xs text-slate-400">
+                                    料金プランを確認します
+                                </p>
+                            </div>
+                        </div>
+                        <svg
+                            class="w-5 h-5 text-slate-300 group-hover:translate-x-1 transition-transform"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            ><path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 5l7 7-7 7"
+                            /></svg
+                        >
+                    </button>
                 </div>
-            {/if}
-        </main>
-    </div>
+
+                <p class="text-center text-xs text-slate-400 py-8">
+                    決済はすべて Stripe を通じて安全に行われます。<br />
+                    ご不明な点はサポートまでお問い合わせください。
+                </p>
+            </div>
+        {/if}
+    </main>
 </div>
 
 <style>

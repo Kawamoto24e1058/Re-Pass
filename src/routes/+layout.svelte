@@ -122,36 +122,47 @@
 			} else {
 				// User is logged in, check if they have a profile doc (onboarded)
 				try {
-					const userDoc = await getDoc(
+					const unsubProfile = onSnapshot(
 						doc(db, "users", currentUser.uid),
+						async (docSnap) => {
+							if (!docSnap.exists()) {
+								userProfile.set(null);
+								if (path !== "/pricing" && path !== "/login")
+									await goto("/pricing");
+							} else {
+								const profile = docSnap.data() as any;
+								userProfile.set(profile);
+
+								// Onboarding check: If university is not set, redirect to /setup
+								const currentPath = $page.url
+									.pathname as string;
+								if (
+									!profile.university &&
+									currentPath !== "/setup" &&
+									currentPath !== "/login" &&
+									currentPath !== "/pricing"
+								) {
+									await goto("/setup");
+								} else if (
+									(currentPath === "/login" ||
+										currentPath === "/pricing" ||
+										(currentPath === "/setup" &&
+											profile.university)) &&
+									!$isRecording
+								) {
+									await goto("/");
+								}
+							}
+						},
+						(error) => {
+							console.error("Profile listener error:", error);
+						},
 					);
 
-					if (!userDoc.exists()) {
-						userProfile.set(null);
-						if (path !== "/pricing" && path !== "/login")
-							await goto("/pricing");
-					} else {
-						const profile = userDoc.data() as any;
-						userProfile.set(profile);
-
-						// Onboarding check: If university is not set, redirect to /setup
-						const currentPath = path as string;
-						if (
-							!profile.university &&
-							currentPath !== "/setup" &&
-							currentPath !== "/login" &&
-							currentPath !== "/pricing"
-						) {
-							await goto("/setup");
-							return;
-						}
-
-						if (
-							currentPath === "/login" ||
-							currentPath === "/pricing" ||
-							(currentPath === "/setup" && profile.university)
-						)
-							await goto("/");
+					// Store for cleanup if not already handled by onMount return
+					// Actually we can add it to the cleanup logic
+					if (typeof window !== "undefined") {
+						(window as any)._unsubProfile = unsubProfile;
 					}
 
 					// Fetch Subjects Globally
@@ -167,7 +178,7 @@
 						subjects.set(subs);
 					});
 				} catch (e) {
-					console.error("Error fetching user profile", e);
+					console.error("Error setting up profile listener", e);
 				} finally {
 					authLoading.set(false);
 				}
@@ -179,6 +190,12 @@
 		return () => {
 			unsubscribe();
 			if (unsubscribeSubjects) unsubscribeSubjects();
+			if (
+				typeof window !== "undefined" &&
+				(window as any)._unsubProfile
+			) {
+				(window as any)._unsubProfile();
+			}
 			cleanupLectureListeners();
 		};
 	});

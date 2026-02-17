@@ -33,7 +33,6 @@
     endAt,
   } from "firebase/firestore";
   import { goto } from "$app/navigation";
-  import Sidebar from "$lib/components/Sidebar.svelte";
   import { signOut } from "firebase/auth";
   import { subjects, lectures, currentBinder } from "$lib/stores";
   import {
@@ -128,64 +127,81 @@
 
     clearTimeout(courseInputTimer);
     courseInputTimer = setTimeout(async () => {
-      console.log("Current University State:", userData?.university);
+      // Normalize university name for consistent querying
+      const cleanUniv = userData?.university ? userData.university.trim() : "";
+      console.log("🔍 [Suggest] Processing input for university:", {
+        raw: userData?.university,
+        trimmed: cleanUniv,
+        input: input,
+      });
 
       // Fallback: If university is missing in state, try a hard fetch
-      if (!userData?.university && auth.currentUser) {
-        console.log("University missing in state, attempting hard fetch...");
+      if (!cleanUniv && auth.currentUser) {
+        console.log(
+          "🔍 [Suggest] University missing in state, attempting hard fetch...",
+        );
         try {
           const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
           if (userDoc.exists()) {
-            userData = userDoc.data();
-            console.log(
-              "Hard fetch successful, university:",
-              userData.university,
-            );
+            const freshData = userDoc.data();
+            userData = freshData;
+            const refetchedUniv = freshData.university
+              ? freshData.university.trim()
+              : "";
+            console.log("🔍 [Suggest] Hard fetch successful:", refetchedUniv);
+            if (!refetchedUniv) {
+              console.warn("⚠️ [Suggest] Refetched university is still empty");
+              suggestedCourses = [];
+              return;
+            }
           }
         } catch (e) {
-          console.error("Hard fetch for university failed:", e);
+          console.error("❌ [Suggest] Hard fetch for university failed:", e);
         }
       }
 
-      if (!userData?.university) {
-        console.warn("No university set, skipping suggestion fetch");
+      const finalUniv = userData?.university ? userData.university.trim() : "";
+      if (!finalUniv) {
+        console.warn(
+          "⚠️ [Suggest] No university set, skipping suggestion fetch",
+        );
         suggestedCourses = [];
         return;
       }
 
-      const normalized = normalizeCourseName(input);
-      console.log("🔍 Fetching suggestions:", {
-        input: normalized,
-        university: userData.university,
-        universityType: typeof userData.university,
-        authUid: auth.currentUser?.uid,
+      const normalizedInput = normalizeCourseName(input);
+      console.log("🔍 [Suggest] Executing Firestore Query:", {
+        university: finalUniv,
+        input: normalizedInput,
+        prefix: normalizedInput + "\uf8ff",
       });
+
       try {
         const q = query(
           collection(db, "masterCourses"),
-          where("university", "==", userData.university),
+          where("university", "==", finalUniv),
           orderBy("normalizedCourseName"),
-          where("normalizedCourseName", ">=", normalized),
-          where("normalizedCourseName", "<=", normalized + "\uf8ff"),
+          where("normalizedCourseName", ">=", normalizedInput),
+          where("normalizedCourseName", "<=", normalizedInput + "\uf8ff"),
           limit(5),
         );
 
         const snapshot = await getDocs(q);
         suggestedCourses = snapshot.docs.map((d: any) => d.data());
-        console.log(
-          "✨ Suggestions found:",
-          suggestedCourses.length,
-          suggestedCourses,
-        );
+        console.log("✨ [Suggest] Query Results:", {
+          foundCount: suggestedCourses.length,
+          courses: suggestedCourses.map((c: any) => c.courseName),
+        });
+
         if (suggestedCourses.length === 0) {
           console.warn(
-            "⚠️ No suggestions found. Check if 'masterCourses' has documents with university:",
-            userData.university,
+            "⚠️ [Suggest] No suggestions found. University mismatch? Searching in 'masterCourses' with:",
+            finalUniv,
           );
         }
         showSuggestions = true;
       } catch (e) {
-        console.error("❌ Autocomplete error", e);
+        console.error("❌ [Suggest] Firestore Query Error:", e);
       }
     }, 300);
   }
@@ -254,7 +270,10 @@
   let selectedSubjectId = $state<string | null>(null);
 
   // Sync state with store
+  import { user as userStore, userProfile } from "$lib/userStore";
   $effect(() => {
+    user = $userStore;
+    userData = $userProfile;
     selectedSubjectId = $currentBinder;
   });
   // Duplicate removed
@@ -2231,7 +2250,7 @@
     class="flex-1 relative overflow-x-hidden overflow-y-auto h-full bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:20px_20px] pt-16 lg:pt-0"
   >
     <main
-      class="max-w-7xl mx-auto py-8 lg:py-12 px-4 lg:px-16 pb-32 animate-in fade-in duration-700 slide-in-from-bottom-4"
+      class="w-full py-8 lg:py-12 px-4 lg:px-16 pb-32 animate-in fade-in duration-700 slide-in-from-bottom-4"
     >
       {#if currentLectureId && !isEditing}
         <!-- Viewing Result Mode -->
@@ -3208,7 +3227,7 @@
                         <!-- Custom Autocomplete Dropdown -->
                         {#if showSuggestions && suggestedCourses.length > 0}
                           <div
-                            class="absolute z-[100] w-full bg-white border-2 border-indigo-200 rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] max-h-60 overflow-y-auto mt-1"
+                            class="absolute z-10000 w-full bg-white border-2 border-indigo-200 rounded-lg shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)] max-h-60 overflow-y-auto mt-1"
                           >
                             {#each suggestedCourses as course}
                               <button
