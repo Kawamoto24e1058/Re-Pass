@@ -414,13 +414,9 @@
                                                 .trim()
                                                 .toLowerCase() === "ultimate"}
                                                 アルティメットプラン
-                                            {:else if String(userData?.plan || "")
-                                                .trim()
-                                                .toLowerCase() === "premium" || String(userData?.plan || "")
+                                            {:else if ["premium", "pro", "season"].includes(String(userData?.plan || "")
                                                     .trim()
-                                                    .toLowerCase() === "pro" || String(userData?.plan || "")
-                                                    .trim()
-                                                    .toLowerCase() === "season"}
+                                                    .toLowerCase())}
                                                 プレミアムプラン
                                             {:else}
                                                 フリープラン

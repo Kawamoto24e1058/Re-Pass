@@ -15,6 +15,14 @@
     let portalLoading = $state(false);
     let showConfetti = $state(false);
     let successMessage = $state(false);
+    let planLevel = $derived.by(() => {
+        const p = String(userData?.plan || "")
+            .toLowerCase()
+            .trim();
+        if (p === "ultimate") return "ULTIMATE";
+        if (p === "premium" || p === "pro" || p === "season") return "PREMIUM";
+        return "FREE";
+    });
 
     const isSuccess = $page.url.searchParams.get("success") === "true";
 
@@ -44,7 +52,8 @@
             } else {
                 goto("/login");
             }
-            loading = false;
+            // Ensure loading is resolved even if snap is delayed
+            setTimeout(() => (loading = false), 1500);
         });
 
         return () => unsubAuth();
@@ -141,10 +150,7 @@
 
         const unsub = $effect.root(() => {
             $effect(() => {
-                const currentPlan = String(userData?.plan || "")
-                    .toLowerCase()
-                    .trim();
-                if (currentPlan && currentPlan !== "free") {
+                if (planLevel !== "FREE") {
                     clearTimeout(timeout);
                     setTimeout(() => goto("/"), 500); // Fast redirection
                 }
@@ -260,75 +266,72 @@
                     読み込み中...
                 </p>
             </div>
-        {:else if isSuccess}
-            {@const isWaiting = !userData?.plan || userData?.plan === "free"}
-            {#if isWaiting}
-                <!-- Redirection Logic with Timeout -->
-                <div use:redirectionTimer></div>
-                <!-- Improved Sync UX: Waiting for Webhook -->
-                <div
-                    class="text-center py-24 bg-white rounded-[2rem] border border-indigo-100 shadow-sm animate-in fade-in zoom-in"
-                >
-                    <div class="relative w-24 h-24 mx-auto mb-8">
-                        <div
-                            class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"
-                        ></div>
-                        <div
-                            class="relative bg-white rounded-full w-24 h-24 flex items-center justify-center border-4 border-indigo-500 shadow-inner"
-                        >
-                            <span class="text-4xl animate-bounce">⏳</span>
-                        </div>
-                    </div>
-                    <h2 class="text-2xl font-black text-slate-900 mb-2">
-                        プランを有効化しています...
-                    </h2>
-                    <p class="text-slate-500 mb-8 max-w-sm mx-auto px-4">
-                        決済が完了しました。現在プランを反映させています。このまま数秒お待ちください。
-                    </p>
-                    <div class="flex flex-col items-center gap-4">
-                        <div
-                            class="flex items-center gap-2 text-indigo-600 font-bold text-sm"
-                        >
-                            <div
-                                class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"
-                            ></div>
-                            <div
-                                class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.2s]"
-                            ></div>
-                            <div
-                                class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.4s]"
-                            ></div>
-                            同期中
-                        </div>
-
-                        {#if showHomeButton}
-                            <button
-                                onclick={() => goto("/")}
-                                class="w-full max-w-xs py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg animate-in slide-in-from-bottom-2"
-                            >
-                                ホームへ戻る
-                            </button>
-                        {/if}
-
-                        <button
-                            onclick={() => window.location.reload()}
-                            class="text-xs text-slate-400 font-medium underline hover:text-indigo-500 transition-colors"
-                        >
-                            画面が切り替わらない場合はこちら
-                        </button>
+        {:else if isSuccess && planLevel === "FREE"}
+            <!-- Redirection Logic with Timeout -->
+            <div use:redirectionTimer></div>
+            <!-- Improved Sync UX: Waiting for Webhook -->
+            <div
+                class="text-center py-24 bg-white rounded-[2rem] border border-indigo-100 shadow-sm animate-in fade-in zoom-in"
+            >
+                <div class="relative w-24 h-24 mx-auto mb-8">
+                    <div
+                        class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"
+                    ></div>
+                    <div
+                        class="relative bg-white rounded-full w-24 h-24 flex items-center justify-center border-4 border-indigo-500 shadow-inner"
+                    >
+                        <span class="text-4xl animate-bounce">⏳</span>
                     </div>
                 </div>
-            {:else}
-                <!-- Fallback to normal settings view if not waiting -->
+                <h2 class="text-2xl font-black text-slate-900 mb-2">
+                    プランを有効化しています...
+                </h2>
+                <p class="text-slate-500 mb-8 max-w-sm mx-auto px-4">
+                    決済が完了しました。現在プランを反映させています。このまま数秒お待ちください。
+                </p>
+                <div class="flex flex-col items-center gap-4">
+                    <div
+                        class="flex items-center gap-2 text-indigo-600 font-bold text-sm"
+                    >
+                        <div
+                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"
+                        ></div>
+                        <div
+                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.2s]"
+                        ></div>
+                        <div
+                            class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce [animation-delay:0.4s]"
+                        ></div>
+                        同期中
+                    </div>
+
+                    {#if showHomeButton}
+                        <button
+                            onclick={() => goto("/")}
+                            class="w-full max-w-xs py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg animate-in slide-in-from-bottom-2"
+                        >
+                            ホームへ戻る
+                        </button>
+                    {/if}
+
+                    <button
+                        onclick={() => window.location.reload()}
+                        class="text-xs text-slate-400 font-medium underline hover:text-indigo-500 transition-colors"
+                    >
+                        画面が切り替わらない場合はこちら
+                    </button>
+                </div>
+            </div>
+        {:else}
+            {#if isSuccess}
                 <div use:triggerConfetti></div>
-                <!-- This part is handled by the main content below, so we just let it fall through -->
             {/if}
             <div class="space-y-6">
                 <!-- Current Plan Card -->
                 <div
                     class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 relative overflow-hidden"
                 >
-                    {#if userData?.plan && userData.plan !== "free"}
+                    {#if planLevel !== "FREE"}
                         <div class="absolute top-0 right-0 p-6 opacity-10">
                             <svg
                                 class="w-24 h-24"
@@ -354,21 +357,15 @@
                                 <p
                                     class="text-4xl font-black text-slate-900 tracking-tight"
                                 >
-                                    {#if String(userData?.plan || "")
-                                        .trim()
-                                        .toLowerCase() === "ultimate"}
+                                    {#if planLevel === "ULTIMATE"}
                                         アルティメットプラン
-                                    {:else if String(userData?.plan || "")
-                                        .trim()
-                                        .toLowerCase() === "premium" || String(userData?.plan || "")
-                                            .trim()
-                                            .toLowerCase() === "pro"}
+                                    {:else if planLevel === "PREMIUM"}
                                         プレミアムプラン
                                     {:else}
                                         フリープラン
                                     {/if}
                                 </p>
-                                {#if userData?.plan && userData.plan !== "free"}
+                                {#if planLevel !== "FREE"}
                                     <span
                                         class="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider"
                                         >Active</span
@@ -377,7 +374,7 @@
                             </div>
                         </div>
 
-                        {#if userData?.plan === "free"}
+                        {#if planLevel === "FREE"}
                             <button
                                 onclick={() => goto("/pricing")}
                                 class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:translate-y-0"
@@ -397,7 +394,7 @@
                                 利用可能機能
                             </h4>
                             <ul class="space-y-2">
-                                {#if userData?.plan === "free"}
+                                {#if planLevel === "FREE"}
                                     <li
                                         class="flex items-center gap-2 text-sm text-slate-600"
                                     >
@@ -420,7 +417,7 @@
                                             >✓</span
                                         > 授業分析（無制限）
                                     </li>
-                                    {#if userData?.plan === "ultimate"}
+                                    {#if planLevel === "ULTIMATE"}
                                         <li
                                             class="flex items-center gap-2 text-sm text-slate-600"
                                         >
@@ -474,7 +471,7 @@
 
                 <!-- Actions Area -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {#if userData?.plan !== "free"}
+                    {#if planLevel !== "FREE"}
                         <button
                             onclick={handlePortal}
                             disabled={portalLoading}
