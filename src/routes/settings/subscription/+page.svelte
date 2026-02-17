@@ -256,9 +256,9 @@
                                 <p
                                     class="text-4xl font-black text-slate-900 tracking-tight"
                                 >
-                                    {#if userData?.plan === "ultimate"}
+                                    {#if userData?.plan?.toLowerCase() === "ultimate"}
                                         アルティメットプラン
-                                    {:else if userData?.plan === "premium" || userData?.plan === "pro"}
+                                    {:else if userData?.plan?.toLowerCase() === "premium" || userData?.plan?.toLowerCase() === "pro"}
                                         プレミアムプラン
                                     {:else}
                                         フリープラン

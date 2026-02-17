@@ -36,10 +36,11 @@
 
     // Derived
     let isPremium = $derived(
-        userData?.plan === "premium" || userData?.plan === "ultimate",
+        userData?.plan?.toLowerCase() === "premium" ||
+            userData?.plan?.toLowerCase() === "ultimate",
     );
 
-    let isUltimate = $derived(userData?.plan === "ultimate");
+    let isUltimate = $derived(userData?.plan?.toLowerCase() === "ultimate");
 
     // Calculate Academic Year threshold (April 1st)
     const today = new Date();

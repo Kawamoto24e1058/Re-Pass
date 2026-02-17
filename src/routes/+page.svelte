@@ -400,9 +400,10 @@
   let thumbPosition = $derived((targetLength / 4000) * 100);
 
   let isPremium = $derived(
-    userData?.plan === "premium" || userData?.plan === "ultimate",
+    userData?.plan?.toLowerCase() === "premium" ||
+      userData?.plan?.toLowerCase() === "ultimate",
   );
-  let isUltimate = $derived(userData?.plan === "ultimate");
+  let isUltimate = $derived(userData?.plan?.toLowerCase() === "ultimate");
 
   let dailyRemaining = $derived.by(() => {
     if (isPremium) return Infinity;

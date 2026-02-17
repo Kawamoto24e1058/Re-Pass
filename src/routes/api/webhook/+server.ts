@@ -62,35 +62,38 @@ export async function POST({ request }) {
         const customerId = session.customer as string;
         const subscriptionId = (session.subscription as string) || session.id;
 
-        // Price IDs (Should preferably be in env, but hardcoding for safety/clarity in this block if env is missing)
-        const SEASON_PASS_PRICE_ID = 'price_1T0d6PRuwTinsDU9aJjf0JW1';
-        // These placeholders must match what is in .env or what Stripe actually sends. 
-        // Since we are using placeholders in .env, we should use the same here or load from env.
-        // However, the user asked to "reflect the new price IDs" which are currently placeholders.
-        const ULTIMATE_MONTHLY_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_MONTHLY || 'price_ultimate_monthly_placeholder';
-        const ULTIMATE_SEASON_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_SEASON || 'price_ultimate_season_placeholder';
+        // Price IDs from env
+        const PREMIUM_MONTHLY_PRICE_ID = env.STRIPE_PRICE_PREMIUM || 'price_1T0d6rRuwTinsDU9cqaomb4f';
+        const PREMIUM_SEASON_PRICE_ID = env.STRIPE_PRICE_SEASON || 'price_1T0d6PRuwTinsDU9aJjf0JW1';
+        const ULTIMATE_MONTHLY_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_MONTHLY || 'price_1T1TRSRuwTinsDU9kUdRZQxo';
+        const ULTIMATE_SEASON_PRICE_ID = env.STRIPE_PRICE_ULTIMATE_SEASON || 'price_1T1TS9RuwTinsDU9NeJ4CwL3';
 
-        let expiresAt = null;
-        let finalPlan = plan === 'pro' ? 'premium' : plan; // Default 'pro' -> 'premium'
+        let finalPlan = plan.toLowerCase();
+        if (finalPlan === 'pro') finalPlan = 'premium'; // Legacy sync
+
         let isUltimate = false;
 
-        // Determine Plan & Expiry based on Price ID
-        if (priceId === ULTIMATE_SEASON_PRICE_ID) {
-            finalPlan = 'ultimate';
+        // --- Plan Detection Fallback (Priority: metadata.plan > priceId) ---
+        if (session.metadata?.plan) {
+            finalPlan = session.metadata.plan.toLowerCase();
+        } else if (priceId) {
+            if (priceId === ULTIMATE_MONTHLY_PRICE_ID || priceId === ULTIMATE_SEASON_PRICE_ID) {
+                finalPlan = 'ultimate';
+            } else if (priceId === PREMIUM_MONTHLY_PRICE_ID || priceId === PREMIUM_SEASON_PRICE_ID) {
+                finalPlan = 'premium';
+            }
+        }
+
+        // Set Ultimate flag
+        if (finalPlan === 'ultimate') {
             isUltimate = true;
-            const createdMs = session.created * 1000;
-            expiresAt = new Date(createdMs + (120 * 24 * 60 * 60 * 1000));
-        } else if (priceId === ULTIMATE_MONTHLY_PRICE_ID) {
-            finalPlan = 'ultimate';
-            isUltimate = true;
-        } else if (priceId === SEASON_PASS_PRICE_ID) {
-            // This is the original "Premium Season Pass" -> map to premium
-            finalPlan = 'premium';
+        }
+
+        // Handle Expiry for Season Passes
+        let expiresAt = null;
+        if (priceId === ULTIMATE_SEASON_PRICE_ID || priceId === PREMIUM_SEASON_PRICE_ID) {
             const createdMs = session.created * 1000;
             expiresAt = new Date(createdMs + (120 * 24 * 60 * 60 * 1000)); // 4 months
-        } else if (priceId === ULTIMATE_SEASON_PRICE_ID || priceId === ULTIMATE_MONTHLY_PRICE_ID) {
-            finalPlan = 'ultimate';
-            isUltimate = true;
         }
 
         // Robust User Lookup via Email if ID is missing
