@@ -95,6 +95,13 @@ export async function POST({ request }) {
         console.log('Input Metadata Plan:', plan);
         console.log('Input Metadata PriceId:', priceId);
 
+        // Debug: Explicit Comparison for Test Mode Verification
+        console.log(`[DEBUG] Comparing Price ID: '${priceId}'`);
+        console.log(`[DEBUG] vs ULTIMATE_MONTHLY: '${ULTIMATE_MONTHLY}' -> Match: ${priceId === ULTIMATE_MONTHLY}`);
+        console.log(`[DEBUG] vs ULTIMATE_SEASON: '${ULTIMATE_SEASON}' -> Match: ${priceId === ULTIMATE_SEASON}`);
+        console.log(`[DEBUG] vs PREMIUM_MONTHLY: '${PREMIUM_MONTHLY}' -> Match: ${priceId === PREMIUM_MONTHLY}`);
+        console.log(`[DEBUG] vs PREMIUM_SEASON: '${PREMIUM_SEASON}' -> Match: ${priceId === PREMIUM_SEASON}`);
+
         // 1. Prioritize Price ID mapping (Independent of metadata.plan)
         if (priceId === ULTIMATE_MONTHLY || priceId === ULTIMATE_SEASON) {
             finalPlan = 'ultimate';
