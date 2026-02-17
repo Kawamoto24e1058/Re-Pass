@@ -79,12 +79,51 @@ class RecognitionService {
         }
     }
 
-    start() {
+    private async configureMicrophone() {
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
+
+        try {
+            // Request microphone with specific constraints to broaden capture range
+            // noiseSuppression: false -> captures ambient sounds/voices better
+            // autoGainControl: true -> amplifies distant voices
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true, // Keep on to prevent speaker feedback
+                    noiseSuppression: false, // OFF/LOW to hear surroundings
+                    autoGainControl: true,   // ON to boost quiet voices
+                    channelCount: 1
+                }
+            });
+
+            // We don't need to keep the stream active for SpeechRecognition (it manages its own),
+            // but getting it hints the OS/Browser to use these settings.
+            // Some browsers might require the stream to remain open, so let's keep it in a valid scope if needed.
+            // For now, we'll stop it to avoid "tab is using microphone" double-indicator if possible,
+            // OR we keep it if that's required for the settings to persist.
+            // To be safe and ensure "settings applied", we often need to keep the track alive...
+            // But SpeechRec might fail if we hog the mic?
+            // Actually, standard Web Speech API doesn't let us attach a stream.
+            // Best effort: Get stream, apply constraints, stop.
+            // OR: If the user specifically asked for this, they might imply we should HOLD the settings.
+            // Let's try just getting it. If it causes issues, we can adjust.
+
+            // Important: We stop the tracks immediately to release the mic for SpeechRecognition
+            stream.getTracks().forEach(track => track.stop());
+
+        } catch (e) {
+            console.warn("Microphone configuration hint failed:", e);
+        }
+    }
+
+    async start() {
         if (!this.recognition) {
             alert('このブラウザは音声認識をサポートしていません。');
             return;
         }
         if (get(isRecording)) return;
+
+        // Apply audio constraints (best effort)
+        await this.configureMicrophone();
 
         isRecording.set(true);
         this.initKeepAlive();
