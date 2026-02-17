@@ -5,7 +5,7 @@
 <div
     class="h-screen overflow-y-auto bg-[#F9FAFB] font-sans selection:bg-indigo-100"
 >
-    <main class="max-w-[800px] mx-auto py-12 px-6" in:fade={{ duration: 400 }}>
+    <main class="max-w-5xl mx-auto py-12 px-6" in:fade={{ duration: 400 }}>
         <button
             onclick={() => history.back()}
             class="group mb-8 flex items-center gap-3 text-slate-500 hover:text-indigo-600 font-bold transition-all"

@@ -2231,7 +2231,7 @@
     class="flex-1 relative overflow-x-hidden overflow-y-auto h-full bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:20px_20px] pt-16 lg:pt-0"
   >
     <main
-      class="max-w-5xl mx-auto py-8 lg:py-12 px-4 lg:px-16 pb-32 animate-in fade-in duration-700 slide-in-from-bottom-4"
+      class="max-w-7xl mx-auto py-8 lg:py-12 px-4 lg:px-16 pb-32 animate-in fade-in duration-700 slide-in-from-bottom-4"
     >
       {#if currentLectureId && !isEditing}
         <!-- Viewing Result Mode -->

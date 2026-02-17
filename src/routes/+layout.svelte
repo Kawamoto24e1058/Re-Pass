@@ -277,42 +277,44 @@
 			/>
 		{/if}
 
-		<main class="flex-1 min-w-0 relative">
-			{@render children()}
-		</main>
+		<div class="flex-1 flex flex-col min-w-0 relative">
+			<main class="flex-1">
+				{@render children()}
+			</main>
 
-		<!-- Global Footer -->
-		<footer
-			class="mt-auto py-12 px-6 border-t border-slate-200/50 bg-white/50 backdrop-blur-sm"
-		>
-			<div
-				class="max-w-4xl mx-auto flex flex-col items-center justify-center gap-4 text-center"
+			<!-- Global Footer -->
+			<footer
+				class="mt-auto py-12 px-6 border-t border-slate-200/50 bg-white/50 backdrop-blur-sm"
 			>
 				<div
-					class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[10px] sm:text-xs font-bold text-slate-400"
+					class="max-w-4xl mx-auto flex flex-col items-center justify-center gap-4 text-center"
 				>
-					<span>© 2026 Re-Pass</span>
-					<span class="hidden sm:inline">/</span>
-					<a
-						href="/terms"
-						class="hover:text-indigo-600 transition-colors"
-						>利用規約</a
+					<div
+						class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[10px] sm:text-xs font-bold text-slate-400"
 					>
-					<span>/</span>
-					<a
-						href="/privacy"
-						class="hover:text-indigo-600 transition-colors"
-						>プライバシーポリシー</a
-					>
-					<span>/</span>
-					<a
-						href="/legal/notation"
-						class="hover:text-indigo-600 transition-colors"
-						>特定商取引法に基づく表記</a
-					>
+						<span>© 2026 Re-Pass</span>
+						<span class="hidden sm:inline">/</span>
+						<a
+							href="/terms"
+							class="hover:text-indigo-600 transition-colors"
+							>利用規約</a
+						>
+						<span>/</span>
+						<a
+							href="/privacy"
+							class="hover:text-indigo-600 transition-colors"
+							>プライバシーポリシー</a
+						>
+						<span>/</span>
+						<a
+							href="/legal/notation"
+							class="hover:text-indigo-600 transition-colors"
+							>特定商取引法に基づく表記</a
+						>
+					</div>
 				</div>
-			</div>
-		</footer>
+			</footer>
+		</div>
 	</div>
 </div>
 

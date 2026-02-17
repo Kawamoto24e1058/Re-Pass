@@ -206,7 +206,7 @@
         <div
             class="flex-1 relative overflow-x-hidden overflow-y-auto bg-slate-50 pt-16 lg:pt-0"
         >
-            <main class="max-w-3xl mx-auto py-8 lg:py-12 px-4 lg:px-12">
+            <main class="max-w-7xl mx-auto py-8 lg:py-12 px-4 lg:px-12">
                 <h1
                     class="text-3xl font-bold text-slate-900 mb-8 tracking-tight"
                 >
