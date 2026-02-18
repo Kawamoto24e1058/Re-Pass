@@ -1362,21 +1362,46 @@
     textClass: string,
     file: File | null,
     accept: string,
-    extraClass: string = "",
+    extraClass: string = "h-16",
+    icon: any = null,
   )}
     <label
-      class="rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 flex flex-col items-center justify-center cursor-pointer transition-colors p-4 gap-2 {extraClass} {file
+      class="rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 flex flex-row items-center justify-start cursor-pointer transition-colors px-4 gap-3 w-full {extraClass} {file
         ? `${bgClass} ${borderClass}`
         : 'bg-white'}"
     >
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-bold text-slate-500">{label}</span>
+      <div
+        class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100/50 text-slate-500"
+      >
+        {#if icon}
+          {@render icon()}
+        {:else}
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            /></svg
+          >
+        {/if}
       </div>
-      {#if file}
-        <span class="text-[10px] text-slate-400 truncate w-full text-center"
-          >{file.name}</span
+      <div class="flex flex-col items-start min-w-0 flex-1">
+        <span class="text-xs font-bold text-slate-500 leading-tight"
+          >{label}</span
         >
-      {/if}
+        {#if file}
+          <span class="text-[10px] text-slate-400 truncate w-full"
+            >{file.name}</span
+          >
+        {:else}
+          <span class="text-[9px] text-slate-300">未選択</span>
+        {/if}
+      </div>
       <input
         type="file"
         {accept}
@@ -2032,6 +2057,7 @@
                   <div>
                     <div class="flex justify-between items-center mb-4">
                       <label
+                        for="target-length"
                         class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
                         >目標文字数</label
                       >
@@ -2049,6 +2075,7 @@
                         {$targetLength}文字
                       </span>
                       <input
+                        id="target-length"
                         type="range"
                         min="100"
                         max="4000"
@@ -2069,7 +2096,7 @@
                   </div>
                 </div>
 
-                <!-- 3. File Inputs -->
+                <!-- 3. File Inputs (Compact) -->
                 <div class="space-y-10">
                   <!-- Group A: Learning Materials -->
                   <div>
@@ -2099,7 +2126,6 @@
                         "text-indigo-600",
                         $pdfFile,
                         ".pdf",
-                        "h-24 md:h-28",
                       )}
                       {@render FileInputCard(
                         "image",
@@ -2109,7 +2135,6 @@
                         "text-emerald-600",
                         $imageFile,
                         "image/*",
-                        "h-24 md:h-28",
                       )}
                       {@render FileInputCard(
                         "txt",
@@ -2119,7 +2144,6 @@
                         "text-slate-600",
                         $txtFile,
                         ".txt",
-                        "h-24 md:h-28",
                       )}
                     </div>
                   </div>
@@ -2144,40 +2168,67 @@
                       マルチメディア (B系統)
                     </h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <!-- Combined or separate? User said "VIDEO / AUDIO". Let's do a wide card for each as requested layout. -->
                       {@render FileInputCard(
                         "video",
-                        "VIDEO / AUDIO",
+                        "VIDEO",
                         "bg-rose-50",
                         "border-rose-200",
                         "text-rose-600",
                         $videoFile,
-                        "video/*,audio/*",
-                        "h-24 md:h-28",
+                        "video/*",
                       )}
-                      <!-- URL Input -->
-                      <div
-                        class="h-24 md:h-28 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-300 flex items-center px-4 transition-colors relative group"
+                      {@render FileInputCard(
+                        "audio",
+                        "AUDIO",
+                        "bg-amber-50",
+                        "border-amber-200",
+                        "text-amber-600",
+                        $audioFile,
+                        "audio/*",
+                      )}
+                    </div>
+                  </div>
+
+                  <!-- URL Analysis -->
+                  <div>
+                    <h3
+                      class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                        /></svg
                       >
-                        <svg
-                          class="w-5 h-5 text-slate-400 mr-3 absolute left-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          ><path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                          /></svg
-                        >
-                        <input
-                          type="text"
-                          bind:value={$targetUrl}
-                          placeholder="URL (Webサイトのみ)"
-                          class="w-full bg-transparent border-none focus:outline-none text-sm font-bold text-slate-600 placeholder:text-slate-300 pl-8"
-                        />
-                      </div>
+                      URLから解析
+                    </h3>
+                    <div
+                      class="h-16 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-300 flex items-center px-4 transition-colors relative group"
+                    >
+                      <svg
+                        class="w-5 h-5 text-slate-400 mr-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                        /></svg
+                      >
+                      <input
+                        type="text"
+                        bind:value={$targetUrl}
+                        placeholder="URLを入力 (Webサイトのみ)"
+                        class="w-full bg-transparent border-none focus:outline-none text-sm font-bold text-slate-600 placeholder:text-slate-300"
+                      />
                     </div>
                   </div>
                 </div>
