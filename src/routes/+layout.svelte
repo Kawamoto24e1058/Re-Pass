@@ -20,11 +20,18 @@
 		userProfile,
 		authLoading,
 	} from "$lib/userStore";
-	import { isRecording, transcript } from "$lib/stores/recordingStore";
-	import { recognitionService } from "$lib/services/recognitionService";
 	import PwaInstallPrompt from "$lib/components/PwaInstallPrompt.svelte";
 	import LoadingScreen from "$lib/components/LoadingScreen.svelte";
-	import GlobalRecordingOverlay from "$lib/components/GlobalRecordingOverlay.svelte";
+	import {
+		isRecording,
+		lectureTitle,
+		pdfFile,
+		txtFile,
+		audioFile,
+		videoFile,
+		targetUrl,
+		transcript,
+	} from "$lib/stores/sessionStore";
 
 	let { children } = $props<{ children: any }>();
 	let loading = $state(true); // App state
@@ -340,12 +347,48 @@
 	</div>
 </div>
 
-<!-- Splash Screen -->
 {#if loading}
 	<LoadingScreen onComplete={() => (loading = false)} />
 {/if}
 
-<!-- Global Recording Overlay (Manages its own visibility) -->
-<GlobalRecordingOverlay />
+<!-- Return to Work Button -->
+{#if $page.url.pathname !== "/" && ($isRecording || $lectureTitle || $pdfFile || $audioFile || $videoFile || $transcript)}
+	<button
+		onclick={() => goto("/")}
+		class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-6 py-4 rounded-full shadow-2xl font-bold flex items-center gap-3 animate-in slide-in-from-bottom-10 hover:scale-105 transition-transform border border-slate-700"
+	>
+		<span class="relative flex h-3 w-3">
+			{#if $isRecording}
+				<span
+					class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
+				></span>
+				<span
+					class="relative inline-flex rounded-full h-3 w-3 bg-red-500"
+				></span>
+			{:else}
+				<span class="bg-emerald-400 rounded-full h-3 w-3"></span>
+			{/if}
+		</span>
+		<div class="text-left leading-tight">
+			<div class="text-[10px] text-slate-400 font-medium">作業に戻る</div>
+			<div class="text-sm">
+				{$lectureTitle || ($isRecording ? "録音中..." : "作成中の講義")}
+			</div>
+		</div>
+		<svg
+			class="w-5 h-5 text-slate-400"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				stroke-width="2"
+				d="M14 5l7 7m0 0l-7 7m7-7H3"
+			/>
+		</svg>
+	</button>
+{/if}
 
 <PwaInstallPrompt />

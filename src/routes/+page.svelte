@@ -8,6 +8,11 @@
     getDownloadURL,
     deleteObject,
   } from "firebase/storage";
+  import {
+    extractAudioFromVideo,
+    type AudioExtractionProgress,
+  } from "$lib/utils/audioExtractor";
+  import { retryOperation } from "$lib/utils/retry";
   import { marked } from "marked";
   import {
     collection,
@@ -35,17 +40,24 @@
     transcript,
     finalTranscript,
     interimTranscript,
-    resetTranscript,
-    isOverlayVisible,
-    isOverlayExpanded,
-  } from "$lib/stores/recordingStore";
+    resetSession, // Renamed from resetTranscript/resetAll
+    lectureTitle,
+    analysisMode,
+    targetLength,
+    pdfFile,
+    txtFile,
+    audioFile,
+    imageFile,
+    videoFile,
+    targetUrl,
+  } from "$lib/stores/sessionStore";
   import { recognitionService } from "$lib/services/recognitionService";
   import { page } from "$app/stores";
   import UpgradeModal from "$lib/components/UpgradeModal.svelte";
 
   // --- Simplified State Variables ---
   let isEditing = $state(false);
-  let lectureTitle = $state("");
+  // lectureTitle is managed by sessionStore
   let currentLectureId = $state<string | null>(null);
   let selectedSubjectId = $state<string | null>(null);
   let draggingLectureId = $state<string | null>(null);
@@ -112,8 +124,7 @@
   // let recognition: any;
 
   // Analysis Settings
-  let analysisMode = $state<"note" | "thoughts" | "report">("note");
-  let targetLength = $state(500);
+  // Managed by sessionStore: analysisMode, targetLength
 
   // Series Analysis State
   let analyzingSeries = $state(false);
@@ -136,7 +147,7 @@
 
   // Copy result to clipboard (AnalysisResult aware)
   let strategyContent = $derived.by(() => {
-    const ca = lectureAnalyses[analysisMode];
+    const ca = lectureAnalyses[$analysisMode];
     if (!ca || typeof ca !== "object" || !ca.summary) return null;
     const match = ca.summary.match(
       /\[A_STRATEGY_START\]([\s\S]*?)\[A_STRATEGY_END\]/,
@@ -145,7 +156,7 @@
   });
 
   let displaySummary = $derived.by(() => {
-    const ca = lectureAnalyses[analysisMode];
+    const ca = lectureAnalyses[$analysisMode];
     if (!ca) return "";
     if (typeof ca === "string") return ca;
     if (!ca.summary) return "";
@@ -177,7 +188,7 @@
     let cleanText = "";
 
     // If we have structured data, construct a nice report
-    const currentData = lectureAnalyses[analysisMode] || result;
+    const currentData = lectureAnalyses[$analysisMode] || result;
 
     if (typeof currentData === "object" && currentData !== null) {
       const { title, category, summary, glossary } = currentData;
@@ -187,7 +198,7 @@
 
       if (glossary && glossary.length > 0) {
         cleanText += `\n【用語辞典】\n`;
-        glossary.forEach((item) => {
+        glossary.forEach((item: any) => {
           cleanText += `・${item.term}: ${item.definition}\n`;
         });
       }
@@ -319,8 +330,8 @@
   }
 
   // --- Derived State for UI ---
-  let manuscriptPages = $derived(Math.ceil(targetLength / 400));
-  let thumbPosition = $derived((targetLength / 4000) * 100);
+  let manuscriptPages = $derived(Math.ceil($targetLength / 400));
+  let thumbPosition = $derived(($targetLength / 4000) * 100);
 
   let isUltimate = $derived(
     String(userData?.plan || "")
@@ -347,17 +358,17 @@
   });
 
   let headerTitle = $derived(
-    analysisMode === "note"
+    $analysisMode === "note"
       ? "講義ノート (復習用)"
-      : analysisMode === "thoughts"
+      : $analysisMode === "thoughts"
         ? "感想・リアクション (提出用)"
         : "学術レポート (課題用)",
   );
 
   let containerBgColor = $derived(
-    analysisMode === "note"
+    $analysisMode === "note"
       ? "bg-white/60"
-      : analysisMode === "thoughts"
+      : $analysisMode === "thoughts"
         ? "bg-amber-50/60"
         : "bg-slate-50/60",
   );
@@ -463,7 +474,268 @@
 
   // Global SpeechRecognition is managed in +layout via recognitionService
 
+  // --- Timer & Progress ---
+  let duration = $state(0);
+  let timerInterval: any;
+
+  $effect(() => {
+    if ($isRecording) {
+      if (!timerInterval) {
+        timerInterval = setInterval(() => duration++, 1000);
+      }
+    } else {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        duration = 0;
+      }
+    }
+  });
+
+  function formatTime(seconds: number) {
+    const m = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  function startProgress() {
+    progressValue = 0;
+    progressStatus = "音声データを解析中...";
+    progressInterval = setInterval(() => {
+      if (progressValue < 30) {
+        progressValue += Math.random() * 2;
+        progressStatus = "音声データを解析中...";
+      } else if (progressValue < 60) {
+        progressValue += Math.random() * 1.5;
+        progressStatus = "講義の構造を分析中...";
+      } else if (progressValue < 85) {
+        progressValue += Math.random() * 0.5;
+        progressStatus = "ノートをまとめています...";
+      } else if (progressValue < 95) {
+        progressValue += 0.1;
+        progressStatus = "仕上げ中...";
+      }
+    }, 200);
+  }
+
+  async function stopProgress() {
+    clearInterval(progressInterval);
+    progressValue = 100;
+    progressStatus = "完了";
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  async function handleAnalyze() {
+    if (analyzing || isExtractingAudio) return;
+
+    if (!$lectureTitle.trim()) {
+      toastMessage = "講義名を入力してください";
+      return;
+    }
+
+    if (
+      !$pdfFile &&
+      !$txtFile &&
+      !$audioFile &&
+      !$imageFile &&
+      !$videoFile &&
+      !$targetUrl &&
+      !$transcript
+    ) {
+      toastMessage = "学習素材を入力してください";
+      return;
+    }
+
+    // Quota Checks
+    const usageCount = userData?.usageCount || 0;
+    if (!isPremium && usageCount >= 5) {
+      showUpgradeModal = true;
+      return;
+    }
+    if (($videoFile || $audioFile || $targetUrl) && !isUltimate) {
+      showUpgradeModal = true;
+      toastMessage = "動画・音声解析はアルティメットプラン限定です";
+      return;
+    }
+
+    analyzing = true;
+    startProgress();
+    toastMessage = null;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      let audioUrl = "";
+      let videoUrl = "";
+      let pdfUrl = "";
+      let imageUrl = "";
+
+      cancellationController = new AbortController();
+      const signal = cancellationController.signal;
+
+      // Uploads (using our update uploadToStorage)
+      if ($audioFile) audioUrl = await uploadToStorage($audioFile);
+      if ($videoFile) videoUrl = await uploadToStorage($videoFile);
+      if ($pdfFile) pdfUrl = await uploadToStorage($pdfFile);
+      if ($imageFile) imageUrl = await uploadToStorage($imageFile);
+
+      const formData = new FormData();
+      if (audioUrl) formData.append("audioUrl", audioUrl);
+      if (videoUrl) formData.append("videoUrl", videoUrl);
+      if (pdfUrl) formData.append("pdfUrl", pdfUrl);
+      if (imageUrl) formData.append("imageUrl", imageUrl);
+      if ($txtFile) formData.append("txt", $txtFile);
+      if ($targetUrl) formData.append("url", $targetUrl);
+      formData.append("transcript", $transcript);
+      formData.append("mode", $analysisMode);
+      formData.append("plan", userData?.plan || "free");
+      // targetLength is passed implicitly or we should add it if API supports it
+      // formData.append("targetLength", $targetLength.toString());
+
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+        headers: { Authorization: `Bearer ${idToken}` },
+        signal,
+      });
+
+      if (!res.ok) throw new Error("Analysis failed");
+      const data = await res.json();
+
+      // Save Logic
+      const lectureData = {
+        title: data.result?.title || $lectureTitle,
+        lectureTitle: $lectureTitle, // Legacy?
+        courseName: $lectureTitle, // Legacy support using lectureTitle as courseName
+        content: $transcript,
+        analysis: data.result,
+        analyses: { [$analysisMode]: data.result },
+        createdAt: serverTimestamp(),
+        subjectId: selectedSubjectId || null,
+        uid: user.uid,
+        sourceType: $videoFile
+          ? "video"
+          : $audioFile
+            ? "audio"
+            : $targetUrl
+              ? "url"
+              : "text",
+      };
+
+      const docRef = await addDoc(
+        collection(db, `users/${user.uid}/lectures`),
+        lectureData,
+      );
+
+      toastMessage = "解析完了！";
+      await stopProgress();
+      analyzing = false;
+      resetSession();
+
+      // Navigate to the new lecture
+      // We are already on the page, just load it
+      loadLecture({ id: docRef.id, ...lectureData });
+    } catch (e: any) {
+      console.error(e);
+      toastMessage = "エラー: " + e.message;
+      analyzing = false;
+      stopProgress();
+    }
+  }
+
   // --- Functions ---
+
+  // --- File Handlers ---
+  let isExtractingAudio = $state(false);
+  let extractionProgress = $state<AudioExtractionProgress | null>(null);
+
+  async function uploadToStorage(file: File): Promise<string> {
+    const originalName = file.name || "file";
+    const filename = `${Date.now()}_${originalName}`;
+    if (!$userStore) throw new Error("User not authenticated");
+    const storageRef = ref(storage, `uploads/${$userStore.uid}/${filename}`);
+
+    return retryOperation(async () => {
+      return new Promise((resolve, reject) => {
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        if (cancellationController?.signal.aborted) {
+          uploadTask.cancel();
+          reject(new DOMException("Upload cancelled", "AbortError"));
+          return;
+        }
+
+        const abortHandler = () => {
+          uploadTask.cancel();
+          reject(new DOMException("Upload cancelled", "AbortError"));
+        };
+        cancellationController?.signal.addEventListener("abort", abortHandler);
+
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            // Optional: Update progress
+          },
+          (error) => {
+            cancellationController?.signal.removeEventListener(
+              "abort",
+              abortHandler,
+            );
+            reject(error);
+          },
+          async () => {
+            cancellationController?.signal.removeEventListener(
+              "abort",
+              abortHandler,
+            );
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(url);
+          },
+        );
+      });
+    });
+  }
+
+  async function extractAudio(file: File) {
+    try {
+      isExtractingAudio = true;
+      const result = await extractAudioFromVideo(file, (p) => {
+        extractionProgress = p;
+      });
+      const extractedFile = new File(
+        [result.blob],
+        file.name.replace(/\.[^/.]+$/, "") + ".wav",
+        { type: "audio/wav" },
+      );
+      audioFile.set(extractedFile);
+      videoFile.set(null); // Prioritize audio
+      toastMessage = "🎥 デジタル高速抽出完了 (WAV 16kHz)";
+      setTimeout(() => (toastMessage = null), 3000);
+    } catch (e: any) {
+      console.error(e);
+      toastMessage = "音声抽出失敗: " + e.message;
+    } finally {
+      isExtractingAudio = false;
+      extractionProgress = null;
+    }
+  }
+
+  function handleFileChange(e: Event, type: string) {
+    const input = e.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      if (type === "pdf") pdfFile.set(file);
+      if (type === "txt") txtFile.set(file);
+      if (type === "image") imageFile.set(file);
+      if (type === "audio") audioFile.set(file);
+      if (type === "video") {
+        videoFile.set(file);
+        extractAudio(file);
+      }
+    }
+  }
 
   async function deleteFromStorage(downloadUrl: string) {
     if (!downloadUrl) return;
@@ -482,7 +754,7 @@
       showUpgradeModal = true;
       return;
     }
-    analysisMode = newMode;
+    $analysisMode = newMode;
   }
 
   function handleLengthChange(e: Event) {
@@ -496,7 +768,7 @@
         "フリープランの解析上限は500文字です。<br />プレミアムプランなら2000文字、アルティメットプランなら4000文字まで拡張されます。";
       toastMessage = "フリープランは500文字までです";
       setTimeout(() => (toastMessage = null), 3000);
-      targetLength = 500; // Force back
+      $targetLength = 500; // Force back
       return;
     }
 
@@ -507,10 +779,10 @@
         "アルティメットプランなら、最大4000文字（原稿用紙10枚分）の超ロング解析が可能です。";
       toastMessage = "2000文字以上はアルティメット限定です";
       setTimeout(() => (toastMessage = null), 3000);
-      targetLength = 2000; // Force back
+      $targetLength = 2000; // Force back
       return;
     }
-    targetLength = val;
+    $targetLength = val;
   }
 
   function toggleRecording() {
@@ -546,9 +818,9 @@
 
     currentLectureId = lecture.id;
     // Don't auto-deselect subject, keep context
-    lectureTitle = lecture.title;
+    $lectureTitle = lecture.title;
     // Update global transcript store when loading a lecture
-    resetTranscript();
+    resetSession();
     finalTranscript.set(lecture.content || "");
 
     // Restore settings with defaults
@@ -559,12 +831,12 @@
       thoughts: "thoughts",
       report: "report",
     };
-    analysisMode = modeMap[lecture.analysisMode] || "note";
-    targetLength = lecture.targetLength || 1000;
+    $analysisMode = modeMap[lecture.analysisMode] || "note";
+    $targetLength = lecture.targetLength || 1000;
 
     result = lecture.analysis || "";
     lectureAnalyses =
-      lecture.analyses || (result ? { [analysisMode]: result } : {});
+      lecture.analyses || (result ? { [$analysisMode]: result } : {});
     initialGenerationDone = !!result;
     isEditing = false; // Switch to View Mode
 
@@ -590,8 +862,8 @@
     isEditing = false;
 
     // Reset editor state
-    lectureTitle = "";
-    resetTranscript();
+    $lectureTitle = "";
+    resetSession();
     result = "";
     // Removed file inputs state clearing as they are gone
 
@@ -618,9 +890,7 @@
   }
 
   function startNewLecture() {
-    // Open the global overlay
-    isOverlayVisible.set(true);
-    if ($isOverlayVisible) isOverlayExpanded.set(true);
+    resetSession();
     // Ensure we stay in dashboard mode
     isEditing = false;
     currentLectureId = null;
@@ -1084,12 +1354,39 @@
     </div>
   {/snippet}
 
+  {#snippet FileInputCard(
+    type: string,
+    label: string,
+    bgClass: string,
+    borderClass: string,
+    textClass: string,
+    file: File | null,
+    accept: string,
+  )}
+    <label
+      class="aspect-square rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 flex flex-col items-center justify-center cursor-pointer transition-colors {file
+        ? `${bgClass} ${borderClass}`
+        : 'bg-white'}"
+    >
+      <span class="text-xs font-bold text-slate-500">{label}</span>
+      <span class="text-[9px] text-slate-400 truncate max-w-[90%]"
+        >{file ? file.name : ""}</span
+      >
+      <input
+        type="file"
+        {accept}
+        class="hidden"
+        onchange={(e) => handleFileChange(e, type)}
+      />
+    </label>
+  {/snippet}
+
   {#snippet ResultDisplay()}
-    {@const currentAnalysis = lectureAnalyses[analysisMode] || result}
+    {@const currentAnalysis = lectureAnalyses[$analysisMode] || result}
     {#if currentAnalysis}
       <div
         bind:this={resultContainer}
-        class="relative bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-12 animate-in fade-in slide-in-from-bottom-8 duration-700 overflow-hidden {analysisMode ===
+        class="relative bg-white rounded-3xl shadow-sm border border-slate-100 p-8 md:p-12 animate-in fade-in slide-in-from-bottom-8 duration-700 overflow-hidden {$analysisMode ===
         'note'
           ? 'bg-article-paper'
           : ''}"
@@ -1124,7 +1421,7 @@
           </div>
         {:else}
           <!-- Video Player (Sticky) -->
-          {#if previewVideoUrl && analysisMode === "note"}
+          {#if previewVideoUrl && $analysisMode === "note"}
             <div
               class="mb-8 sticky top-4 z-30 bg-white/95 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-indigo-50 transition-all max-w-2xl mx-auto ring-1 ring-slate-900/50"
             >
@@ -1168,9 +1465,9 @@
                   <span
                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-50 text-slate-500 border border-slate-100 uppercase tracking-wider"
                   >
-                    {analysisMode === "note"
+                    {$analysisMode === "note"
                       ? "Lecture Note"
-                      : analysisMode === "thoughts"
+                      : $analysisMode === "thoughts"
                         ? "Reflections"
                         : "Academic Report"}
                   </span>
@@ -1358,7 +1655,7 @@
               <button
                 onclick={() => handleDerivativeGenerate("note")}
                 class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-                {analysisMode === 'note'
+                {$analysisMode === 'note'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
                   : lectureAnalyses['note']
                     ? 'bg-white border border-indigo-200 text-indigo-600'
@@ -1369,7 +1666,7 @@
               <button
                 onclick={() => handleDerivativeGenerate("thoughts")}
                 class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-                {analysisMode === 'thoughts'
+                {$analysisMode === 'thoughts'
                   ? 'bg-amber-500 text-white shadow-lg shadow-amber-100'
                   : lectureAnalyses['thoughts']
                     ? 'bg-white border border-amber-200 text-amber-600'
@@ -1380,7 +1677,7 @@
               <button
                 onclick={() => handleDerivativeGenerate("report")}
                 class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-                {analysisMode === 'report'
+                {$analysisMode === 'report'
                   ? 'bg-slate-800 text-white shadow-lg shadow-slate-200'
                   : lectureAnalyses['report']
                     ? 'bg-white border border-slate-400 text-slate-800'
@@ -1672,34 +1969,247 @@
       {:else if !selectedSubjectId && !isEditing}
         <!-- Unassigned Dashboard (Inbox) -->
         <div class="mb-10">
+          <!-- Input Section -->
+          <div
+            class="mb-10 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative"
+          >
+            <div class="p-8">
+              <!-- Header -->
+              <div class="flex items-center justify-between mb-8">
+                <h2
+                  class="text-2xl font-bold text-slate-900 flex items-center gap-3"
+                >
+                  {#if $isRecording}
+                    <span class="relative flex h-4 w-4">
+                      <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
+                      ></span>
+                      <span
+                        class="relative inline-flex rounded-full h-4 w-4 bg-red-500"
+                      ></span>
+                    </span>
+                    <span class="text-red-600"
+                      >録音中 {formatTime(duration)}</span
+                    >
+                  {:else}
+                    <span class="text-slate-700">新しい講義を記録</span>
+                  {/if}
+                </h2>
+                <!-- Action Buttons -->
+                <button
+                  onclick={toggleRecording}
+                  class="px-6 py-3 rounded-full font-bold shadow-lg transition-all flex items-center gap-2
+                        {$isRecording
+                    ? 'bg-red-500 text-white shadow-red-200 hover:bg-red-600'
+                    : 'bg-indigo-600 text-white shadow-indigo-200 hover:bg-indigo-700'}"
+                >
+                  {#if $isRecording}
+                    <span>⏹ 録音停止</span>
+                  {:else}
+                    <span>🎙 録音開始</span>
+                  {/if}
+                </button>
+              </div>
+
+              <!-- Forms -->
+              <div class="space-y-8">
+                <!-- Title -->
+                <div>
+                  <label
+                    class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2"
+                    >講義名 <span class="text-red-500">*</span></label
+                  >
+                  <input
+                    type="text"
+                    bind:value={$lectureTitle}
+                    placeholder="例: 線形代数 第3回"
+                    class="w-full text-2xl font-bold border-b-2 border-slate-200 focus:border-indigo-500 focus:outline-none bg-transparent py-2 placeholder:text-slate-300 transition-colors"
+                  />
+                </div>
+
+                <!-- Mode & Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3"
+                      >モード選択</label
+                    >
+                    <div class="flex bg-slate-100 p-1 rounded-xl">
+                      <button
+                        onclick={() => setAnalysisMode("note")}
+                        class="flex-1 py-2 rounded-lg text-sm font-bold transition-all {$analysisMode ===
+                        'note'
+                          ? 'bg-white text-indigo-600 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'}"
+                        >ノート</button
+                      >
+                      <button
+                        onclick={() => setAnalysisMode("thoughts")}
+                        class="flex-1 py-2 rounded-lg text-sm font-bold transition-all {$analysisMode ===
+                        'thoughts'
+                          ? 'bg-white text-amber-600 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'}"
+                        >感想文</button
+                      >
+                      <button
+                        onclick={() => setAnalysisMode("report")}
+                        class="flex-1 py-2 rounded-lg text-sm font-bold transition-all {$analysisMode ===
+                        'report'
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'}"
+                        >レポート</button
+                      >
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3"
+                      >出力設定</label
+                    >
+                    <!-- Length Slider -->
+                    <div class="relative pt-1">
+                      <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-bold text-slate-700"
+                          >文字数目安: Approx. {$targetLength} chars</span
+                        >
+                        <span class="text-xs font-bold text-slate-400"
+                          >{manuscriptPages}枚分</span
+                        >
+                      </div>
+                      <input
+                        type="range"
+                        min="100"
+                        max="4000"
+                        step="100"
+                        value={$targetLength}
+                        oninput={handleLengthChange}
+                        class="w-full appearance-none h-2 bg-slate-200 rounded-full cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
+                      />
+                      <div class="relative h-2 mt-2 w-full">
+                        {#if isFree}
+                          <div
+                            class="absolute left-[12.5%] right-0 top-0 bottom-0 bg-slate-100/50 flex items-center justify-center text-[10px] text-slate-400 font-bold border-l-2 border-slate-300"
+                          >
+                            Free Limit (500)
+                          </div>
+                        {:else if !isUltimate}
+                          <div
+                            class="absolute left-[50%] right-0 top-0 bottom-0 bg-slate-100/50 flex items-center justify-center text-[10px] text-slate-400 font-bold border-l-2 border-slate-300"
+                          >
+                            Premium Limit (2000)
+                          </div>
+                        {/if}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- File Inputs -->
+                <div>
+                  <label
+                    class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4"
+                    >資料を添付</label
+                  >
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {@render FileInputCard(
+                      "pdf",
+                      "PDF",
+                      "bg-indigo-50",
+                      "border-indigo-500",
+                      "text-indigo-600",
+                      $pdfFile,
+                      ".pdf",
+                    )}
+                    {@render FileInputCard(
+                      "image",
+                      "IMG",
+                      "bg-emerald-50",
+                      "border-emerald-500",
+                      "text-emerald-600",
+                      $imageFile,
+                      "image/*",
+                    )}
+                    {@render FileInputCard(
+                      "audio",
+                      "AUDIO",
+                      "bg-amber-50",
+                      "border-amber-500",
+                      "text-amber-600",
+                      $audioFile,
+                      "audio/*",
+                    )}
+                    {@render FileInputCard(
+                      "video",
+                      "VIDEO",
+                      "bg-rose-50",
+                      "border-rose-500",
+                      "text-rose-600",
+                      $videoFile,
+                      "video/*",
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer Actions -->
+              <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                {#if analyzing}
+                  <div class="flex items-center gap-4">
+                    <div class="flex flex-col text-right">
+                      <span class="text-sm font-bold text-slate-800"
+                        >{progressStatus}</span
+                      >
+                      <div
+                        class="w-32 h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden"
+                      >
+                        <div
+                          class="h-full bg-indigo-600 transition-all duration-300"
+                          style="width: {progressValue}%"
+                        ></div>
+                      </div>
+                    </div>
+                    <button
+                      onclick={handleCancelAnalysis}
+                      class="text-xs font-bold text-slate-400 hover:text-slate-600 px-3 py-2"
+                      >中断</button
+                    >
+                  </div>
+                {:else}
+                  <button
+                    onclick={handleAnalyze}
+                    disabled={!$lectureTitle.trim() &&
+                      !$isRecording &&
+                      !$pdfFile}
+                    class="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-slate-800 hover:translate-y-[-1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <span>解析を実行</span>
+                    <svg
+                      class="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      ><path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      /></svg
+                    >
+                  </button>
+                {/if}
+              </div>
+            </div>
+          </div>
+
           <div class="flex items-center justify-between mb-8">
             <div>
-              <h1 class="text-4xl font-bold text-slate-900 tracking-tight">
+              <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
                 未分類の履歴
               </h1>
               <p class="text-slate-500 mt-2">
                 {$lectures.filter((l) => !l.subjectId).length} 件の講義が整理を待っています
               </p>
             </div>
-            <button
-              onclick={() => startNewLecture()}
-              class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 flex items-center gap-2"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-              新しい講義を記録
-            </button>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

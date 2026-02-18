@@ -1,4 +1,4 @@
-import { isRecording, finalTranscript, interimTranscript } from '../stores/recordingStore';
+import { isRecording, finalTranscript, interimTranscript } from '../stores/sessionStore';
 import { get } from 'svelte/store';
 
 class RecognitionService {
