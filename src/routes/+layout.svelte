@@ -24,6 +24,7 @@
 	import { recognitionService } from "$lib/services/recognitionService";
 	import PwaInstallPrompt from "$lib/components/PwaInstallPrompt.svelte";
 	import LoadingScreen from "$lib/components/LoadingScreen.svelte";
+	import RecordingBar from "$lib/components/RecordingBar.svelte";
 
 	let { children } = $props<{ children: any }>();
 	let loading = $state(true); // App state

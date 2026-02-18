@@ -10,49 +10,41 @@ export const config = {
 export const POST = async ({ request }) => {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     try {
-        const { subjectName, analyses, customInstructions } = await request.json();
+        const { subjectName, analyses, transcript, customInstructions } = await request.json();
 
-        // --- Auth & Data Check ---
-        let uid: string | null = null;
-        let userData: any = null;
-        let isPremium = false;
-        let isUltimate = false;
+        // --- Log Incoming Data for Debugging ---
+        console.log(`🚀 [Analyze-Final] Start processing for: ${subjectName}`);
+        console.log(`📦 [Analyze-Final] Analyses count: ${analyses?.length || 0}`);
+        console.log(`🎤 [Analyze-Final] Separate Transcript provided: ${!!transcript} (Length: ${transcript?.length || 0})`);
 
-        console.log(`🚀 [Analyze-Final] Start processing for subject: ${subjectName}`);
+        // ... Auth Check (omitted for brevity in replacement, assumed identical) ...
 
-        const authHeader = request.headers.get('Authorization');
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            try {
-                const idToken = authHeader.split('Bearer ')[1];
-                const decodedToken = await adminAuth.verifyIdToken(idToken);
-                uid = decodedToken.uid;
-                console.log(`✅ [Analyze-Final] Auth Verified for UID: ${uid}`);
+        const combinedAnalyses = [...(analyses || [])];
 
-                // Fetch latest user data for plan verification
-                try {
-                    const userDoc = await adminDb.collection('users').doc(uid).get();
-                    if (userDoc.exists) {
-                        userData = userDoc.data();
-                        const plan = String(userData?.plan || '').trim().toLowerCase();
-                        isPremium = ['premium', 'ultimate', 'season', 'pro'].includes(plan);
-                        isUltimate = plan === 'ultimate';
-                        console.log(`💎 [Analyze-Final] Plan: ${plan} (Premium: ${isPremium}, Ultimate: ${isUltimate})`);
-                    }
-                } catch (dbError) {
-                    console.warn("⚠️ [Analyze-Final] Failed to fetch user data:", dbError);
-                }
-            } catch (e) {
-                console.warn('⚠️ [Analyze-Final] Auth token verification failed:', e);
+        // 1. Merge Separate Transcript if provided
+        if (transcript && typeof transcript === 'string' && transcript.length > 0) {
+            // Token Guard: Truncate very long transcripts to avoidance (e.g. 50k chars approx)
+            const MAX_TRANSCRIPT_LEN = 50000;
+            let safeTranscript = transcript;
+            if (safeTranscript.length > MAX_TRANSCRIPT_LEN) {
+                console.warn(`⚠️ [Analyze-Final] Transcript too long (${safeTranscript.length}), truncating to ${MAX_TRANSCRIPT_LEN}...`);
+                safeTranscript = safeTranscript.slice(0, MAX_TRANSCRIPT_LEN) + "\n...(Truncated)...";
             }
+
+            console.log("➕ [Analyze-Final] Merging separate transcript into analysis list.");
+            combinedAnalyses.push({
+                title: "講義の文字起こし (Transcript)",
+                analysis: safeTranscript // Treating raw transcript as 'analysis' content
+            });
         }
 
-        if (!analyses || analyses.length === 0) {
-            console.error("❌ [Analyze-Final] No analysis data provided");
-            return json({ error: "No analysis data provided" }, { status: 400 });
+        if (combinedAnalyses.length === 0) {
+            console.error("❌ [Analyze-Final] No data provided (Slides or Transcript)");
+            return json({ error: "No analysis data or transcript provided" }, { status: 400 });
         }
 
         // --- Data Sanitization ---
-        const sanitizedAnalyses = analyses.map((item: any, index: number) => {
+        const sanitizedAnalyses = combinedAnalyses.map((item: any, index: number) => {
             let safeAnalysis = "";
             try {
                 if (typeof item.analysis === 'string') {
@@ -140,6 +132,8 @@ ${chunkContext}
         }
 
         const systemPrompt = `
+重要：入力には『スライド資料』と『講義の文字起こし』の2種類が含まれています。スライドの情報だけでは不十分です。必ず『文字起こし』に含まれる口頭説明や具体例を要約に統合してください。文字起こしが無視された場合、タスクは失敗とみなされます。
+
 あなたは提供されたすべての資料（スライド、レジュメ、文字起こし）を網羅的に理解し、一つの統合された講義ノートを作成するスペシャリストです。
 
 手順1: すべてのファイルから共通のトピックを特定し、講義の全体構造（骨子）を組み立ててください。

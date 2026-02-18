@@ -1407,6 +1407,7 @@
         body: JSON.stringify({
           subjectName: subject?.name || "Unknown Subject",
           customInstructions: customAnalysisInstructions,
+          transcript: $transcript || "", // Send current transcript if available
           analyses: subjectLectures.map((l) => ({
             title: l.title,
             analysis: l.analysis,
@@ -3557,28 +3558,7 @@
           {/if}
         </div>
 
-        <!-- Transcript Preview -->
-        {#if $transcript || $isRecording}
-          <div class="mb-8 animate-in fade-in slide-in-from-bottom-2">
-            <div
-              class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group"
-            >
-              <!-- ... -->
-              <div class="pl-4">
-                <div class="flex items-center justify-between mb-2">
-                  <h3 class="text-xs font-bold text-slate-400 uppercase">
-                    Live Transcript
-                  </h3>
-                </div>
-                <p
-                  class="text-sm text-slate-600 font-mono leading-relaxed line-clamp-3 hover:line-clamp-none transition-all"
-                >
-                  {$transcript}
-                </p>
-              </div>
-            </div>
-          </div>
-        {/if}
+        <!-- Transcript Preview Removed (Moved to Global RecordingBar) -->
 
         <!-- Result Card -->
         {#if !analyzing}
@@ -3588,42 +3568,29 @@
     </main>
   </div>
 
-  <!-- FAB: Recording & Analysis Buttons (Bottom Right) -->
-  {#if user}
-    <div class="fixed bottom-8 right-8 flex flex-col items-end gap-4 z-50">
-      <!-- Recording FAB (Only item remaining in this floating container) -->
+  <!-- FAB: Recording Start Button (Only visible when NOT recording, Global Bar handles Stop) -->
+  {#if user && !$isRecording}
+    <div class="fixed bottom-8 right-8 flex flex-col items-end gap-4 z-40">
       <button
         onclick={toggleRecording}
-        class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-95 group border border-white/10
-        {$isRecording
-          ? 'bg-red-500 text-white ring-4 ring-red-500/20'
-          : 'bg-white text-red-500 hover:bg-slate-50'}"
-        title={$isRecording ? "Stop Recording" : "Start Recording"}
+        class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 group border border-white/10 bg-white text-red-500 hover:bg-slate-50"
+        title="Start Recording"
       >
-        {#if $isRecording}
-          <div class="w-6 h-6 bg-white rounded-md animate-pulse"></div>
-        {:else}
-          <div class="relative">
-            <svg
-              class="w-8 h-8"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-              />
-            </svg>
-            {#if !selectedSummary && !$isRecording}
-              <div
-                class="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full border-2 border-white animate-bounce"
-              ></div>
-            {/if}
-          </div>
-        {/if}
+        <div class="relative">
+          <svg
+            class="w-8 h-8"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+            />
+          </svg>
+        </div>
       </button>
     </div>
   {/if}
