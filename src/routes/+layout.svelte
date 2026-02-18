@@ -24,7 +24,7 @@
 	import { recognitionService } from "$lib/services/recognitionService";
 	import PwaInstallPrompt from "$lib/components/PwaInstallPrompt.svelte";
 	import LoadingScreen from "$lib/components/LoadingScreen.svelte";
-	import RecordingBar from "$lib/components/RecordingBar.svelte";
+	import GlobalRecordingOverlay from "$lib/components/GlobalRecordingOverlay.svelte";
 
 	let { children } = $props<{ children: any }>();
 	let loading = $state(true); // App state
@@ -345,42 +345,7 @@
 	<LoadingScreen onComplete={() => (loading = false)} />
 {/if}
 
-<!-- Global Recording Indicator -->
-{#if $isRecording}
-	<div
-		class="fixed top-6 left-1/2 -translate-x-1/2 z-[50] animate-in fade-in slide-in-from-top-4 duration-500"
-	>
-		<div
-			class="bg-slate-900/90 backdrop-blur-md border border-white/10 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-4 text-white hover:bg-slate-800 transition-all group"
-		>
-			<div class="flex items-center gap-2">
-				<div class="relative w-3 h-3">
-					<div
-						class="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"
-					></div>
-					<div class="relative w-3 h-3 bg-red-500 rounded-full"></div>
-				</div>
-				<span class="text-xs font-black tracking-widest uppercase"
-					>Recording</span
-				>
-			</div>
-
-			<div class="h-4 w-px bg-white/20"></div>
-
-			<p
-				class="text-[10px] text-slate-300 font-medium truncate max-w-[200px] italic"
-			>
-				{$transcript || "音声を待機中..."}
-			</p>
-
-			<button
-				onclick={() => recognitionService.stop()}
-				class="bg-white/10 hover:bg-red-500 text-white px-3 py-1.5 rounded-xl text-[10px] font-black transition-all"
-			>
-				STOP
-			</button>
-		</div>
-	</div>
-{/if}
+<!-- Global Recording Overlay (Manages its own visibility) -->
+<GlobalRecordingOverlay />
 
 <PwaInstallPrompt />
