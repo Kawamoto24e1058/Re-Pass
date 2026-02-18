@@ -103,16 +103,16 @@ export const POST = async ({ request }) => {
             const intermediateSummaries = await Promise.all(chunks.map(async (chunk, i) => {
                 let chunkContext = `Chunk ${i + 1}:\n`;
                 chunk.forEach((item, j) => {
-                    chunkContext += `Lecture ${j + 1}: ${item.title}\n${item.analysis}\n\n`;
+                    chunkContext += `【ソース${j + 1}: ${item.title}】\n${item.analysis}\n\n`;
                 });
 
                 const intermediatePrompt = `
-あなたは学術データの圧縮専門AIです。以下の講義データを、**重要キーワードと論理構造を維持したまま 1/10 の長さに要約**してください。
+あなたは優秀な学習アシスタントです。以下の複数の講義データ（スライド、文字起こし等）を統合し、**矛盾なく、かつ補完し合った包括的な要約**を作成してください。
 
-**【厳守ルール】**
-- **固有名詞、専門用語、日付、試験に関する言及**は、絶対に削らずに全て抽出してください。
-- 冗長な装飾を省き、事実に基づいた情報密度を最大化してください。
-- 出力は構造化されたテキスト形式（箇条書き推奨）としてください。
+**【統合ルール】**
+1. **スライド/板書**と思われる内容から「構造・専門用語・定義」を骨子として抽出してください。
+2. **文字起こし**と思われる内容から「具体的な説明・事例・ニュアンス」を肉付けしてください。
+3. すべての情報を 1/10 の長さに圧縮しつつ、試験に出る重要なキーワードは漏らさないでください。
 
 データ:
 ${chunkContext}
@@ -131,16 +131,20 @@ ${chunkContext}
             // Standard small processing
             let context = `Subject: ${subjectName}\n\n`;
             sanitizedAnalyses.forEach((item: any, index: number) => {
-                context += `--- Lecture ${index + 1}: ${item.title} ---\n`;
+                context += `【ソース${index + 1}: ${item.title}】\n`;
                 // Safe slice
                 const content = item.analysis || "";
-                context += `Summary/Notes: ${content.slice(0, 5000)}\n\n`;
+                context += `(内容):\n${content.slice(0, 5000)}\n\n`;
             });
             finalContext = context;
         }
 
         const systemPrompt = `
-あなたは、大学生が単位を落とさないための「最短・最強の試験対策ノート」を作成する専門AIです。提供された講義データを分析し、以下の 4 つのセクションで構成される対策ノートを生成してください。
+あなたは優秀な学習アシスタントです。以下の【スライド構成】と【講義の文字起こし】という2つの異なるソースから、矛盾なく、かつ補完し合った包括的な要約を作成してください。
+
+**【統合方針】**
+- **スライドにある専門用語や構造**を「骨子」として採用してください。
+- **文字起こしの詳細な説明**でその骨子を「肉付け」してください。
 
 **【重要：回答のスタイルとルール】**
 1. **### 各見出しの直後に必ず1行の空行を入れること。**
@@ -189,7 +193,10 @@ ${finalContext}
 
         // Stage 2: Final Integration (Gemini 2.0 Flash)
         const finalModel = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash", // Replaced Pro with Flash to avoid 404 and standardize
+            model: "gemini-2.0-flash",
+            generationConfig: {
+                maxOutputTokens: 8192,
+            }
         });
 
         const result = await finalModel.generateContent(systemPrompt);

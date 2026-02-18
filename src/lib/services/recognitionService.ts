@@ -19,11 +19,14 @@ class RecognitionService {
                 this.recognition.onresult = (event: any) => {
                     let currentInterim = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            // Use the first alternative (highest confidence) for final
-                            finalTranscript.update(prev => prev + event.results[i][0].transcript);
+                        const result = event.results[i];
+                        if (result.isFinal) {
+                            // Use the first alternative (highest confidence) for final, 
+                            // but ensuring we don't accidentally drop it if confidence is low (rarely happens with isFinal).
+                            finalTranscript.update(prev => prev + result[0].transcript);
                         } else {
-                            currentInterim += event.results[i][0].transcript;
+                            // Accumulate interim results
+                            currentInterim += result[0].transcript;
                         }
                     }
                     interimTranscript.set(currentInterim);
@@ -44,18 +47,29 @@ class RecognitionService {
 
                 this.recognition.onend = () => {
                     console.log('Speech recognition ended. isRecording:', get(isRecording));
+
+                    // --- Fixed "Disappearing Text" Bug ---
+                    // If there was any pending interim text that didn't get finalized (e.g. cut off by silence),
+                    // force it into the final transcript now.
+                    const pendingInterim = get(interimTranscript);
+                    if (pendingInterim && pendingInterim.trim().length > 0) {
+                        console.log('Saving pending interim on stop:', pendingInterim);
+                        finalTranscript.update(prev => prev + pendingInterim);
+                        interimTranscript.set('');
+                    }
+
                     // Continuous restart if isRecording is still true
                     if (get(isRecording)) {
                         // Clear any existing timer
                         if (this.restartTimer) clearTimeout(this.restartTimer);
 
-                        // Add a small delay before restart to avoid browser throttling
-                        // Retry loop for silence or network drops
+                        // --- Aggressive Restart (Silenced Protection) ---
+                        // Reduced to 100ms (or nearly instant) to prevent dropping words during pauses.
                         this.restartTimer = setTimeout(() => {
                             if (get(isRecording)) {
                                 try {
                                     this.recognition.start();
-                                    console.log('Recognition restarted');
+                                    console.log('Recognition restarted (Aggressive Mode)');
                                 } catch (e) {
                                     console.error('Failed to restart recognition:', e);
                                     // Retry once more if immediate start fails
@@ -63,10 +77,10 @@ class RecognitionService {
                                         if (get(isRecording) && this.recognition) {
                                             try { this.recognition.start(); } catch (e2) { console.error("Retry restart failed", e2); }
                                         }
-                                    }, 1000);
+                                    }, 500);
                                 }
                             }
-                        }, 300);
+                        }, 100);
                     }
                 };
 
