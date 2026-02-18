@@ -1362,16 +1362,21 @@
     textClass: string,
     file: File | null,
     accept: string,
+    extraClass: string = "",
   )}
     <label
-      class="aspect-square rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 flex flex-col items-center justify-center cursor-pointer transition-colors {file
+      class="rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 flex flex-col items-center justify-center cursor-pointer transition-colors p-4 gap-2 {extraClass} {file
         ? `${bgClass} ${borderClass}`
         : 'bg-white'}"
     >
-      <span class="text-xs font-bold text-slate-500">{label}</span>
-      <span class="text-[9px] text-slate-400 truncate max-w-[90%]"
-        >{file ? file.name : ""}</span
-      >
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-slate-500">{label}</span>
+      </div>
+      {#if file}
+        <span class="text-[10px] text-slate-400 truncate w-full text-center"
+          >{file.name}</span
+        >
+      {/if}
       <input
         type="file"
         {accept}
@@ -1974,70 +1979,32 @@
             class="mb-10 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative"
           >
             <div class="p-8">
-              <!-- Header -->
-              <div class="flex items-center justify-between mb-8">
-                <h2
-                  class="text-2xl font-bold text-slate-900 flex items-center gap-3"
-                >
-                  {#if $isRecording}
-                    <span class="relative flex h-4 w-4">
-                      <span
-                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"
-                      ></span>
-                      <span
-                        class="relative inline-flex rounded-full h-4 w-4 bg-red-500"
-                      ></span>
-                    </span>
-                    <span class="text-red-600"
-                      >録音中 {formatTime(duration)}</span
-                    >
-                  {:else}
-                    <span class="text-slate-700">新しい講義を記録</span>
-                  {/if}
-                </h2>
-                <!-- Action Buttons -->
-                <button
-                  onclick={toggleRecording}
-                  class="px-6 py-3 rounded-full font-bold shadow-lg transition-all flex items-center gap-2
-                        {$isRecording
-                    ? 'bg-red-500 text-white shadow-red-200 hover:bg-red-600'
-                    : 'bg-indigo-600 text-white shadow-indigo-200 hover:bg-indigo-700'}"
-                >
-                  {#if $isRecording}
-                    <span>⏹ 録音停止</span>
-                  {:else}
-                    <span>🎙 録音開始</span>
-                  {/if}
-                </button>
-              </div>
-
-              <!-- Forms -->
-              <div class="space-y-8">
-                <!-- Title -->
-                <div>
-                  <label
-                    class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2"
-                    >講義名 <span class="text-red-500">*</span></label
-                  >
+              <div class="p-8 md:p-12 relative">
+                <!-- 1. Header Area: Large Title -->
+                <div class="mb-12">
                   <input
                     type="text"
                     bind:value={$lectureTitle}
-                    placeholder="例: 線形代数 第3回"
-                    class="w-full text-2xl font-bold border-b-2 border-slate-200 focus:border-indigo-500 focus:outline-none bg-transparent py-2 placeholder:text-slate-300 transition-colors"
+                    placeholder="講義タイトル"
+                    class="w-full text-4xl md:text-5xl font-bold bg-transparent border-none placeholder:text-slate-200 text-slate-900 focus:outline-none focus:ring-0 mb-4 tracking-tight"
                   />
+                  <div
+                    class="h-1.5 w-24 bg-gradient-to-r from-indigo-600 to-pink-500 rounded-full opacity-90"
+                  ></div>
                 </div>
 
-                <!-- Mode & Settings -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- 2. Mode & Settings (2 Columns) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
+                  <!-- Left: Mode -->
                   <div>
                     <label
-                      class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3"
-                      >モード選択</label
+                      class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                      >生成モード</label
                     >
-                    <div class="flex bg-slate-100 p-1 rounded-xl">
+                    <div class="flex bg-slate-100/80 p-1.5 rounded-2xl">
                       <button
                         onclick={() => setAnalysisMode("note")}
-                        class="flex-1 py-2 rounded-lg text-sm font-bold transition-all {$analysisMode ===
+                        class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
                         'note'
                           ? 'bg-white text-indigo-600 shadow-sm'
                           : 'text-slate-500 hover:text-slate-700'}"
@@ -2045,15 +2012,14 @@
                       >
                       <button
                         onclick={() => setAnalysisMode("thoughts")}
-                        class="flex-1 py-2 rounded-lg text-sm font-bold transition-all {$analysisMode ===
+                        class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
                         'thoughts'
                           ? 'bg-white text-amber-600 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-700'}"
-                        >感想文</button
+                          : 'text-slate-500 hover:text-slate-700'}">感想</button
                       >
                       <button
                         onclick={() => setAnalysisMode("report")}
-                        class="flex-1 py-2 rounded-lg text-sm font-bold transition-all {$analysisMode ===
+                        class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
                         'report'
                           ? 'bg-white text-slate-800 shadow-sm'
                           : 'text-slate-500 hover:text-slate-700'}"
@@ -2061,21 +2027,27 @@
                       >
                     </div>
                   </div>
+
+                  <!-- Right: Length -->
                   <div>
-                    <label
-                      class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3"
-                      >出力設定</label
-                    >
-                    <!-- Length Slider -->
-                    <div class="relative pt-1">
-                      <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-bold text-slate-700"
-                          >文字数目安: Approx. {$targetLength} chars</span
-                        >
-                        <span class="text-xs font-bold text-slate-400"
-                          >{manuscriptPages}枚分</span
-                        >
-                      </div>
+                    <div class="flex justify-between items-center mb-4">
+                      <label
+                        class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
+                        >目標文字数</label
+                      >
+                      <span
+                        class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg"
+                        >{manuscriptPages}枚分</span
+                      >
+                    </div>
+
+                    <div class="relative pt-6 pb-2">
+                      <span
+                        class="absolute -top-2 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
+                        style="left: {($targetLength / 4000) * 100}%"
+                      >
+                        {$targetLength}文字
+                      </span>
                       <input
                         type="range"
                         min="100"
@@ -2083,108 +2055,200 @@
                         step="100"
                         value={$targetLength}
                         oninput={handleLengthChange}
-                        class="w-full appearance-none h-2 bg-slate-200 rounded-full cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
+                        class="w-full h-2 bg-slate-200 rounded-full cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
                       />
-                      <div class="relative h-2 mt-2 w-full">
-                        {#if isFree}
-                          <div
-                            class="absolute left-[12.5%] right-0 top-0 bottom-0 bg-slate-100/50 flex items-center justify-center text-[10px] text-slate-400 font-bold border-l-2 border-slate-300"
-                          >
-                            Free Limit (500)
-                          </div>
-                        {:else if !isUltimate}
-                          <div
-                            class="absolute left-[50%] right-0 top-0 bottom-0 bg-slate-100/50 flex items-center justify-center text-[10px] text-slate-400 font-bold border-l-2 border-slate-300"
-                          >
-                            Premium Limit (2000)
-                          </div>
-                        {/if}
+                      <div
+                        class="flex justify-between mt-2 text-[10px] text-slate-400 font-bold font-mono"
+                      >
+                        <span>100</span>
+                        <span>500</span>
+                        <span>2000</span>
+                        <span>4000</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- File Inputs -->
-                <div>
-                  <label
-                    class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-4"
-                    >資料を添付</label
-                  >
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {@render FileInputCard(
-                      "pdf",
-                      "PDF",
-                      "bg-indigo-50",
-                      "border-indigo-500",
-                      "text-indigo-600",
-                      $pdfFile,
-                      ".pdf",
-                    )}
-                    {@render FileInputCard(
-                      "image",
-                      "IMG",
-                      "bg-emerald-50",
-                      "border-emerald-500",
-                      "text-emerald-600",
-                      $imageFile,
-                      "image/*",
-                    )}
-                    {@render FileInputCard(
-                      "audio",
-                      "AUDIO",
-                      "bg-amber-50",
-                      "border-amber-500",
-                      "text-amber-600",
-                      $audioFile,
-                      "audio/*",
-                    )}
-                    {@render FileInputCard(
-                      "video",
-                      "VIDEO",
-                      "bg-rose-50",
-                      "border-rose-500",
-                      "text-rose-600",
-                      $videoFile,
-                      "video/*",
-                    )}
+                <!-- 3. File Inputs -->
+                <div class="space-y-10">
+                  <!-- Group A: Learning Materials -->
+                  <div>
+                    <h3
+                      class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                        /></svg
+                      >
+                      学習資料 (A系統)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {@render FileInputCard(
+                        "pdf",
+                        "PDF",
+                        "bg-indigo-50",
+                        "border-indigo-200",
+                        "text-indigo-600",
+                        $pdfFile,
+                        ".pdf",
+                        "h-24 md:h-28",
+                      )}
+                      {@render FileInputCard(
+                        "image",
+                        "IMAGE",
+                        "bg-emerald-50",
+                        "border-emerald-200",
+                        "text-emerald-600",
+                        $imageFile,
+                        "image/*",
+                        "h-24 md:h-28",
+                      )}
+                      {@render FileInputCard(
+                        "txt",
+                        "TEXT",
+                        "bg-slate-50",
+                        "border-slate-200",
+                        "text-slate-600",
+                        $txtFile,
+                        ".txt",
+                        "h-24 md:h-28",
+                      )}
+                    </div>
+                  </div>
+
+                  <!-- Group B: Multimedia -->
+                  <div>
+                    <h3
+                      class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        /></svg
+                      >
+                      マルチメディア (B系統)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <!-- Combined or separate? User said "VIDEO / AUDIO". Let's do a wide card for each as requested layout. -->
+                      {@render FileInputCard(
+                        "video",
+                        "VIDEO / AUDIO",
+                        "bg-rose-50",
+                        "border-rose-200",
+                        "text-rose-600",
+                        $videoFile,
+                        "video/*,audio/*",
+                        "h-24 md:h-28",
+                      )}
+                      <!-- URL Input -->
+                      <div
+                        class="h-24 md:h-28 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-300 flex items-center px-4 transition-colors relative group"
+                      >
+                        <svg
+                          class="w-5 h-5 text-slate-400 mr-3 absolute left-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                          /></svg
+                        >
+                        <input
+                          type="text"
+                          bind:value={$targetUrl}
+                          placeholder="URL (Webサイトのみ)"
+                          class="w-full bg-transparent border-none focus:outline-none text-sm font-bold text-slate-600 placeholder:text-slate-300 pl-8"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Footer Actions -->
-              <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-                {#if analyzing}
-                  <div class="flex items-center gap-4">
-                    <div class="flex flex-col text-right">
-                      <span class="text-sm font-bold text-slate-800"
-                        >{progressStatus}</span
-                      >
+                <!-- Action Button in Flow (Analyze) -->
+                <div class="mt-16 flex justify-end">
+                  {#if analyzing}
+                    <!-- Progress Bar -->
+                    <div class="w-full max-w-md ml-auto">
                       <div
-                        class="w-32 h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden"
+                        class="flex justify-between text-xs font-bold text-slate-500 mb-2"
+                      >
+                        <span>{progressStatus}</span>
+                        <span>{progressValue}%</span>
+                      </div>
+                      <div
+                        class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
                       >
                         <div
                           class="h-full bg-indigo-600 transition-all duration-300"
                           style="width: {progressValue}%"
                         ></div>
                       </div>
+                      <button
+                        onclick={handleCancelAnalysis}
+                        class="mt-2 text-xs text-slate-400 hover:text-red-500 underline"
+                        >キャンセル</button
+                      >
                     </div>
+                  {:else}
                     <button
-                      onclick={handleCancelAnalysis}
-                      class="text-xs font-bold text-slate-400 hover:text-slate-600 px-3 py-2"
-                      >中断</button
+                      onclick={handleAnalyze}
+                      disabled={!$lectureTitle.trim() &&
+                        !$isRecording &&
+                        !$pdfFile &&
+                        !$imageFile &&
+                        !$txtFile &&
+                        !$videoFile &&
+                        !$targetUrl}
+                      class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
                     >
-                  </div>
-                {:else}
-                  <button
-                    onclick={handleAnalyze}
-                    disabled={!$lectureTitle.trim() &&
-                      !$isRecording &&
-                      !$pdfFile}
-                    class="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-slate-800 hover:translate-y-[-1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    <span>解析を実行</span>
+                      <span class="text-lg">解析を開始</span>
+                      <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M14 5l7 7m0 0l-7 7m7-7H3"
+                        /></svg
+                      >
+                    </button>
+                  {/if}
+                </div>
+
+                <!-- Floating Mic Button (Bottom Right) -->
+                <button
+                  onclick={toggleRecording}
+                  class="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-4 border-white
+                  {$isRecording
+                    ? 'bg-red-500 shadow-red-300 animate-pulse'
+                    : 'bg-white text-indigo-600 shadow-indigo-200'}"
+                >
+                  {#if $isRecording}
+                    <div class="w-6 h-6 bg-white rounded-md"></div>
+                  {:else}
                     <svg
-                      class="w-5 h-5"
+                      class="w-8 h-8"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -2192,11 +2256,11 @@
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
                       /></svg
                     >
-                  </button>
-                {/if}
+                  {/if}
+                </button>
               </div>
             </div>
           </div>
