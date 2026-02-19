@@ -8,7 +8,8 @@ export const interimTranscript = writable<string>('');
 
 // --- Session/Input State ---
 export const lectureTitle = writable<string>('');
-export const isShared = writable<boolean>(false); // Added isShared
+export const courseId = writable<string>(''); // Added courseId
+export const isShared = writable<boolean>(true); // Default to true
 export const courseName = writable<string>('');
 export const analysisMode = writable<"note" | "thoughts" | "report">("note");
 export const targetLength = writable<number>(500);
@@ -27,7 +28,8 @@ export function resetSession() {
     transcript.set('');
     interimTranscript.set('');
     lectureTitle.set('');
-    isShared.set(false);
+    courseId.set('');
+    isShared.set(true);
     courseName.set('');
     analysisMode.set('note');
     targetLength.set(500);

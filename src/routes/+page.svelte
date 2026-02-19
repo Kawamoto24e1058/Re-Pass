@@ -38,8 +38,8 @@
   import {
     isRecording,
     transcript,
-    interimTranscript,
     isShared,
+    courseId,
     resetSession, // Renamed from resetTranscript/resetAll
     lectureTitle,
     analysisMode,
@@ -83,6 +83,20 @@
     subjectId: string;
     subjectName: string;
   } | null>(null);
+
+  // Action for auto-scrolling textarea
+  function actionTextAreaAutoscroll(node: HTMLTextAreaElement) {
+    function scroll() {
+      node.scrollTop = node.scrollHeight;
+    }
+
+    // Scroll on update
+    return {
+      update() {
+        scroll();
+      },
+    };
+  }
 
   let upgradeModalTitle = $state("ULTIMATE限定機能");
   let upgradeModalMessage = $state("");
@@ -1355,60 +1369,81 @@
   {/snippet}
 
   {#snippet FileInputCard(
-    type: string,
+    id: string,
     label: string,
-    bgClass: string,
-    borderClass: string,
-    textClass: string,
-    file: File | null,
+    colorClasses: string,
+    fileStore: File | null,
     accept: string,
-    extraClass: string = "h-16",
-    icon: any = null,
+    iconPath: string,
   )}
-    <label
-      class="rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 flex flex-row items-center justify-start cursor-pointer transition-colors px-4 gap-3 w-full {extraClass} {file
-        ? `${bgClass} ${borderClass}`
-        : 'bg-white'}"
+    <button
+      onclick={() => document.getElementById(`file-input-${id}`)?.click()}
+      class="relative group flex items-center gap-3 p-3 w-full h-20 rounded-xl border-2 transition-all duration-200 {colorClasses} {fileStore
+        ? 'border-current ring-1 ring-current'
+        : 'border-transparent'} hover:brightness-95 active:scale-[0.98]"
     >
+      <!-- Icon Container -->
       <div
-        class="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100/50 text-slate-500"
+        class="flex-shrink-0 w-10 h-10 rounded-full bg-white/60 flex items-center justify-center"
       >
-        {#if icon}
-          {@render icon()}
-        {:else}
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d={iconPath}
+          />
+        </svg>
+      </div>
+
+      <!-- Label & Filename -->
+      <div class="flex-1 text-left overflow-hidden">
+        <div class="text-xs font-bold opacity-70 tracking-wider mb-0.5">
+          {label}
+        </div>
+        <div class="text-sm font-bold truncate max-w-full">
+          {fileStore ? fileStore.name : "選択"}
+        </div>
+      </div>
+
+      <!-- Active Check Badge -->
+      {#if fileStore}
+        <div
+          class="absolute -top-2 -right-2 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm border border-current"
+        >
           <svg
-            class="w-4 h-4"
+            class="w-3 h-3"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-            ><path
+          >
+            <path
               stroke-linecap="round"
               stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            /></svg
-          >
-        {/if}
-      </div>
-      <div class="flex flex-col items-start min-w-0 flex-1">
-        <span class="text-xs font-bold text-slate-500 leading-tight"
-          >{label}</span
-        >
-        {#if file}
-          <span class="text-[10px] text-slate-400 truncate w-full"
-            >{file.name}</span
-          >
-        {:else}
-          <span class="text-[9px] text-slate-300">未選択</span>
-        {/if}
-      </div>
+              stroke-width="3"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        </div>
+      {/if}
+
       <input
         type="file"
+        id="file-input-{id}"
+        hidden
         {accept}
-        class="hidden"
-        onchange={(e) => handleFileChange(e, type)}
+        onchange={(e) =>
+          handleFileChange(
+            e,
+            id as "pdf" | "image" | "txt" | "audio" | "video",
+          )}
       />
-    </label>
+    </button>
   {/snippet}
 
   {#snippet ResultDisplay()}
@@ -1999,16 +2034,58 @@
       {:else if !selectedSubjectId && !isEditing}
         <!-- Unassigned Dashboard (Inbox) -->
         <div class="mb-10">
-          <!-- 1. Header Area: Large Title (Moved text-center above card) -->
+          <!-- 1. Header Area: Course Select (Mandatory) -->
           <div class="mb-6 px-4">
-            <label for="lecture-title-top" class="sr-only">講義タイトル</label>
-            <input
-              id="lecture-title-top"
-              type="text"
-              bind:value={$lectureTitle}
-              placeholder="講義タイトルを入力"
-              class="w-full text-4xl md:text-5xl font-bold bg-transparent border-b-2 border-slate-200 focus:border-indigo-500 placeholder:text-slate-300 text-slate-800 focus:outline-none py-2 transition-colors tracking-tight"
-            />
+            <label
+              for="course-select"
+              class="block text-xl font-bold text-slate-700 mb-2"
+              >履修中の講義を選択 <span class="text-red-500 text-sm align-top"
+                >必須</span
+              ></label
+            >
+            <div class="relative">
+              <select
+                id="course-select"
+                bind:value={$courseId}
+                onchange={(e) => {
+                  const selected = $subjects.find(
+                    (s) => s.id === e.currentTarget.value,
+                  );
+                  if (selected) {
+                    $lectureTitle = selected.name;
+                  }
+                }}
+                class="w-full text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-slate-200 focus:border-indigo-500 text-slate-800 focus:outline-none py-3 pr-10 cursor-pointer appearance-none tracking-tight transition-all hover:border-indigo-300"
+              >
+                <option value="" disabled selected
+                  >講義を選択してください</option
+                >
+                {#if $subjects.length > 0}
+                  {#each $subjects as subject}
+                    <option value={subject.id}>{subject.name}</option>
+                  {/each}
+                {:else}
+                  <option value="dummy1">ダミー講義A</option>
+                  <option value="dummy2">ダミー講義B</option>
+                {/if}
+              </select>
+              <div
+                class="absolute inset-y-0 right-0 flex items-center pointer-events-none text-slate-400"
+              >
+                <svg
+                  class="w-6 h-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  ><path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  /></svg
+                >
+              </div>
+            </div>
           </div>
 
           <!-- Input Section -->
@@ -2120,29 +2197,26 @@
                       {@render FileInputCard(
                         "pdf",
                         "PDF",
-                        "bg-indigo-50",
-                        "border-indigo-200",
-                        "text-indigo-600",
+                        "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
                         $pdfFile,
                         ".pdf",
+                        "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", // FileText
                       )}
                       {@render FileInputCard(
                         "image",
                         "IMAGE",
-                        "bg-emerald-50",
-                        "border-emerald-200",
-                        "text-emerald-600",
+                        "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100",
                         $imageFile,
                         "image/*",
+                        "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z", // Image
                       )}
                       {@render FileInputCard(
                         "txt",
                         "TEXT",
-                        "bg-slate-50",
-                        "border-slate-200",
-                        "text-slate-600",
+                        "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100",
                         $txtFile,
                         ".txt",
+                        "M4 6h16M4 12h16M4 18h7", // Menu/Text
                       )}
                     </div>
                   </div>
@@ -2170,20 +2244,18 @@
                       {@render FileInputCard(
                         "video",
                         "VIDEO",
-                        "bg-rose-50",
-                        "border-rose-200",
-                        "text-rose-600",
+                        "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100",
                         $videoFile,
                         "video/*",
+                        "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z", // PlayCircle
                       )}
                       {@render FileInputCard(
                         "audio",
                         "AUDIO",
-                        "bg-amber-50",
-                        "border-amber-200",
-                        "text-amber-600",
+                        "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100",
                         $audioFile,
                         "audio/*",
+                        "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z", // Mic
                       )}
                     </div>
                   </div>
@@ -2253,6 +2325,7 @@
                   </h3>
                   <textarea
                     bind:value={$transcript}
+                    use:actionTextAreaAutoscroll
                     class="w-full h-48 p-4 bg-gray-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none text-sm text-slate-700 leading-relaxed custom-scrollbar"
                     placeholder="ここに文字起こしが表示されます... (手動で修正可能)"
                   ></textarea>
@@ -2273,59 +2346,59 @@
                       class="text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors"
                       >データの共有・改善への協力を許可する</span
                     >
-                  </label>
 
-                  {#if analyzing}
-                    <!-- Progress Bar -->
-                    <div class="w-full max-w-md ml-auto">
-                      <div
-                        class="flex justify-between text-xs font-bold text-slate-500 mb-2"
-                      >
-                        <span>{progressStatus}</span>
-                        <span>{progressValue}%</span>
-                      </div>
-                      <div
-                        class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
-                      >
+                    {#if analyzing}
+                      <!-- Progress Bar -->
+                      <div class="w-full max-w-md ml-auto">
                         <div
-                          class="h-full bg-indigo-600 transition-all duration-300"
-                          style="width: {progressValue}%"
-                        ></div>
+                          class="flex justify-between text-xs font-bold text-slate-500 mb-2"
+                        >
+                          <span>{progressStatus}</span>
+                          <span>{progressValue}%</span>
+                        </div>
+                        <div
+                          class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
+                        >
+                          <div
+                            class="h-full bg-indigo-600 transition-all duration-300"
+                            style="width: {progressValue}%"
+                          ></div>
+                        </div>
+                        <button
+                          onclick={handleCancelAnalysis}
+                          class="mt-2 text-xs text-slate-400 hover:text-red-500 underline"
+                          >キャンセル</button
+                        >
                       </div>
+                    {:else}
                       <button
-                        onclick={handleCancelAnalysis}
-                        class="mt-2 text-xs text-slate-400 hover:text-red-500 underline"
-                        >キャンセル</button
+                        onclick={handleAnalyze}
+                        disabled={!$courseId &&
+                          !$isRecording &&
+                          !$pdfFile &&
+                          !$imageFile &&
+                          !$txtFile &&
+                          !$videoFile &&
+                          !$targetUrl &&
+                          !$transcript}
+                        class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
                       >
-                    </div>
-                  {:else}
-                    <button
-                      onclick={handleAnalyze}
-                      disabled={!$lectureTitle.trim() &&
-                        !$isRecording &&
-                        !$pdfFile &&
-                        !$imageFile &&
-                        !$txtFile &&
-                        !$videoFile &&
-                        !$targetUrl &&
-                        !$transcript}
-                      class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
-                    >
-                      <span class="text-lg">解析を開始</span>
-                      <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        ><path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M14 5l7 7m0 0l-7 7m7-7H3"
-                        /></svg
-                      >
-                    </button>
-                  {/if}
+                        <span class="text-lg">解析を開始</span>
+                        <svg
+                          class="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M14 5l7 7m0 0l-7 7m7-7H3"
+                          /></svg
+                        >
+                      </button>
+                    {/if}
+                  </label>
                 </div>
 
                 <!-- Floating Mic Button (Bottom Right) -->
