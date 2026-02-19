@@ -73,8 +73,8 @@
 
   // Sync state with store
   $effect(() => {
-    // Only sync user and binder, let userData be handled by local snapshot (like Sidebar)
     user = $userStore;
+    userData = $userProfile; // Restore this for global data access
     selectedSubjectId = $currentBinder;
   });
 
@@ -83,6 +83,13 @@
     console.log("Dropdown Debug: userData", userData);
     console.log("Dropdown Debug: Enrolled Courses", userData?.enrolledCourses);
   });
+
+  // Derived courses for display (with retry/fallback)
+  let displayCourses = $derived(
+    userData?.enrolledCourses && userData.enrolledCourses.length > 0
+      ? userData.enrolledCourses
+      : [{ name: "テスト講義A (DB空)", value: "test1" }],
+  );
 
   // UI State
   let toastMessage = $state<string | null>(null);
@@ -2107,48 +2114,53 @@
                 class="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
               >
                 <div class="max-h-60 overflow-y-auto custom-scrollbar p-2">
-                  {#if userData?.enrolledCourses && userData.enrolledCourses.length > 0}
-                    {#each userData.enrolledCourses as course}
-                      <button
-                        onclick={() => {
-                          $lectureTitle = course;
-                          // If we had IDs, we would set $courseId here too
-                          isCourseDropdownOpen = false;
-                        }}
-                        class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group {$lectureTitle ===
-                        course
-                          ? 'bg-indigo-50 text-indigo-700 font-bold'
-                          : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}"
-                      >
-                        <span class="text-lg">{course}</span>
-                        {#if $lectureTitle === course}
-                          <svg
-                            class="w-5 h-5 text-indigo-600"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2.5"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        {/if}
-                      </button>
-                    {/each}
-                  {:else}
-                    <div class="p-6 text-center text-slate-400 text-sm">
-                      <p class="font-bold mb-1">履修中の講義がありません</p>
-                      <p class="text-xs">
-                        サイドバーからコースを追加してください
-                      </p>
-                    </div>
-                  {/if}
+                  {#each displayCourses as course}
+                    {@const courseName =
+                      typeof course === "string" ? course : course.name}
+                    <button
+                      onclick={() => {
+                        $lectureTitle = courseName;
+                        isCourseDropdownOpen = false;
+                      }}
+                      class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group {$lectureTitle ===
+                      courseName
+                        ? 'bg-indigo-50 text-indigo-700 font-bold'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}"
+                    >
+                      <span class="text-lg">{courseName}</span>
+                      {#if $lectureTitle === courseName}
+                        <svg
+                          class="w-5 h-5 text-indigo-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      {/if}
+                    </button>
+                  {/each}
                 </div>
               </div>
             {/if}
+          </div>
+
+          <!-- DEBUG UI -->
+          <div
+            class="bg-red-100 p-4 mt-4 text-xs font-mono break-all rounded-lg border border-red-200"
+          >
+            <p class="font-bold text-red-600 mb-1">【デバッグ用】</p>
+            <p>UserData: {userData ? "取得済み" : "未取得 (null)"}</p>
+            <p>
+              Courses: {JSON.stringify(
+                userData?.enrolledCourses || "データなし",
+              )}
+            </p>
           </div>
         </div>
 
