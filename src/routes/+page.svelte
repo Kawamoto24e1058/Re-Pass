@@ -76,12 +76,6 @@
     user = $userStore;
     userData = $userProfile;
     selectedSubjectId = $currentBinder;
-
-    // Debug logging for enrolled courses
-    if (userData) {
-      console.log("Lecture Page: User Data Updated", userData);
-      console.log("Lecture Page: Enrolled Courses", userData.enrolledCourses);
-    }
   });
 
   // UI State
