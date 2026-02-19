@@ -1,4 +1,4 @@
-import { isRecording, finalTranscript, interimTranscript } from '../stores/sessionStore';
+import { isRecording, transcript, interimTranscript } from '../stores/sessionStore';
 import { get } from 'svelte/store';
 
 class RecognitionService {
@@ -23,7 +23,7 @@ class RecognitionService {
                         if (result.isFinal) {
                             // Use the first alternative (highest confidence) for final, 
                             // but ensuring we don't accidentally drop it if confidence is low (rarely happens with isFinal).
-                            finalTranscript.update(prev => prev + result[0].transcript);
+                            transcript.update(prev => prev + result[0].transcript);
                         } else {
                             // Accumulate interim results
                             currentInterim += result[0].transcript;
@@ -54,7 +54,7 @@ class RecognitionService {
                     const pendingInterim = get(interimTranscript);
                     if (pendingInterim && pendingInterim.trim().length > 0) {
                         console.log('Saving pending interim on stop:', pendingInterim);
-                        finalTranscript.update(prev => prev + pendingInterim);
+                        transcript.update(prev => prev + pendingInterim);
                         interimTranscript.set('');
                     }
 

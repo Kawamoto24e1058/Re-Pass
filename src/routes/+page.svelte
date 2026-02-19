@@ -38,8 +38,8 @@
   import {
     isRecording,
     transcript,
-    finalTranscript,
     interimTranscript,
+    isShared,
     resetSession, // Renamed from resetTranscript/resetAll
     lectureTitle,
     analysisMode,
@@ -821,7 +821,7 @@
     $lectureTitle = lecture.title;
     // Update global transcript store when loading a lecture
     resetSession();
-    finalTranscript.set(lecture.content || "");
+    transcript.set(lecture.content || "");
 
     // Restore settings with defaults
     const modeMap: Record<string, "note" | "thoughts" | "report"> = {
@@ -1999,32 +1999,31 @@
       {:else if !selectedSubjectId && !isEditing}
         <!-- Unassigned Dashboard (Inbox) -->
         <div class="mb-10">
+          <!-- 1. Header Area: Large Title (Moved text-center above card) -->
+          <div class="mb-6 px-4">
+            <label for="lecture-title-top" class="sr-only">講義タイトル</label>
+            <input
+              id="lecture-title-top"
+              type="text"
+              bind:value={$lectureTitle}
+              placeholder="講義タイトルを入力"
+              class="w-full text-4xl md:text-5xl font-bold bg-transparent border-b-2 border-slate-200 focus:border-indigo-500 placeholder:text-slate-300 text-slate-800 focus:outline-none py-2 transition-colors tracking-tight"
+            />
+          </div>
+
           <!-- Input Section -->
           <div
             class="mb-10 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative"
           >
             <div class="p-8">
               <div class="p-8 md:p-12 relative">
-                <!-- 1. Header Area: Large Title -->
-                <div class="mb-12">
-                  <input
-                    type="text"
-                    bind:value={$lectureTitle}
-                    placeholder="講義タイトル"
-                    class="w-full text-4xl md:text-5xl font-bold bg-transparent border-none placeholder:text-slate-200 text-slate-900 focus:outline-none focus:ring-0 mb-4 tracking-tight"
-                  />
-                  <div
-                    class="h-1.5 w-24 bg-gradient-to-r from-indigo-600 to-pink-500 rounded-full opacity-90"
-                  ></div>
-                </div>
-
                 <!-- 2. Mode & Settings (2 Columns) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-10">
                   <!-- Left: Mode -->
                   <div>
-                    <label
+                    <span
                       class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
-                      >生成モード</label
+                      >生成モード</span
                     >
                     <div class="flex bg-slate-100/80 p-1.5 rounded-2xl">
                       <button
@@ -2097,7 +2096,7 @@
                 </div>
 
                 <!-- 3. File Inputs (Compact) -->
-                <div class="space-y-10">
+                <div class="space-y-10 mb-10">
                   <!-- Group A: Learning Materials -->
                   <div>
                     <h3
@@ -2233,8 +2232,49 @@
                   </div>
                 </div>
 
-                <!-- Action Button in Flow (Analyze) -->
-                <div class="mt-16 flex justify-end">
+                <!-- 4. Transcript Area (Realtime Edit) -->
+                <div class="mb-10">
+                  <h3
+                    class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      ><path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                      /></svg
+                    >
+                    文字起こし (リアルタイム編集)
+                  </h3>
+                  <textarea
+                    bind:value={$transcript}
+                    class="w-full h-48 p-4 bg-gray-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none text-sm text-slate-700 leading-relaxed custom-scrollbar"
+                    placeholder="ここに文字起こしが表示されます... (手動で修正可能)"
+                  ></textarea>
+                </div>
+
+                <!-- Action Button -->
+                <div
+                  class="mt-8 flex flex-col md:flex-row justify-end items-center gap-6"
+                >
+                  <!-- Share Toggle -->
+                  <label class="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      bind:checked={$isShared}
+                      class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-colors"
+                    />
+                    <span
+                      class="text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors"
+                      >データの共有・改善への協力を許可する</span
+                    >
+                  </label>
+
                   {#if analyzing}
                     <!-- Progress Bar -->
                     <div class="w-full max-w-md ml-auto">
@@ -2267,7 +2307,8 @@
                         !$imageFile &&
                         !$txtFile &&
                         !$videoFile &&
-                        !$targetUrl}
+                        !$targetUrl &&
+                        !$transcript}
                       class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
                     >
                       <span class="text-lg">解析を開始</span>
