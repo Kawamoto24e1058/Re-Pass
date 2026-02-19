@@ -50,6 +50,7 @@
     imageFile,
     videoFile,
     targetUrl,
+    interimTranscript,
   } from "$lib/stores/sessionStore";
   import { recognitionService } from "$lib/services/recognitionService";
   import { page } from "$app/stores";
@@ -619,10 +620,14 @@
       const data = await res.json();
 
       // Save Logic
+      const generatedSubtitle =
+        data.result?.subtitle || data.result?.title || "要約";
+      const combinedTitle = `${$lectureTitle} : ${generatedSubtitle}`;
+
       const lectureData = {
-        title: data.result?.title || $lectureTitle,
-        lectureTitle: $lectureTitle, // Legacy?
-        courseName: $lectureTitle, // Legacy support using lectureTitle as courseName
+        title: combinedTitle,
+        lectureTitle: combinedTitle,
+        courseName: $lectureTitle, // Keep original course name
         content: $transcript,
         analysis: data.result,
         analyses: { [$analysisMode]: data.result },
@@ -1371,23 +1376,23 @@
   {#snippet FileInputCard(
     id: string,
     label: string,
-    colorClasses: string,
+    iconColorClass: string,
     fileStore: File | null,
     accept: string,
     iconPath: string,
   )}
     <button
       onclick={() => document.getElementById(`file-input-${id}`)?.click()}
-      class="relative group flex items-center gap-3 p-3 w-full h-20 rounded-xl border-2 transition-all duration-200 {colorClasses} {fileStore
-        ? 'border-current ring-1 ring-current'
-        : 'border-transparent'} hover:brightness-95 active:scale-[0.98]"
+      class="relative group flex items-center gap-3 p-3 w-full h-20 rounded-xl border-2 transition-all duration-200 {fileStore
+        ? 'bg-white border-indigo-200 ring-1 ring-indigo-200'
+        : 'bg-slate-50 border-gray-200 hover:bg-gray-100'} hover:brightness-95 active:scale-[0.98]"
     >
       <!-- Icon Container -->
       <div
-        class="flex-shrink-0 w-10 h-10 rounded-full bg-white/60 flex items-center justify-center"
+        class="flex-shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm"
       >
         <svg
-          class="w-5 h-5"
+          class="w-5 h-5 {iconColorClass}"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -1403,10 +1408,12 @@
 
       <!-- Label & Filename -->
       <div class="flex-1 text-left overflow-hidden">
-        <div class="text-xs font-bold opacity-70 tracking-wider mb-0.5">
+        <div
+          class="text-xs font-bold text-slate-500 opacity-70 tracking-wider mb-0.5"
+        >
           {label}
         </div>
-        <div class="text-sm font-bold truncate max-w-full">
+        <div class="text-sm font-bold text-slate-700 truncate max-w-full">
           {fileStore ? fileStore.name : "選択"}
         </div>
       </div>
@@ -1414,7 +1421,7 @@
       <!-- Active Check Badge -->
       {#if fileStore}
         <div
-          class="absolute -top-2 -right-2 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm border border-current"
+          class="absolute -top-2 -right-2 w-5 h-5 bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-sm border border-white"
         >
           <svg
             class="w-3 h-3"
@@ -2043,269 +2050,127 @@
                 >必須</span
               ></label
             >
-            <div class="relative">
-              <select
-                id="course-select"
-                bind:value={$courseId}
-                onchange={(e) => {
-                  const selected = $subjects.find(
-                    (s) => s.id === e.currentTarget.value,
-                  );
-                  if (selected) {
-                    $lectureTitle = selected.name;
-                  }
-                }}
-                class="w-full text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-slate-200 focus:border-indigo-500 text-slate-800 focus:outline-none py-3 pr-10 cursor-pointer appearance-none tracking-tight transition-all hover:border-indigo-300"
+            <select
+              id="course-select"
+              bind:value={$lectureTitle}
+              class="w-full text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-slate-200 focus:border-indigo-500 text-slate-800 focus:outline-none py-3 pr-10 cursor-pointer appearance-none tracking-tight transition-all hover:border-indigo-300"
+            >
+              <option value="" disabled selected>講義を選択してください</option>
+              {#if userData?.enrolledCourses?.length > 0}
+                {#each userData.enrolledCourses as course}
+                  <option value={course}>{course}</option>
+                {/each}
+              {:else}
+                <option value="" disabled>履修中の講義がありません</option>
+                <option value="お試し講義">お試し講義 (デモ用)</option>
+              {/if}
+            </select>
+            <div
+              class="absolute inset-y-0 right-0 flex items-center pointer-events-none text-slate-400"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                /></svg
               >
-                <option value="" disabled selected
-                  >講義を選択してください</option
-                >
-                {#if $subjects.length > 0}
-                  {#each $subjects as subject}
-                    <option value={subject.id}>{subject.name}</option>
-                  {/each}
-                {:else}
-                  <option value="dummy1">ダミー講義A</option>
-                  <option value="dummy2">ダミー講義B</option>
-                {/if}
-              </select>
-              <div
-                class="absolute inset-y-0 right-0 flex items-center pointer-events-none text-slate-400"
-              >
-                <svg
-                  class="w-6 h-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  ><path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  /></svg
-                >
-              </div>
             </div>
           </div>
+        </div>
 
-          <!-- Input Section -->
-          <div
-            class="mb-10 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative"
-          >
-            <div class="p-8">
-              <div class="p-8 md:p-12 relative">
-                <!-- 2. Mode & Settings (2 Columns) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-10">
-                  <!-- Left: Mode -->
-                  <div>
+        <!-- Input Section -->
+        <div
+          class="mb-10 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative"
+        >
+          <div class="p-8">
+            <div class="p-8 md:p-12 relative">
+              <!-- 2. Mode & Settings (2 Columns) -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-10">
+                <!-- Left: Mode -->
+                <div>
+                  <span
+                    class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                    >生成モード</span
+                  >
+                  <div class="flex bg-slate-100/80 p-1.5 rounded-2xl">
+                    <button
+                      onclick={() => setAnalysisMode("note")}
+                      class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
+                      'note'
+                        ? 'bg-white text-indigo-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'}">ノート</button
+                    >
+                    <button
+                      onclick={() => setAnalysisMode("thoughts")}
+                      class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
+                      'thoughts'
+                        ? 'bg-white text-amber-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'}">感想</button
+                    >
+                    <button
+                      onclick={() => setAnalysisMode("report")}
+                      class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
+                      'report'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'}"
+                      >レポート</button
+                    >
+                  </div>
+                </div>
+
+                <!-- Right: Length -->
+                <div>
+                  <div class="flex justify-between items-center mb-4">
+                    <label
+                      for="target-length"
+                      class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
+                      >目標文字数</label
+                    >
                     <span
-                      class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
-                      >生成モード</span
+                      class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg"
+                      >{manuscriptPages}枚分</span
                     >
-                    <div class="flex bg-slate-100/80 p-1.5 rounded-2xl">
-                      <button
-                        onclick={() => setAnalysisMode("note")}
-                        class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
-                        'note'
-                          ? 'bg-white text-indigo-600 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-700'}"
-                        >ノート</button
-                      >
-                      <button
-                        onclick={() => setAnalysisMode("thoughts")}
-                        class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
-                        'thoughts'
-                          ? 'bg-white text-amber-600 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-700'}">感想</button
-                      >
-                      <button
-                        onclick={() => setAnalysisMode("report")}
-                        class="flex-1 py-3 rounded-xl text-sm font-bold transition-all {$analysisMode ===
-                        'report'
-                          ? 'bg-white text-slate-800 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-700'}"
-                        >レポート</button
-                      >
-                    </div>
                   </div>
 
-                  <!-- Right: Length -->
-                  <div>
-                    <div class="flex justify-between items-center mb-4">
-                      <label
-                        for="target-length"
-                        class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
-                        >目標文字数</label
-                      >
-                      <span
-                        class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg"
-                        >{manuscriptPages}枚分</span
-                      >
-                    </div>
-
-                    <div class="relative pt-6 pb-2">
-                      <span
-                        class="absolute -top-2 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
-                        style="left: {($targetLength / 4000) * 100}%"
-                      >
-                        {$targetLength}文字
-                      </span>
-                      <input
-                        id="target-length"
-                        type="range"
-                        min="100"
-                        max="4000"
-                        step="100"
-                        value={$targetLength}
-                        oninput={handleLengthChange}
-                        class="w-full h-2 bg-slate-200 rounded-full cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
-                      />
-                      <div
-                        class="flex justify-between mt-2 text-[10px] text-slate-400 font-bold font-mono"
-                      >
-                        <span>100</span>
-                        <span>500</span>
-                        <span>2000</span>
-                        <span>4000</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 3. File Inputs (Compact) -->
-                <div class="space-y-10 mb-10">
-                  <!-- Group A: Learning Materials -->
-                  <div>
-                    <h3
-                      class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                  <div class="relative pt-6 pb-2">
+                    <span
+                      class="absolute -top-2 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
+                      style="left: {($targetLength / 4000) * 100}%"
                     >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        ><path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                        /></svg
-                      >
-                      学習資料 (A系統)
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {@render FileInputCard(
-                        "pdf",
-                        "PDF",
-                        "bg-red-50 text-red-600 border-red-200 hover:bg-red-100",
-                        $pdfFile,
-                        ".pdf",
-                        "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", // FileText
-                      )}
-                      {@render FileInputCard(
-                        "image",
-                        "IMAGE",
-                        "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100",
-                        $imageFile,
-                        "image/*",
-                        "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z", // Image
-                      )}
-                      {@render FileInputCard(
-                        "txt",
-                        "TEXT",
-                        "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100",
-                        $txtFile,
-                        ".txt",
-                        "M4 6h16M4 12h16M4 18h7", // Menu/Text
-                      )}
-                    </div>
-                  </div>
-
-                  <!-- Group B: Multimedia -->
-                  <div>
-                    <h3
-                      class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
-                    >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        ><path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        /></svg
-                      >
-                      マルチメディア (B系統)
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {@render FileInputCard(
-                        "video",
-                        "VIDEO",
-                        "bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100",
-                        $videoFile,
-                        "video/*",
-                        "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z", // PlayCircle
-                      )}
-                      {@render FileInputCard(
-                        "audio",
-                        "AUDIO",
-                        "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100",
-                        $audioFile,
-                        "audio/*",
-                        "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z", // Mic
-                      )}
-                    </div>
-                  </div>
-
-                  <!-- URL Analysis -->
-                  <div>
-                    <h3
-                      class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
-                    >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        ><path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                        /></svg
-                      >
-                      URLから解析
-                    </h3>
+                      {$targetLength}文字
+                    </span>
+                    <input
+                      id="target-length"
+                      type="range"
+                      min="100"
+                      max="4000"
+                      step="100"
+                      value={$targetLength}
+                      oninput={handleLengthChange}
+                      class="w-full h-2 bg-slate-200 rounded-full cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
+                    />
                     <div
-                      class="h-16 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-300 flex items-center px-4 transition-colors relative group"
+                      class="flex justify-between mt-2 text-[10px] text-slate-400 font-bold font-mono"
                     >
-                      <svg
-                        class="w-5 h-5 text-slate-400 mr-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        ><path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                        /></svg
-                      >
-                      <input
-                        type="text"
-                        bind:value={$targetUrl}
-                        placeholder="URLを入力 (Webサイトのみ)"
-                        class="w-full bg-transparent border-none focus:outline-none text-sm font-bold text-slate-600 placeholder:text-slate-300"
-                      />
+                      <span>100</span>
+                      <span>500</span>
+                      <span>2000</span>
+                      <span>4000</span>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- 4. Transcript Area (Realtime Edit) -->
-                <div class="mb-10">
+              <!-- 3. File Inputs (Compact) -->
+              <div class="space-y-10 mb-10">
+                <!-- Group A: Learning Materials -->
+                <div>
                   <h3
                     class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
                   >
@@ -2318,102 +2183,46 @@
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
-                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                       /></svg
                     >
-                    文字起こし (リアルタイム編集)
+                    学習資料 (A系統)
                   </h3>
-                  <textarea
-                    bind:value={$transcript}
-                    use:actionTextAreaAutoscroll
-                    class="w-full h-48 p-4 bg-gray-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none text-sm text-slate-700 leading-relaxed custom-scrollbar"
-                    placeholder="ここに文字起こしが表示されます... (手動で修正可能)"
-                  ></textarea>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {@render FileInputCard(
+                      "pdf",
+                      "PDF",
+                      "text-red-400",
+                      $pdfFile,
+                      ".pdf",
+                      "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", // FileText
+                    )}
+                    {@render FileInputCard(
+                      "image",
+                      "IMAGE",
+                      "text-blue-400",
+                      $imageFile,
+                      "image/*",
+                      "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z", // Image
+                    )}
+                    {@render FileInputCard(
+                      "txt",
+                      "TEXT",
+                      "text-emerald-400",
+                      $txtFile,
+                      ".txt",
+                      "M4 6h16M4 12h16M4 18h7", // Menu/Text
+                    )}
+                  </div>
                 </div>
 
-                <!-- Action Button -->
-                <div
-                  class="mt-8 flex flex-col md:flex-row justify-end items-center gap-6"
-                >
-                  <!-- Share Toggle -->
-                  <label class="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      bind:checked={$isShared}
-                      class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-colors"
-                    />
-                    <span
-                      class="text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors"
-                      >データの共有・改善への協力を許可する</span
-                    >
-
-                    {#if analyzing}
-                      <!-- Progress Bar -->
-                      <div class="w-full max-w-md ml-auto">
-                        <div
-                          class="flex justify-between text-xs font-bold text-slate-500 mb-2"
-                        >
-                          <span>{progressStatus}</span>
-                          <span>{progressValue}%</span>
-                        </div>
-                        <div
-                          class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
-                        >
-                          <div
-                            class="h-full bg-indigo-600 transition-all duration-300"
-                            style="width: {progressValue}%"
-                          ></div>
-                        </div>
-                        <button
-                          onclick={handleCancelAnalysis}
-                          class="mt-2 text-xs text-slate-400 hover:text-red-500 underline"
-                          >キャンセル</button
-                        >
-                      </div>
-                    {:else}
-                      <button
-                        onclick={handleAnalyze}
-                        disabled={!$courseId &&
-                          !$isRecording &&
-                          !$pdfFile &&
-                          !$imageFile &&
-                          !$txtFile &&
-                          !$videoFile &&
-                          !$targetUrl &&
-                          !$transcript}
-                        class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
-                      >
-                        <span class="text-lg">解析を開始</span>
-                        <svg
-                          class="w-5 h-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          ><path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M14 5l7 7m0 0l-7 7m7-7H3"
-                          /></svg
-                        >
-                      </button>
-                    {/if}
-                  </label>
-                </div>
-
-                <!-- Floating Mic Button (Bottom Right) -->
-                <button
-                  onclick={toggleRecording}
-                  class="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-4 border-white
-                  {$isRecording
-                    ? 'bg-red-500 shadow-red-300 animate-pulse'
-                    : 'bg-white text-indigo-600 shadow-indigo-200'}"
-                >
-                  {#if $isRecording}
-                    <div class="w-6 h-6 bg-white rounded-md"></div>
-                  {:else}
+                <!-- Group B: Multimedia -->
+                <div>
+                  <h3
+                    class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                  >
                     <svg
-                      class="w-8 h-8"
+                      class="w-4 h-4"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -2421,43 +2230,229 @@
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
-                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                       /></svg
                     >
-                  {/if}
-                </button>
+                    マルチメディア (B系統)
+                  </h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {@render FileInputCard(
+                      "video",
+                      "VIDEO",
+                      "text-purple-400",
+                      $videoFile,
+                      "video/*",
+                      "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z", // PlayCircle
+                    )}
+                    {@render FileInputCard(
+                      "audio",
+                      "AUDIO",
+                      "text-pink-400",
+                      $audioFile,
+                      "audio/*",
+                      "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z", // Mic
+                    )}
+                  </div>
+                </div>
+
+                <!-- URL Analysis -->
+                <div>
+                  <h3
+                    class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      ><path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                      /></svg
+                    >
+                    URLから解析
+                  </h3>
+                  <div
+                    class="h-16 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-300 flex items-center px-4 transition-colors relative group"
+                  >
+                    <svg
+                      class="w-5 h-5 text-slate-400 mr-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      ><path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                      /></svg
+                    >
+                    <input
+                      type="text"
+                      bind:value={$targetUrl}
+                      placeholder="URLを入力 (Webサイトのみ)"
+                      class="w-full bg-transparent border-none focus:outline-none text-sm font-bold text-slate-600 placeholder:text-slate-300"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div class="flex items-center justify-between mb-8">
-            <div>
-              <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
-                未分類の履歴
-              </h1>
-              <p class="text-slate-500 mt-2">
-                {$lectures.filter((l) => !l.subjectId).length} 件の講義が整理を待っています
-              </p>
-            </div>
-          </div>
+              <!-- 4. Transcript Area (Realtime Edit) -->
+              <div class="mb-10">
+                <h3
+                  class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    ><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                    /></svg
+                  >
+                  文字起こし (リアルタイム編集)
+                </h3>
+                <textarea
+                  value={$transcript + $interimTranscript}
+                  oninput={(e) => transcript.set(e.currentTarget.value)}
+                  use:actionTextAreaAutoscroll
+                  class="w-full h-48 p-4 bg-gray-50 rounded-xl border border-slate-200 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none text-sm text-slate-700 leading-relaxed custom-scrollbar"
+                  placeholder="ここに文字起こしが表示されます... (手動で修正可能)"
+                ></textarea>
+              </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {#each $lectures.filter((l: any) => !l.subjectId) as lecture (lecture.id)}
-              {@render LectureItem(lecture)}
-            {/each}
-            {#if $lectures.filter((l) => !l.subjectId).length === 0}
+              <!-- Action Button -->
               <div
-                class="col-span-full text-center py-20 text-slate-300 border-2 border-dashed border-slate-100 rounded-3xl"
+                class="mt-8 flex flex-col md:flex-row justify-end items-center gap-6"
               >
-                <p class="text-lg font-medium mb-1">未分類の履歴はありません</p>
-                <p class="text-sm">
-                  全ての講義が科目バインダーに整理されています。
-                </p>
+                <!-- Share Toggle -->
+                <label class="flex items-center gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    bind:checked={$isShared}
+                    class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-colors"
+                  />
+                  <span
+                    class="text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors"
+                    >データの共有・改善への協力を許可する</span
+                  >
+
+                  {#if analyzing}
+                    <!-- Progress Bar -->
+                    <div class="w-full max-w-md ml-auto">
+                      <div
+                        class="flex justify-between text-xs font-bold text-slate-500 mb-2"
+                      >
+                        <span>{progressStatus}</span>
+                        <span>{progressValue}%</span>
+                      </div>
+                      <div
+                        class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
+                      >
+                        <div
+                          class="h-full bg-indigo-600 transition-all duration-300"
+                          style="width: {progressValue}%"
+                        ></div>
+                      </div>
+                      <button
+                        onclick={handleCancelAnalysis}
+                        class="mt-2 text-xs text-slate-400 hover:text-red-500 underline"
+                        >キャンセル</button
+                      >
+                    </div>
+                  {:else}
+                    <button
+                      onclick={handleAnalyze}
+                      disabled={!$courseId &&
+                        !$isRecording &&
+                        !$pdfFile &&
+                        !$imageFile &&
+                        !$txtFile &&
+                        !$videoFile &&
+                        !$targetUrl &&
+                        !$transcript}
+                      class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                    >
+                      <span class="text-lg">解析を開始</span>
+                      <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M14 5l7 7m0 0l-7 7m7-7H3"
+                        /></svg
+                      >
+                    </button>
+                  {/if}
+                </label>
               </div>
-            {/if}
+
+              <!-- Floating Mic Button (Bottom Right) -->
+              <button
+                onclick={toggleRecording}
+                class="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-4 border-white
+                  {$isRecording
+                  ? 'bg-red-500 shadow-red-300 animate-pulse'
+                  : 'bg-white text-indigo-600 shadow-indigo-200'}"
+              >
+                {#if $isRecording}
+                  <div class="w-6 h-6 bg-white rounded-md"></div>
+                {:else}
+                  <svg
+                    class="w-8 h-8"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    ><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                    /></svg
+                  >
+                {/if}
+              </button>
+            </div>
           </div>
         </div>
-      {:else}{/if}
+
+        <div class="flex items-center justify-between mb-8">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+              未分類の履歴
+            </h1>
+            <p class="text-slate-500 mt-2">
+              {$lectures.filter((l) => !l.subjectId).length} 件の講義が整理を待っています
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {#each $lectures.filter((l: any) => !l.subjectId) as lecture (lecture.id)}
+            {@render LectureItem(lecture)}
+          {/each}
+          {#if $lectures.filter((l) => !l.subjectId).length === 0}
+            <div
+              class="col-span-full text-center py-20 text-slate-300 border-2 border-dashed border-slate-100 rounded-3xl"
+            >
+              <p class="text-lg font-medium mb-1">未分類の履歴はありません</p>
+              <p class="text-sm">
+                全ての講義が科目バインダーに整理されています。
+              </p>
+            </div>
+          {/if}
+        </div>
+      {/if}
     </main>
   </div>
 
