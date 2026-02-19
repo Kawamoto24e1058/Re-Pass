@@ -2106,6 +2106,7 @@
                       <button
                         onclick={() => {
                           $lectureTitle = course;
+                          // If we had IDs, we would set $courseId here too
                           isCourseDropdownOpen = false;
                         }}
                         class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group {$lectureTitle ===
@@ -2132,8 +2133,11 @@
                       </button>
                     {/each}
                   {:else}
-                    <div class="p-4 text-center text-slate-400 text-sm">
-                      履修中の講義がありません
+                    <div class="p-6 text-center text-slate-400 text-sm">
+                      <p class="font-bold mb-1">履修中の講義がありません</p>
+                      <p class="text-xs">
+                        サイドバーからコースを追加してください
+                      </p>
                     </div>
                   {/if}
                 </div>
