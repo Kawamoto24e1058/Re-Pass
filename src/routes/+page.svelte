@@ -2045,6 +2045,7 @@
             {/if}
           </div>
         {/if}
+      {:else}
         <!-- Input Section Only (History moved to /history) -->
         <div class="mb-10">
           <!-- 1. Header Area: Course Select (Mandatory) -->
