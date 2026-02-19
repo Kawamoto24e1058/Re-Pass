@@ -789,6 +789,32 @@
 
             <!-- Home Link Removed -->
 
+            <!-- History Link -->
+            <a
+                href="/history"
+                onclick={() => isSidebarOpen.set(false)}
+                class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group mb-1"
+            >
+                <div
+                    class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
+                >
+                    <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                </div>
+                <span>未分類の履歴</span>
+            </a>
+
             <!-- Search Link -->
             <a
                 href="/search"

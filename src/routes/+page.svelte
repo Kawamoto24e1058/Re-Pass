@@ -73,9 +73,15 @@
 
   // Sync state with store
   $effect(() => {
+    // Only sync user and binder, let userData be handled by local snapshot (like Sidebar)
     user = $userStore;
-    userData = $userProfile;
     selectedSubjectId = $currentBinder;
+  });
+
+  // Debug logging for dropdown data
+  $effect(() => {
+    console.log("Dropdown Debug: userData", userData);
+    console.log("Dropdown Debug: Enrolled Courses", userData?.enrolledCourses);
   });
 
   // UI State
@@ -2039,8 +2045,7 @@
             {/if}
           </div>
         {/if}
-      {:else if !selectedSubjectId && !isEditing}
-        <!-- Unassigned Dashboard (Inbox) -->
+        <!-- Input Section Only (History moved to /history) -->
         <div class="mb-10">
           <!-- 1. Header Area: Course Select (Mandatory) -->
           <div class="mb-6 px-4">
