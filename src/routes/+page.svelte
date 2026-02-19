@@ -359,8 +359,37 @@
   }
 
   // --- Derived State for UI ---
+  const sliderMarks = [100, 500, 2000, 4000];
+
+  function getSliderValueFromLength(length: number) {
+    if (length <= sliderMarks[0]) return 0;
+    if (length >= sliderMarks[3]) return 3;
+    for (let i = 0; i < 3; i++) {
+      if (length >= sliderMarks[i] && length <= sliderMarks[i + 1]) {
+        const range = sliderMarks[i + 1] - sliderMarks[i];
+        const diff = length - sliderMarks[i];
+        return i + diff / range;
+      }
+    }
+    return 1;
+  }
+
+  function getLengthFromSliderValue(val: number) {
+    const index = Math.floor(val);
+    const fraction = val - index;
+    if (index >= 3) return sliderMarks[3];
+    const start = sliderMarks[index];
+    const end = sliderMarks[index + 1];
+    return Math.round(start + (end - start) * fraction);
+  }
+
+  let sliderValue = $state(1);
+  $effect(() => {
+    sliderValue = getSliderValueFromLength($targetLength);
+  });
+
   let manuscriptPages = $derived(Math.ceil($targetLength / 400));
-  let thumbPosition = $derived((($targetLength - 100) / 3900) * 100);
+  let thumbPosition = $derived((sliderValue / 3) * 100);
 
   let isUltimate = $derived(
     String(userData?.plan || "")
@@ -791,8 +820,10 @@
   }
 
   function handleLengthChange(e: Event) {
-    let val = parseInt((e.target as HTMLInputElement).value);
-    if (val < 100) val = 100; // Snap to 100 min
+    const sliderVal = parseFloat((e.target as HTMLInputElement).value);
+    let val = getLengthFromSliderValue(sliderVal);
+
+    if (val < 100) val = 100;
 
     if (!isPremium && val > 500) {
       showUpgradeModal = true;
@@ -2226,20 +2257,22 @@
                     <input
                       id="target-length"
                       type="range"
-                      min="100"
-                      max="4000"
-                      step="100"
-                      value={$targetLength}
+                      min="0"
+                      max="3"
+                      step="any"
+                      bind:value={sliderValue}
                       oninput={handleLengthChange}
-                      class="w-full h-2 bg-slate-200 rounded-full cursor-pointer appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:hover:scale-110"
+                      class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                     />
+
+                    <!-- Ticks -->
                     <div
-                      class="flex justify-between mt-2 text-[10px] text-slate-400 font-bold font-mono"
+                      class="flex justify-between text-[10px] font-bold text-slate-400 mt-2"
                     >
-                      <span>100</span>
-                      <span>500</span>
-                      <span>2000</span>
-                      <span>4000</span>
+                      <span class="w-8 text-left">100</span>
+                      <span class="w-8 text-center ml-[2%]">500</span>
+                      <span class="w-8 text-center mr-[2%]">2000</span>
+                      <span class="w-8 text-right">4000</span>
                     </div>
                   </div>
                 </div>
