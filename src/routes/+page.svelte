@@ -76,6 +76,12 @@
     user = $userStore;
     userData = $userProfile;
     selectedSubjectId = $currentBinder;
+
+    // Debug logging for enrolled courses
+    if (userData) {
+      console.log("Lecture Page: User Data Updated", userData);
+      console.log("Lecture Page: Enrolled Courses", userData.enrolledCourses);
+    }
   });
 
   // UI State
@@ -2101,7 +2107,7 @@
                 class="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
               >
                 <div class="max-h-60 overflow-y-auto custom-scrollbar p-2">
-                  {#if userData?.enrolledCourses?.length > 0}
+                  {#if userData?.enrolledCourses && userData.enrolledCourses.length > 0}
                     {#each userData.enrolledCourses as course}
                       <button
                         onclick={() => {
