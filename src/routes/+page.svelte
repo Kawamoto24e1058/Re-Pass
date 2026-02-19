@@ -58,6 +58,7 @@
 
   // --- Simplified State Variables ---
   let isEditing = $state(false);
+  let isCourseDropdownOpen = $state(false);
   // lectureTitle is managed by sessionStore
   let currentLectureId = $state<string | null>(null);
   let selectedSubjectId = $state<string | null>(null);
@@ -2050,37 +2051,94 @@
                 >必須</span
               ></label
             >
-            <select
-              id="course-select"
-              bind:value={$lectureTitle}
-              class="w-full text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-slate-200 focus:border-indigo-500 text-slate-800 focus:outline-none py-3 pr-10 cursor-pointer appearance-none tracking-tight transition-all hover:border-indigo-300"
+            <!-- Custom Dropdown Trigger -->
+            <button
+              id="course-dropdown-trigger"
+              onclick={(e) => {
+                e.stopPropagation();
+                isCourseDropdownOpen = !isCourseDropdownOpen;
+              }}
+              class="w-full bg-white rounded-2xl border border-slate-200 shadow-sm py-4 px-6 flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all group"
             >
-              <option value="" disabled selected>講義を選択してください</option>
-              {#if userData?.enrolledCourses?.length > 0}
-                {#each userData.enrolledCourses as course}
-                  <option value={course}>{course}</option>
-                {/each}
-              {:else}
-                <option value="" disabled>履修中の講義がありません</option>
-                <option value="お試し講義">お試し講義 (デモ用)</option>
-              {/if}
-            </select>
-            <div
-              class="absolute inset-y-0 right-0 flex items-center pointer-events-none text-slate-400"
-            >
+              <span
+                class="text-xl md:text-2xl font-bold {$lectureTitle
+                  ? 'text-slate-800'
+                  : 'text-slate-400'}"
+              >
+                {$lectureTitle || "講義を選択してください"}
+              </span>
               <svg
-                class="w-6 h-6"
+                class="w-5 h-5 text-slate-400 group-hover:text-indigo-500 transition-colors {isCourseDropdownOpen
+                  ? 'rotate-180'
+                  : ''}"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
-                ><path
+              >
+                <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
                   d="M19 9l-7 7-7-7"
-                /></svg
+                />
+              </svg>
+            </button>
+
+            <!-- Custom Dropdown Menu -->
+            {#if isCourseDropdownOpen}
+              <!-- Backdrop for click-outside -->
+              <div
+                class="fixed inset-0 z-40"
+                onclick={() => (isCourseDropdownOpen = false)}
+                role="button"
+                tabindex="0"
+                onkeydown={(e) => {
+                  if (e.key === "Escape") isCourseDropdownOpen = false;
+                }}
+              ></div>
+
+              <div
+                class="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
               >
-            </div>
+                <div class="max-h-60 overflow-y-auto custom-scrollbar p-2">
+                  {#if userData?.enrolledCourses?.length > 0}
+                    {#each userData.enrolledCourses as course}
+                      <button
+                        onclick={() => {
+                          $lectureTitle = course;
+                          isCourseDropdownOpen = false;
+                        }}
+                        class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group {$lectureTitle ===
+                        course
+                          ? 'bg-indigo-50 text-indigo-700 font-bold'
+                          : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'}"
+                      >
+                        <span class="text-lg">{course}</span>
+                        {#if $lectureTitle === course}
+                          <svg
+                            class="w-5 h-5 text-indigo-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2.5"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        {/if}
+                      </button>
+                    {/each}
+                  {:else}
+                    <div class="p-4 text-center text-slate-400 text-sm">
+                      履修中の講義がありません
+                    </div>
+                  {/if}
+                </div>
+              </div>
+            {/if}
           </div>
         </div>
 
