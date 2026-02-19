@@ -2117,20 +2117,20 @@
                 >
                   <div class="max-h-60 overflow-y-auto custom-scrollbar">
                     {#if userData?.enrolledCourses && userData.enrolledCourses.length > 0}
-                      {#each userData.enrolledCourses as course}
+                      {#each userData.enrolledCourses as courseName}
                         <button
                           type="button"
                           onclick={() => {
-                            $lectureTitle = course;
+                            $lectureTitle = courseName;
                             isCourseDropdownOpen = false;
                           }}
                           class="w-full text-left px-4 py-3 hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between group {$lectureTitle ===
-                          course
+                          courseName
                             ? 'bg-purple-50 text-purple-700 font-bold'
                             : 'text-slate-700'}"
                         >
-                          <span class="text-lg">{course}</span>
-                          {#if $lectureTitle === course}
+                          <span class="text-lg">{courseName}</span>
+                          {#if $lectureTitle === courseName}
                             <svg
                               class="w-5 h-5 text-purple-600"
                               fill="none"
@@ -2159,19 +2159,6 @@
                 </div>
               {/if}
             </div>
-          </div>
-
-          <!-- DEBUG UI -->
-          <div
-            class="bg-red-100 p-4 mt-4 text-xs font-mono break-all rounded-lg border border-red-200"
-          >
-            <p class="font-bold text-red-600 mb-1">【デバッグ用】</p>
-            <p>UserData: {userData ? "取得済み" : "未取得 (null)"}</p>
-            <p>
-              Courses: {JSON.stringify(
-                userData?.enrolledCourses || "データなし",
-              )}
-            </p>
           </div>
         </div>
 
