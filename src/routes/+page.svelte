@@ -360,7 +360,7 @@
 
   // --- Derived State for UI ---
   let manuscriptPages = $derived(Math.ceil($targetLength / 400));
-  let thumbPosition = $derived(($targetLength / 4000) * 100);
+  let thumbPosition = $derived((($targetLength - 100) / 3900) * 100);
 
   let isUltimate = $derived(
     String(userData?.plan || "")
