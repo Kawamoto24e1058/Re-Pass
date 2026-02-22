@@ -170,7 +170,7 @@
         const filename = `${Date.now()}_${originalName}`;
         const storageRef = ref(
             storage,
-            `uploads/${$userStore.uid}/${filename}`,
+            `uploads/${$userStore?.uid}/${filename}`,
         );
 
         return retryOperation(async () => {
@@ -293,6 +293,7 @@
         showCourseNameError = false;
 
         try {
+            if (!$userStore) throw new Error("User not found");
             const idToken = await $userStore.getIdToken();
 
             let audioUrl = "";
@@ -340,7 +341,7 @@
                 analyses: { [$analysisMode]: data.result },
                 createdAt: serverTimestamp(),
                 subjectId: $currentBinder || null,
-                uid: $userStore.uid,
+                uid: $userStore?.uid,
                 sourceType: $videoFile
                     ? "video"
                     : $audioFile
@@ -351,7 +352,7 @@
             };
 
             const docRef = await addDoc(
-                collection(db, `users/${$userStore.uid}/lectures`),
+                collection(db, `users/${$userStore?.uid}/lectures`),
                 lectureData,
             );
 
@@ -404,6 +405,9 @@
             class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 pointer-events-auto"
             transition:fade
             on:click={minimize}
+            role="button"
+            tabindex="0"
+            on:keydown={(e) => e.key === "Enter" && minimize()}
         ></div>
     {/if}
 
@@ -479,10 +483,12 @@
                     <!-- Course Name Input -->
                     <div class="mb-6">
                         <label
+                            for="course-name"
                             class="block text-sm font-bold text-slate-700 mb-2"
                             >講義名 <span class="text-red-500">*</span></label
                         >
                         <input
+                            id="course-name"
                             type="text"
                             bind:value={$courseName}
                             placeholder="例: 線形代数 第3回"

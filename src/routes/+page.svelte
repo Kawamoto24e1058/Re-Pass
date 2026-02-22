@@ -359,37 +359,7 @@
   }
 
   // --- Derived State for UI ---
-  const sliderMarks = [100, 500, 2000, 4000];
-
-  function getSliderValueFromLength(length: number) {
-    if (length <= sliderMarks[0]) return 0;
-    if (length >= sliderMarks[3]) return 3;
-    for (let i = 0; i < 3; i++) {
-      if (length >= sliderMarks[i] && length <= sliderMarks[i + 1]) {
-        const range = sliderMarks[i + 1] - sliderMarks[i];
-        const diff = length - sliderMarks[i];
-        return i + diff / range;
-      }
-    }
-    return 1;
-  }
-
-  function getLengthFromSliderValue(val: number) {
-    const index = Math.floor(val);
-    const fraction = val - index;
-    if (index >= 3) return sliderMarks[3];
-    const start = sliderMarks[index];
-    const end = sliderMarks[index + 1];
-    return Math.round(start + (end - start) * fraction);
-  }
-
-  let sliderValue = $state(1);
-  $effect(() => {
-    sliderValue = getSliderValueFromLength($targetLength);
-  });
-
   let manuscriptPages = $derived(Math.ceil($targetLength / 400));
-  let thumbPosition = $derived((sliderValue / 3) * 100);
 
   let isUltimate = $derived(
     String(userData?.plan || "")
@@ -820,11 +790,9 @@
   }
 
   function handleLengthChange(e: Event) {
-    const sliderVal = parseFloat((e.target as HTMLInputElement).value);
-    let val = getLengthFromSliderValue(sliderVal);
+    const val = parseInt((e.target as HTMLInputElement).value);
 
-    if (val < 100) val = 100;
-
+    // Plan Enforcement
     if (!isPremium && val > 500) {
       showUpgradeModal = true;
       upgradeModalTitle = "プレミアムプラン限定";
@@ -846,7 +814,6 @@
       $targetLength = 2000; // Force back
       return;
     }
-    $targetLength = val;
   }
 
   function toggleRecording() {
@@ -2247,32 +2214,45 @@
                     >
                   </div>
 
-                  <div class="relative pt-6 pb-2">
+                  <div class="relative w-full pt-6 pb-2">
                     <span
-                      class="absolute -top-2 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
-                      style="left: {($targetLength / 4000) * 100}%"
+                      class="absolute -top-3 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
+                      style="left: {(($targetLength - 100) / 3900) * 100}%"
                     >
                       {$targetLength}文字
                     </span>
                     <input
                       id="target-length"
                       type="range"
-                      min="0"
-                      max="3"
-                      step="any"
-                      bind:value={sliderValue}
+                      min="100"
+                      max="4000"
+                      step="50"
+                      bind:value={$targetLength}
                       oninput={handleLengthChange}
-                      class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                      class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 relative z-10 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                     />
 
-                    <!-- Ticks -->
                     <div
-                      class="flex justify-between text-[10px] font-bold text-slate-400 mt-2"
+                      class="relative w-full mt-2 text-xs text-slate-400 font-bold"
                     >
-                      <span class="w-8 text-left">100</span>
-                      <span class="w-8 text-center ml-[2%]">500</span>
-                      <span class="w-8 text-center mr-[2%]">2000</span>
-                      <span class="w-8 text-right">4000</span>
+                      <span
+                        class="absolute"
+                        style="left: 0%; transform: translateX(0);">100</span
+                      >
+                      <span
+                        class="absolute"
+                        style="left: 10.25%; transform: translateX(-50%);"
+                        >500</span
+                      >
+                      <span
+                        class="absolute"
+                        style="left: 48.71%; transform: translateX(-50%);"
+                        >2000</span
+                      >
+                      <span
+                        class="absolute"
+                        style="right: 0%; transform: translateX(0);">4000</span
+                      >
                     </div>
                   </div>
                 </div>

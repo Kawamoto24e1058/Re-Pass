@@ -497,12 +497,11 @@
             <div class="space-y-1">
                 <!-- Unassigned / Inbox -->
                 <div class="group relative">
-                    <button
+                    <a
+                        href="/history"
                         onclick={() => {
                             props.onSelectSubject(null);
                             currentBinder.set(null);
-                            toggleSubject("unassigned");
-                            goto("/?view=history");
                             isSidebarOpen.set(false);
                         }}
                         ondragover={(e) => handleDragOver(e, "unassigned")}
@@ -515,7 +514,7 @@
                         {flashTargetId === 'unassigned'
                             ? 'ring-4 ring-green-400 ring-offset-2 animate-pulse'
                             : ''}
-                        {$currentBinder === null
+                        {String($page.url.pathname) === '/history'
                             ? 'bg-indigo-50 text-indigo-900 font-semibold'
                             : 'text-slate-600 hover:bg-black/5'}"
                     >
@@ -541,7 +540,7 @@
                             {props.lectures.filter((l: any) => !l.subjectId)
                                 .length}
                         </span>
-                    </button>
+                    </a>
 
                     <!-- Unassigned Lectures List -->
                     {#if $expandedSubjects.has("unassigned")}
@@ -780,7 +779,7 @@
             <h3
                 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2 flex items-center justify-between"
             >
-                <span>桃大コミュニティ</span>
+                <span>キャンパスコミュニティ</span>
                 <span
                     class="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded text-[10px]"
                     >BETA</span
@@ -789,31 +788,7 @@
 
             <!-- Home Link Removed -->
 
-            <!-- History Link -->
-            <a
-                href="/history"
-                onclick={() => isSidebarOpen.set(false)}
-                class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group mb-1"
-            >
-                <div
-                    class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
-                >
-                    <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                    </svg>
-                </div>
-                <span>未分類の履歴</span>
-            </a>
+            <!-- History Link Removed (Duplicate) -->
 
             <!-- Search Link -->
             <a

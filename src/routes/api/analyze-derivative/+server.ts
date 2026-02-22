@@ -104,7 +104,9 @@ export const POST = async ({ request }) => {
   ${systemPrompt}
 
   以下の【元となる解析結果】を基に、指定された形式に書き換えてください。
-  文字数は概ね ${minLength}〜${maxLength}文字 を目指してください。
+【重要ルール】
+出力する要約（summary）の文字数は、必ず「約 ${targetLength} 文字（許容範囲: ${minLength}文字 〜 ${maxLength}文字）」に収めてください。
+文字数が極端に少ない、または指定文字数を大幅にオーバーすることは厳禁です。指定された分量に合わせて情報の粒度を調整してください。
 
   【元となる解析結果】
   ${sourceAnalysis}

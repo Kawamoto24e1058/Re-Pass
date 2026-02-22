@@ -92,6 +92,7 @@
                     <button
                         on:click={toggleExpand}
                         class="p-2 hover:bg-gray-100 rounded-full text-gray-500"
+                        aria-label="Toggle Expand"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -165,6 +166,9 @@
                 transition:slide={{ axis: "y", duration: 300 }}
                 class="w-full max-w-lg bg-gray-900/90 backdrop-blur-md text-white shadow-xl rounded-full p-2 pr-4 mb-4 pointer-events-auto flex items-center gap-4 border border-white/10"
                 on:click={toggleExpand}
+                role="button"
+                tabindex="0"
+                on:keydown={(e) => e.key === "Enter" && toggleExpand()}
             >
                 <!-- Status Icon -->
                 <div
@@ -239,6 +243,7 @@
                     <button
                         on:click|stopPropagation={toggleExpand}
                         class="p-2 hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+                        aria-label="Toggle Expand"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

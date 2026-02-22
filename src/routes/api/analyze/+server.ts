@@ -373,7 +373,10 @@ export const POST = async ({ request }) => {
 
     const prompt = `
 ${systemPrompt}
-        以下の資料をもとに解析を行ってください。目標文字数: ${minLength}〜${maxLength} 文字程度。
+        以下の資料をもとに解析を行ってください。
+【重要ルール】
+出力する要約（summary）の文字数は、必ず「約 ${targetLength} 文字（許容範囲: ${minLength}文字 〜 ${maxLength}文字）」に収めてください。
+文字数が極端に少ない、または指定文字数を大幅にオーバーすることは厳禁です。指定された分量に合わせて情報の粒度を調整してください。
 【テキスト情報】
 ${transcript}
 ${evaluationCriteria ? `

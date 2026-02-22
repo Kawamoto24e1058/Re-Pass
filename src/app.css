@@ -11,8 +11,8 @@
 
 body,
 html {
-  @apply select-none;
-  /* user-select: none */
+  -webkit-user-select: none;
+  user-select: none;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
   touch-action: manipulation;
@@ -25,7 +25,8 @@ html {
 /* Allow selection on inputs */
 input,
 textarea {
-  @apply select-text;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Ensure buttons have minimum touch target */
