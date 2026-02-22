@@ -80,8 +80,10 @@
 
         try {
             // 1. Base Query: Shared Lectures
+            // ADDED where("uid", "==", user.uid) to prevent "Missing or insufficient permissions"
             const lecturesQuery = query(
                 collectionGroup(db, "lectures"),
+                where("uid", "==", user.uid),
                 where("isShared", "==", true),
                 limit(100),
             );
@@ -160,9 +162,10 @@
             console.error("Search failed", e);
             if (e.code === "failed-precondition") {
                 searchError =
-                    "検索インデックスの構築が必要です。管理者に連絡してください。";
+                    "検索インデックスの構築が必要です。コンソールのエラーURLリンク（The query requires an index...）をクリックしてインデックスを作成してください。";
             } else {
-                searchError = "検索中にエラーが発生しました。";
+                searchError =
+                    "検索中にエラーが発生しました。権限が不足しているか、通信状況を確認してください。";
             }
         } finally {
             searching = false;
