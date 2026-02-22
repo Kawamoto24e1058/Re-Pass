@@ -80,10 +80,9 @@
 
         try {
             // 1. Base Query: Shared Lectures
-            // ADDED where("uid", "==", user.uid) to prevent "Missing or insufficient permissions"
+            // (Note: To search across all users' shared lectures, we don't filter by uid here)
             const lecturesQuery = query(
                 collectionGroup(db, "lectures"),
-                where("uid", "==", user.uid),
                 where("isShared", "==", true),
                 limit(100),
             );
