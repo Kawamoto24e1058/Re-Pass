@@ -648,9 +648,16 @@
       stagedImageUrls.forEach((url) => {
         formData.append("imageUrl", url);
       });
-      if ($txtFile) formData.append("txt", $txtFile);
-      if ($targetUrl) formData.append("url", $targetUrl);
-      formData.append("transcript", $transcript);
+
+      // Explicitly separate text inputs for the prompt
+      let documentText = "";
+      if ($txtFile) {
+        documentText = await $txtFile.text();
+      }
+
+      formData.append("documentText", documentText);
+      formData.append("audioText", $transcript);
+      formData.append("url", $targetUrl || "");
       formData.append("mode", $analysisMode);
       formData.append("plan", userData?.plan || "free");
       // targetLength is passed implicitly or we should add it if API supports it

@@ -94,7 +94,8 @@ export const POST = async ({ request }) => {
     const mode = formData.get('mode') as string || "note";
     const targetLengthRaw = formData.get('targetLength');
     let targetLength = parseInt(targetLengthRaw as string || "1000");
-    let transcript = formData.get('transcript') as string || "";
+    let audioText = formData.get('audioText') as string || "";
+    let documentText = formData.get('documentText') as string || "";
     const targetUrl = formData.get('url') as string;
     const evaluationCriteria = formData.get('evaluationCriteria') as string || "";
 
@@ -119,10 +120,11 @@ export const POST = async ({ request }) => {
     console.log('Mode:', mode);
     console.log('TargetLength:', targetLength);
     console.log('URL:', targetUrl || 'None');
-    console.log('Transcript Length:', transcript.length);
+    console.log('AudioText Length:', audioText.length);
+    console.log('DocumentText Length:', documentText.length);
     console.log('Files:', {
       pdf: formData.has('pdf') || formData.has('pdfUrl'),
-      txt: formData.has('txt'),
+      txt: formData.has('documentText') || formData.has('txt'),
       audio: formData.has('audio') || formData.has('audioUrl'),
       image: formData.has('image') || formData.has('imageUrl'),
       video: formData.has('video') || formData.has('videoUrl')
@@ -134,7 +136,8 @@ export const POST = async ({ request }) => {
     }
 
     const hasInput =
-      transcript ||
+      audioText ||
+      documentText ||
       targetUrl ||
       formData.has('pdf') || formData.has('txt') || formData.has('audio') || formData.has('image') || formData.has('video') ||
       formData.get('audioUrl') || formData.get('videoUrl') || formData.get('pdfUrl') || formData.get('imageUrl');
@@ -150,7 +153,7 @@ export const POST = async ({ request }) => {
     const txtFileInput = formData.get('txt') as File;
     if (txtFileInput) {
       const textContent = await txtFileInput.text();
-      transcript += `\n\n【テキストファイル内容】\n${textContent}`;
+      documentText += `\n\n【追加テキストファイル内容】\n${textContent}`;
     }
 
 
@@ -287,7 +290,7 @@ export const POST = async ({ request }) => {
               const tail = fullTranscript.substring(fullTranscript.length - 5000);
               fullTranscript = `${head}\n\n... (略: 内容が長いため中間部分をカットしました) ...\n\n${tail}`;
             }
-            transcript += `\n\n【YouTube動画内容（字幕）】\n${fullTranscript}`;
+            audioText += `\n\n【YouTube動画内容（字幕）】\n${fullTranscript}`;
             console.log('✅ YouTube transcript extracted successfully');
           } catch (transcriptError) {
             console.warn('YouTube transcript fetch failed, trying metadata fallback...', transcriptError);
@@ -299,7 +302,7 @@ export const POST = async ({ request }) => {
               let title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'タイトル取得失敗';
               let description = $('meta[property="og:description"]').attr('content') || '';
               if (description.length > 500) description = description.substring(0, 500) + '...';
-              transcript += `\n\n【YouTube動画情報（字幕なし・メタデータのみ）】\nタイトル: ${title}\n概要: ${description || '概要なし'}\n\n⚠️ 注意: この動画には字幕が設定されていないため、詳細な内容分析はできません。`;
+              documentText += `\n\n【YouTube動画情報（字幕なし・メタデータのみ）】\nタイトル: ${title}\n概要: ${description || '概要なし'}\n\n⚠️ 注意: この動画には字幕が設定されていないため、詳細な内容分析はできません。`;
               console.log('⚠️ YouTube metadata extracted as fallback');
             } catch (fallbackError) {
               console.error('YouTube metadata fallback failed:', fallbackError);
@@ -319,14 +322,14 @@ export const POST = async ({ request }) => {
               const tail = mainContent.substring(mainContent.length - 5000);
               mainContent = `${head}\n\n... (略: 内容が長いため中間部分をカットしました) ...\n\n${tail}`;
             }
-            transcript += `\n\n【ウェブサイト内容】\n${mainContent}\n(URL: ${targetUrl})`;
+            documentText += `\n\n【ウェブサイト内容】\n${mainContent}\n(URL: ${targetUrl})`;
           } catch (scrapeErr) {
             console.error('Generic scraping failed:', scrapeErr);
           }
         }
       } catch (e: any) {
         console.error('URL Scraping master failed:', e);
-        transcript += `\n\n【参照URL（取得失敗）】\n${targetUrl}\n(URLの内容を取得できませんでした)`;
+        documentText += `\n\n【参照URL（取得失敗）】\n${targetUrl}\n(URLの内容を取得できませんでした)`;
       }
     }
 
@@ -352,7 +355,7 @@ export const POST = async ({ request }) => {
   }
   `;
 
-    const multiModalInstruction = "あなたには、同じ講義に関する複数の情報源（例：スライド資料、ノートの画像群、講義音声の文字起こし等）が与えられます。\n【重要】片方の情報だけに依存せず、両方の内容を突き合わせ、相互に補完し合っている重要なポイントを統合して一つの包括的なノート/要約を作成してください。\n";
+    const multiModalInstruction = "あなたには、同じ講義に関する複数の情報源（例：テキスト資料やスライド画像、さらに講義音声の文字起こし等）が与えられます。\n【重要ルール：複数データの統合】\n資料テキストと音声テキストの両方が提供されている場合、絶対に片方だけを要約してはいけません。\n必ず両方の内容を突き合わせ、スライド等の「資料」に記載されている視覚的・構造的な情報と、「音声」で語られている詳細な解説や具体例を補完し合い、一つの包括的で完璧なノートを作成してください。\n";
 
     let systemPrompt = "";
     switch (mode) {
@@ -394,8 +397,12 @@ export const POST = async ({ request }) => {
 ${systemPrompt}
         以下の資料をもとに解析を行ってください。
 ${formatRules}
-【テキスト情報】
-${transcript}
+
+【提供された資料テキスト（スライドや文書の抽出内容など）】
+${documentText || 'なし'}
+
+【提供された音声テキスト（講義の録音文字起こしや動画字幕など）】
+${audioText || 'なし'}
 ${evaluationCriteria ? `
 【追加指示：A評価攻略ガイド】
 この講義の評価基準は「${evaluationCriteria}」です。
