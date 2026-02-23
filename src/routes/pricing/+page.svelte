@@ -459,8 +459,12 @@
                         {#if currentPlan === "premium"}
                             <div class="flex items-baseline gap-2 mb-1">
                                 <span
-                                    class="text-sm text-slate-400 font-medium line-through decoration-slate-500/50"
+                                    class="text-xs text-slate-400 font-medium line-through decoration-slate-500/50"
                                     >通常 ¥1,480/月</span
+                                >
+                                <span
+                                    class="text-sm font-bold text-indigo-300 tracking-wide"
+                                    >プレミアム優待価格：＋¥700/月</span
                                 >
                             </div>
                             <div class="text-4xl font-black text-white mb-2">
@@ -472,7 +476,7 @@
                             <div
                                 class="text-indigo-300 font-medium text-sm leading-relaxed"
                             >
-                                プレミアム会員特典：差額の＋¥700/月で、動画解析を無制限に。ノート検索も解放されます。
+                                プレミアム会員特典：差額で動画解析を無制限に。ノート検索も解放されます。
                             </div>
                         {:else}
                             <div class="text-4xl font-black text-white">
@@ -485,8 +489,12 @@
                     {:else if currentPlan === "premium"}
                         <div class="flex items-baseline gap-2 mb-1">
                             <span
-                                class="text-sm text-slate-400 font-medium line-through decoration-slate-500/50"
+                                class="text-xs text-slate-400 font-medium line-through decoration-slate-500/50"
                                 >通常 ¥4,980/4ヶ月</span
+                            >
+                            <span
+                                class="text-sm font-bold text-indigo-300 tracking-wide"
+                                >プレミアム優待価格：＋¥2,500</span
                             >
                         </div>
                         <div class="text-4xl font-black text-white mb-2">
@@ -499,7 +507,7 @@
                         <div
                             class="text-indigo-300 font-medium text-sm leading-relaxed"
                         >
-                            プレミアム会員特典：一括＋¥2,500で、今学期の全機能をアンロック。試験対策をフルサポート。
+                            プレミアム会員特典：差額で今学期の全機能をアンロック。試験対策をフルサポート。
                         </div>
                     {:else}
                         <div class="text-4xl font-black text-white">
@@ -684,7 +692,7 @@
                 {:else if currentPlan === "ultimate"}
                     加入中
                 {:else if currentPlan === "premium"}
-                    お得にアップグレードする
+                    プレミアム特典：差額でアップグレード
                 {:else}
                     Ultimateに参加
                 {/if}
