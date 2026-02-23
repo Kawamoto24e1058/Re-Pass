@@ -54,42 +54,6 @@ export const POST = async ({ request }) => {
       }
     }
 
-    // --- Safe Usage Check with Try-Catch ---
-    if (!isPremium && uid) {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const usageRef = adminDb.collection('users').doc(uid).collection('usage').doc('daily');
-        const usageDoc = await usageRef.get();
-        const usageData = usageDoc.data() || { count: 0, lastResetDate: today };
-
-        let currentCount = usageData.count;
-        let lastResetDate = usageData.lastResetDate;
-
-        if (lastResetDate !== today) {
-          currentCount = 0;
-          lastResetDate = today;
-        }
-
-        console.log(`📊 Usage Check: ${currentCount}/3 (Premium: ${isPremium})`);
-
-        if (currentCount >= 3) {
-          return json({
-            error: "本日の上限に達しました",
-            details: "無料プランの1日あたりの解析上限（3回）に達しました。明日また試すか、アルティメットプランへアップグレードしてください。"
-          }, { status: 403 });
-        }
-      } catch (usageError: any) {
-        console.error("🚨 Usage Check Failed:", usageError);
-        // OPTIONAL: Fail open or closed?
-        // For now, let's NOT crash the request, but log it.
-        // If we return, we stop. If we continue, we allow analysis.
-        // Let's allow analysis if DB check fails to avoid blocking users due to system error.
-        console.warn("⚠️ Allowing analysis despite usage check failure due to DB error.");
-      }
-    } else if (!isPremium && !uid) {
-      return json({ error: "解析にはログインが必要です" }, { status: 401 });
-    }
-
     const formData = await request.formData();
     const mode = formData.get('mode') as string || "note";
     const targetLengthRaw = formData.get('targetLength');
@@ -98,6 +62,49 @@ export const POST = async ({ request }) => {
     let documentText = formData.get('documentText') as string || "";
     const targetUrl = formData.get('url') as string;
     const evaluationCriteria = formData.get('evaluationCriteria') as string || "";
+    const isTaskAssist = formData.get('isTaskAssist') === 'true';
+
+    // --- Safe Usage Check & Gating ---
+    if (uid) {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const usageRef = adminDb.collection('users').doc(uid).collection('usage').doc('daily');
+        const usageDoc = await usageRef.get();
+        const usageData = usageDoc.data() || { count: 0, mediaCount: 0, lastResetDate: today };
+
+        let currentCount = usageData.count || 0;
+        let currentMediaCount = usageData.mediaCount || 0;
+        let lastResetDate = usageData.lastResetDate;
+
+        if (lastResetDate !== today) {
+          currentCount = 0;
+          currentMediaCount = 0;
+          lastResetDate = today;
+        }
+
+        const hasMedia = formData.has('videoUrl') || formData.has('audioUrl') || formData.has('audio') || formData.has('video');
+
+        if (!isPremium) {
+          if (currentCount >= 1) {
+            return json({
+              error: "本日の上限に達しました",
+              details: "無料プランの1日あたりの解析上限（1回）に達しました。明日また試すか、プレミアムプランへアップグレードしてください。"
+            }, { status: 429 });
+          }
+        } else if (isPremium && !isUltimate && hasMedia) {
+          if (currentMediaCount >= 3) {
+            return json({
+              error: "メディア解析の上限に達しました",
+              details: "プレミアムプランの1日あたりのメディア解析上限（3回）に達しました。明日また試すか、アルティメットプランへアップグレードしてください。"
+            }, { status: 429 });
+          }
+        }
+      } catch (usageError: any) {
+        console.error("🚨 Usage Check Failed:", usageError);
+      }
+    } else {
+      return json({ error: "解析にはログインが必要です" }, { status: 401 });
+    }
 
     // --- Hard Logic Gating ---
     if (!isPremium && targetLength > 500) {
@@ -105,12 +112,7 @@ export const POST = async ({ request }) => {
       targetLength = 500; // Force down in backend
     }
 
-    if (!isUltimate && (formData.has('videoUrl') || formData.has('audioUrl') || targetUrl)) {
-      console.warn('⚠️ Plan Gating: Non-Ultimate user attempted Video/URL analysis');
-      return json({ error: "動画・URL解析はアルティメットプラン限定です" }, { status: 403 });
-    }
-
-    if (!isPremium && (mode === 'thoughts' || mode === 'report')) {
+    if (!isPremium && (mode === 'thoughts' || mode === 'report' || isTaskAssist)) {
       console.warn('⚠️ Feature Gating: Free user attempted premium mode');
       return json({ error: "この機能はプレミアム限定です" }, { status: 403 });
     }
@@ -358,16 +360,26 @@ export const POST = async ({ request }) => {
     const multiModalInstruction = "あなたには、同じ講義に関する複数の情報源（例：テキスト資料やスライド画像、さらに講義音声の文字起こし等）が与えられます。\n【重要ルール：複数データの統合】\n資料テキストと音声テキストの両方が提供されている場合、絶対に片方だけを要約してはいけません。\n必ず両方の内容を突き合わせ、スライド等の「資料」に記載されている視覚的・構造的な情報と、「音声」で語られている詳細な解説や具体例を補完し合い、一つの包括的で完璧なノートを作成してください。\n";
 
     let systemPrompt = "";
-    switch (mode) {
-      case "thoughts":
-        systemPrompt = multiModalInstruction + `あなたは講義を受講した「熱心な学生」です。丁寧語（です・ます調）でリアクションペーパーを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
-        break;
-      case "report":
-        systemPrompt = multiModalInstruction + `あなたは「論理的批評家」です。常体（だ・である調）で学術レポートを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
-        break;
-      case "note":
-      default:
-        systemPrompt = multiModalInstruction + `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を詳細に構造化します。\n${jsonSchema}\n
+    if (isTaskAssist) {
+      systemPrompt = "あなたは優秀なTA（ティーチングアシスタント）です。提供された資料や問題をもとに、学生が課題を解くサポートをします。\n" +
+        "【重要ルール】\n" +
+        "直接的な答え（最終的な解答そのもの）は絶対に出さないでください。\n" +
+        "代わりに以下の3点を含めて解説してください：\n" +
+        "① この課題が意図していること・問われている核心\n" +
+        "② 参考にするべき資料の該当箇所や関連する公式・概念\n" +
+        "③ 自力で解くための具体的なステップ（最初の一歩はどうするか等）\n\n" +
+        jsonSchema;
+    } else {
+      switch (mode) {
+        case "thoughts":
+          systemPrompt = multiModalInstruction + `あなたは講義を受講した「熱心な学生」です。丁寧語（です・ます調）でリアクションペーパーを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
+          break;
+        case "report":
+          systemPrompt = multiModalInstruction + `あなたは「論理的批評家」です。常体（だ・である調）で学術レポートを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
+          break;
+        case "note":
+        default:
+          systemPrompt = multiModalInstruction + `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を詳細に構造化します。\n${jsonSchema}\n
 **【最重要原則】**:
 1. **提供された資料のみ**に基づき解析すること。一般論での補完は厳禁。
 2. **階層的な箇条書き**を多用し、読者がこのノートだけで講義を完全に復習できるようにすること。
@@ -376,7 +388,8 @@ export const POST = async ({ request }) => {
 5. **専門用語**は用語辞典だけでなく、本文中でも文脈に沿って解説を加えること。
 6. 各見出しの直後に必ず空行を入れること。
 7. **タイムスタンプ**: 重要なトピックの切り替わりや議論の転換点には、必ず **[MM:SS]** 形式（例: [05:30]）でタイムスタンプを付記すること。`;
-        break;
+          break;
+      }
     }
     let formatRules = "";
     if (mode === "note") {
@@ -388,9 +401,8 @@ export const POST = async ({ request }) => {
     } else {
       formatRules = `
 【重要ルール：フォーマットと文字数】
-1. 出力する要約の文字数は、約 ${targetLength} 文字（許容範囲: ±15%）を目安にしてください。
-2. 【超重要】文字数合わせのために改行を消したり、プレーンテキストの塊にすることは絶対にやめてください。
-3. 必ずMarkdown形式を使用し、「## 見出し」「- 箇条書き」「太字」「適切な改行（空行）」を駆使して、人間が視覚的に読みやすく、コピー＆ペーストした際にも綺麗に構造化された文章を作成してください。`;
+1. 出力する文章の文字数は、約 ${targetLength} 文字（許容範囲: ±15%）を目安にしてください。
+2. 文字数合わせのために改行を消したり、プレーンテキストの塊にすることは絶対にやめてください。Markdown形式で段落を分けて読みやすくしてください。`;
     }
 
     const prompt = `
@@ -459,14 +471,24 @@ ${evaluationCriteria ? `
         }
 
         // Update usage count
-        if (!isPremium && uid) {
+        if (uid) {
           try {
             const today = new Date().toISOString().split('T')[0];
             const usageRef = adminDb.collection('users').doc(uid).collection('usage').doc('daily');
             const usageDoc = await usageRef.get();
-            const usageData = usageDoc.data() || { count: 0, lastResetDate: today };
-            let newCount = (usageData.lastResetDate !== today) ? 1 : usageData.count + 1;
-            await usageRef.set({ count: newCount, lastResetDate: today, updatedAt: new Date().toISOString() }, { merge: true });
+            const usageData = usageDoc.data() || { count: 0, mediaCount: 0, lastResetDate: today };
+
+            let newCount = (usageData.lastResetDate !== today) ? 1 : (usageData.count || 0) + 1;
+
+            const hasMedia = formData.has('videoUrl') || formData.has('audioUrl') || formData.has('audio') || formData.has('video');
+            let newMediaCount = (usageData.lastResetDate !== today) ? (hasMedia ? 1 : 0) : ((usageData.mediaCount || 0) + (hasMedia ? 1 : 0));
+
+            await usageRef.set({
+              count: newCount,
+              mediaCount: newMediaCount,
+              lastResetDate: today,
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
 
             // Safe update for global usage count
             const currentGlobalCount = userData?.usageCount || 0;

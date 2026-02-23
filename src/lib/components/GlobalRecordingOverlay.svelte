@@ -60,9 +60,10 @@
     let upgradeModalTitle = "ULTIMATE限定機能";
     let upgradeModalMessage = "";
     let showCourseNameError = false;
+    let isSharedNote = $state(true);
 
     // Plan helpers
-    $: userData = $userStore ? $userStore : null; // Need to fetch fresh user data if possible, but store is okay
+    let userData = $derived($userStore ? $userStore : null); // Need to fetch fresh user data if possible, but store is okay
     // We need to fetch basic user profile data to check plans accurately if not in store.
     // Assuming userStore has { uid, ... } and we might need to look up claims or profile doc.
     // For now, let's blindly trust userStore or fetch if needed.
@@ -71,27 +72,30 @@
     // but let's assume passed in props or global store 'userProfile'.
 
     import { userProfile } from "$lib/userStore"; // Assuming this exists as seen in +page.svelte
-    $: isUltimate = $userProfile?.plan === "ultimate";
-    $: isPremium =
+    let isUltimate = $derived($userProfile?.plan === "ultimate");
+    let isPremium = $derived(
         isUltimate ||
-        $userProfile?.plan === "premium" ||
-        $userProfile?.plan === "season";
+            $userProfile?.plan === "premium" ||
+            $userProfile?.plan === "season",
+    );
 
     // Duration Timer
-    let duration = 0;
-    let timerInterval: any;
+    let duration = $state(0);
+    let timerInterval: ReturnType<typeof setInterval> | null = null;
 
-    $: if ($isRecording) {
-        if (!timerInterval) {
-            timerInterval = setInterval(() => duration++, 1000);
+    $effect(() => {
+        if ($isRecording) {
+            if (!timerInterval) {
+                timerInterval = setInterval(() => duration++, 1000);
+            }
+        } else {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                duration = 0;
+            }
         }
-    } else {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            duration = 0;
-        }
-    }
+    });
 
     function formatTime(seconds: number) {
         const m = Math.floor(seconds / 60)
@@ -102,10 +106,12 @@
     }
 
     // Auto-show overlay when recording starts
-    $: if ($isRecording && !$isOverlayVisible) {
-        isOverlayVisible.set(true);
-        isOverlayExpanded.set(true); // Also expand? Yes, probably.
-    }
+    $effect(() => {
+        if ($isRecording && !$isOverlayVisible) {
+            isOverlayVisible.set(true);
+            isOverlayExpanded.set(true); // Also expand? Yes, probably.
+        }
+    });
 
     function toggleExpand() {
         isOverlayExpanded.update((v) => !v);
@@ -339,6 +345,7 @@
                 content: $transcript,
                 analysis: data.result, // The structured result
                 analyses: { [$analysisMode]: data.result },
+                isShared: isSharedNote,
                 createdAt: serverTimestamp(),
                 subjectId: $currentBinder || null,
                 uid: $userStore?.uid,
@@ -389,13 +396,15 @@
         }
     }
     // Auto-minimize when navigating (if expanded)
-    let lastPath = "";
-    $: if ($page.url.pathname !== lastPath) {
-        lastPath = $page.url.pathname;
-        if ($isOverlayVisible && $isOverlayExpanded) {
-            minimize();
+    let lastPath = $state("");
+    $effect(() => {
+        if ($page.url.pathname !== lastPath) {
+            lastPath = $page.url.pathname;
+            if ($isOverlayVisible && $isOverlayExpanded) {
+                minimize();
+            }
         }
-    }
+    });
 </script>
 
 {#if $isOverlayVisible}
@@ -428,9 +437,7 @@
                         class="text-lg font-bold text-gray-800 flex items-center gap-2"
                     >
                         {#if $isRecording}
-                            <span class="animate-pulse text-red-500"
-                                >● 録音中</span
-                            >
+                            <span class="text-red-500">● 録音中</span>
                             <span class="font-mono text-red-500"
                                 >{formatTime(duration)}</span
                             >
@@ -674,12 +681,32 @@
                                         録音開始
                                     </button>
 
-                                    <button
-                                        on:click={handleAnalyze}
-                                        class="bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-slate-200 transition-all hover:scale-105 flex items-center gap-2"
+                                    <div
+                                        class="flex flex-col items-center gap-3"
                                     >
-                                        <span>⚡ 解析する</span>
-                                    </button>
+                                        <button
+                                            on:click={handleAnalyze}
+                                            class="bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-slate-200 transition-all hover:scale-105 flex items-center gap-2"
+                                        >
+                                            <span>⚡ 解析する</span>
+                                        </button>
+                                        <label
+                                            class="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                bind:checked={isSharedNote}
+                                                class="sr-only peer"
+                                            />
+                                            <div
+                                                class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500 relative"
+                                            ></div>
+                                            <span
+                                                class="text-xs font-bold text-slate-600"
+                                                >このノートをみんなに公開する</span
+                                            >
+                                        </label>
+                                    </div>
                                 {:else}
                                     <button
                                         on:click={stopRecording}
@@ -716,9 +743,6 @@
                 class="w-10 h-10 rounded-full flex items-center justify-center bg-slate-800 group-hover:bg-slate-700 relative"
             >
                 {#if $isRecording}
-                    <span
-                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-20"
-                    ></span>
                     <div class="w-3 h-3 bg-red-500 rounded-full"></div>
                 {:else if analyzing}
                     <div

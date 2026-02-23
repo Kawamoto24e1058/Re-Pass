@@ -1,0 +1,220 @@
+Loading svelte-check in workspace: c:\Users\kharu\Project\Re-Pass
+Getting Svelte diagnostics...
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:416:13
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            transition:fade
+            [35mon:click={minimize}[36m
+            role="button"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:419:13
+[33mWarn[39m: Using `on:keydown` to listen to the keydown event is deprecated. Use the event attribute `onkeydown` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            tabindex="0"
+            [35mon:keydown={(e) => e.key === "Enter" && minimize()}[36m
+        ></div>[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:450:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={minimize}[36m
+                            class="p-2 hover:bg-gray-100 rounded-full text-gray-500"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:468:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={closeOverlay}[36m
+                            class="p-2 hover:bg-red-50 rounded-full text-red-400"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:540:41
+[33mWarn[39m: Using `on:change` to listen to the change event is deprecated. Use the event attribute `onchange` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                        class="hidden"
+                                        [35mon:change={(e) =>
+                                            handleFileChange(e, "pdf")}[36m
+                                    />[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:564:41
+[33mWarn[39m: Using `on:change` to listen to the change event is deprecated. Use the event attribute `onchange` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                        class="hidden"
+                                        [35mon:change={(e) =>
+                                            handleFileChange(e, "image")}[36m
+                                    />[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:588:41
+[33mWarn[39m: Using `on:change` to listen to the change event is deprecated. Use the event attribute `onchange` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                        class="hidden"
+                                        [35mon:change={(e) =>
+                                            handleFileChange(e, "audio")}[36m
+                                    />[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:612:41
+[33mWarn[39m: Using `on:change` to listen to the change event is deprecated. Use the event attribute `onchange` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                        class="hidden"
+                                        [35mon:change={(e) =>
+                                            handleFileChange(e, "video")}[36m
+                                    />[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:675:41
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                    <button
+                                        [35mon:click={startRecording}[36m
+                                        class="bg-red-500 hover:bg-red-600 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-red-200 transition-all hover:scale-105 flex items-center gap-2"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:688:45
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                        <button
+                                            [35mon:click={handleAnalyze}[36m
+                                            class="bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-full font-bold shadow-lg shadow-slate-200 transition-all hover:scale-105 flex items-center gap-2"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:712:41
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                    <button
+                                        [35mon:click={stopRecording}[36m
+                                        class="bg-white border-2 border-red-500 text-red-500 hover:bg-red-50 px-8 py-4 rounded-full font-bold shadow-sm transition-all flex items-center gap-2"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:739:13
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            class="fixed bottom-6 right-6 z-[60] bg-slate-900 text-white shadow-2xl rounded-full pl-2 pr-6 py-2 flex items-center gap-3 transition-all hover:scale-105 hover:bg-slate-800 group border border-white/10"
+            [35mon:click={toggleExpand}[36m
+            transition:fly={{ y: 20 }}[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:48:9
+[33mWarn[39m: `analyzing` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_update (svelte)
+[36m    // --- Local State for Analysis ---
+    let [35manalyzing[36m = false;
+    let isExtractingAudio = false;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:49:9
+[33mWarn[39m: `isExtractingAudio` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_update (svelte)
+[36m    let analyzing = false;
+    let [35misExtractingAudio[36m = false;
+    let extractionProgress: AudioExtractionProgress | null = null;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:54:9
+[33mWarn[39m: `progressValue` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_update (svelte)
+[36m
+    let [35mprogressValue[36m = 0;
+    let progressStatus = "";[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:55:9
+[33mWarn[39m: `progressStatus` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_update (svelte)
+[36m    let progressValue = 0;
+    let [35mprogressStatus[36m = "";
+    let progressInterval: any;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:57:9
+[33mWarn[39m: `toastMessage` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_update (svelte)
+[36m    let progressInterval: any;
+    let [35mtoastMessage: string | null[36m = null;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:59:9
+[33mWarn[39m: `showUpgradeModal` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_update (svelte)
+[36m
+    let [35mshowUpgradeModal[36m = false;
+    let upgradeModalTitle = "ULTIMATE限定機能";[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:62:9
+[33mWarn[39m: `showCourseNameError` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_update (svelte)
+[36m    let upgradeModalMessage = "";
+    let [35mshowCourseNameError[36m = false;
+    let isSharedNote = $state(true);[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:72:17
+[33mWarn[39m: Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+[36m            >
+                [35m<button
+                    onclick={dismissPrompt}
+                    class="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-1"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>[36m
+                <div class="flex items-start gap-4 pr-6">[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:139:21
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m                    <span>Re-Passをインストール</span>
+                    [35m<div
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            dismissPrompt();
+                        }}
+                        class="ml-2 pl-2 border-l border-slate-700 text-slate-400 hover:text-white"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>[36m
+                </button>[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:139:21
+[33mWarn[39m: `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m                    <span>Re-Passをインストール</span>
+                    [35m<div
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            dismissPrompt();
+                        }}
+                        class="ml-2 pl-2 border-l border-slate-700 text-slate-400 hover:text-white"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>[36m
+                </button>[39m
+
+====================================
+[33msvelte-check found 0 errors and 22 warnings in 2 files
+[39m

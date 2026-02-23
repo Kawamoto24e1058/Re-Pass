@@ -3,6 +3,7 @@
     import { doc, setDoc, serverTimestamp } from "firebase/firestore";
     import { goto } from "$app/navigation";
     import { onMount } from "svelte";
+    import { userProfile } from "$lib/stores";
     import {
         PUBLIC_STRIPE_PUBLISHABLE_KEY,
         PUBLIC_STRIPE_PRICE_PREMIUM,
@@ -13,8 +14,8 @@
 
     // Local placeholders removed, using env vars
 
-    let isLoading = ""; // "Premium_Monthly", "Ultimate_Season", etc. or empty
-    let billingCycle = "season"; // "monthly" | "season" (Default to Season for upsell)
+    let isLoading = $state(""); // "Premium_Monthly", "Ultimate_Season", etc. or empty
+    let billingCycle = $state("season"); // "monthly" | "season" (Default to Season for upsell)
 
     onMount(() => {
         if (
@@ -28,7 +29,13 @@
     import { Browser } from "@capacitor/browser";
     import { Capacitor } from "@capacitor/core";
 
-    async function handlePurchase(priceId: string, planId: string) {
+    let isPremiumUser = $derived($userProfile?.plan === "premium");
+
+    async function handlePurchase(
+        priceId: string,
+        planId: string,
+        isUpgrade: boolean = false,
+    ) {
         const user = auth.currentUser;
         if (!user) {
             goto("/login");
@@ -55,6 +62,7 @@
                     priceId,
                     userId: user.uid,
                     email: user.email,
+                    isUpgrade,
                 }),
             });
 
@@ -99,6 +107,55 @@
             goto("/");
         } catch (e) {
             alert("エラーが発生しました。");
+        }
+    }
+
+    let promoCode = $state("");
+    let isRedeeming = $state(false);
+    let redeemError = $state<string | null>(null);
+    let redeemSuccess = $state(false);
+    let redeemedPlanName = $state("");
+
+    async function redeemCode() {
+        if (!promoCode.trim()) return;
+        isRedeeming = true;
+        redeemError = null;
+
+        try {
+            const user = auth.currentUser;
+            if (!user) {
+                redeemError = "ログインが必要です";
+                return;
+            }
+            const token = await user.getIdToken();
+            const res = await fetch("/api/redeem-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ code: promoCode }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "適用に失敗しました");
+            }
+
+            const rawPlan = data.targetPlan?.toLowerCase() || "";
+            redeemedPlanName =
+                rawPlan === "ultimate"
+                    ? "アルティメットプラン"
+                    : "プレミアムプラン";
+
+            redeemSuccess = true;
+            setTimeout(() => {
+                goto("/");
+            }, 2000);
+        } catch (e: any) {
+            redeemError = e.message;
+        } finally {
+            isRedeeming = false;
         }
     }
 </script>
@@ -206,23 +263,33 @@
             <ul class="space-y-3 mb-8 flex-1">
                 <li class="flex items-start gap-3 text-sm text-slate-600">
                     <span class="text-indigo-500 mt-0.5">✔</span>
-                    <span>基本要約・重要語句抽出</span>
+                    <span>ノート生成（1日1回まで）</span>
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-600">
                     <span class="text-indigo-500 mt-0.5">✔</span>
-                    <span>1日3回まで解析</span>
+                    <span>PDF・画像・Webサイト(URL)の解析</span>
+                </li>
+                <li class="flex items-start gap-3 text-sm text-slate-600">
+                    <span class="text-indigo-500 mt-0.5">✔</span>
+                    <span>リアルタイム音声文字起こし</span>
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-400">
                     <span class="text-slate-300 mt-0.5">✕</span>
-                    <span class="line-through">動画・URL解析</span>
+                    <span class="line-through"
+                        >課題・問題アシスト（AI家庭教師）</span
+                    >
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-400">
                     <span class="text-slate-300 mt-0.5">✕</span>
-                    <span class="line-through">共有ノート閲覧</span>
+                    <span class="line-through">動画・音声ファイルの解析</span>
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-400">
                     <span class="text-slate-300 mt-0.5">✕</span>
-                    <span class="line-through">対話型レポート修正</span>
+                    <span class="line-through">みんなの講義ノート検索</span>
+                </li>
+                <li class="flex items-start gap-3 text-sm text-slate-400">
+                    <span class="text-slate-300 mt-0.5">✕</span>
+                    <span class="line-through">試験対策まとめ機能</span>
                 </li>
             </ul>
 
@@ -236,9 +303,18 @@
 
         <!-- 2. PREMIUM -->
         <div
-            class="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group animate-in fade-in slide-in-from-bottom-8 delay-200 relative order-2 lg:order-2"
+            class="bg-white rounded-[2rem] p-8 border-2 border-indigo-100 shadow-xl shadow-indigo-100/50 hover:shadow-2xl hover:shadow-indigo-200/50 transition-all duration-300 flex flex-col group animate-in fade-in slide-in-from-bottom-8 delay-200 order-2 lg:order-2 relative"
         >
-            <div class="mb-6">
+            <!-- Standard Badge -->
+            <div class="absolute top-0 right-0 p-5">
+                <span
+                    class="bg-indigo-50 text-indigo-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-indigo-200 shadow-sm"
+                >
+                    Standard
+                </span>
+            </div>
+
+            <div class="mb-6 relative z-10">
                 <h3
                     class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-4"
                 >
@@ -263,37 +339,47 @@
                     {#if billingCycle === "season"}月あたり ¥495 (超お得!){/if}
                 </p>
                 <p class="text-slate-500 text-sm mt-4 leading-relaxed h-10">
-                    回数制限なし。<br />レポート対話修正で完璧な課題を。
+                    生成・アシスト機能が無制限。<br
+                    />日々の課題や講義を完璧にサポート。
                 </p>
             </div>
 
-            <ul class="space-y-3 mb-8 flex-1">
+            <ul class="space-y-3 mb-8 flex-1 relative z-10">
                 <li class="flex items-start gap-3 text-sm text-slate-600">
                     <span class="text-indigo-500 mt-0.5">✔</span>
                     <span
-                        >解析回数 <strong class="text-indigo-600">無制限</strong
+                        >ノート生成 <strong class="text-indigo-600"
+                            >無制限</strong
                         ></span
                     >
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-600">
                     <span class="text-indigo-500 mt-0.5">✔</span>
                     <span
-                        ><strong class="text-indigo-600"
-                            >対話型レポート修正</strong
+                        >課題・問題アシスト（AI家庭教師）<strong
+                            class="text-indigo-600">無制限</strong
                         ></span
                     >
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-600">
                     <span class="text-indigo-500 mt-0.5">✔</span>
-                    <span>優先サポート</span>
+                    <span>シラバス画像からの自動履修登録</span>
+                </li>
+                <li class="flex items-start gap-3 text-sm text-slate-600">
+                    <span class="text-amber-500 mt-0.5 font-bold">⚠</span>
+                    <span
+                        >動画・音声ファイルの解析<br /><span
+                            class="text-xs text-slate-400">（1日3回まで）</span
+                        ></span
+                    >
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-400">
                     <span class="text-slate-300 mt-0.5">✕</span>
-                    <span class="line-through">動画・URL解析</span>
+                    <span class="line-through">みんなの講義ノート検索</span>
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-400">
                     <span class="text-slate-300 mt-0.5">✕</span>
-                    <span class="line-through">共有ノート閲覧</span>
+                    <span class="line-through">試験対策まとめ機能</span>
                 </li>
             </ul>
 
@@ -349,16 +435,48 @@
                 <h3
                     class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-4"
                 >
-                    Ultimate
+                    Ultimate {isPremiumUser ? "(アップグレード)" : ""}
                 </h3>
                 <div
                     class="text-4xl font-black text-white mb-2 transition-all duration-300"
                 >
                     {#if billingCycle === "monthly"}
-                        ¥1,180<span
-                            class="text-sm text-slate-400 font-medium ml-1"
-                            >/月</span
-                        >
+                        {#if isPremiumUser}
+                            <div
+                                class="text-sm text-slate-400 line-through mb-1"
+                            >
+                                通常価格 ¥1,180/月
+                            </div>
+                            <div class="text-rose-400">
+                                ¥200<span
+                                    class="text-sm text-slate-400 font-medium ml-1"
+                                    >/月</span
+                                >
+                            </div>
+                            <div
+                                class="text-[10px] text-rose-300 font-bold mt-1"
+                            >
+                                プレミアムからのアップグレード特別価格
+                            </div>
+                        {:else}
+                            ¥1,180<span
+                                class="text-sm text-slate-400 font-medium ml-1"
+                                >/月</span
+                            >
+                        {/if}
+                    {:else if isPremiumUser}
+                        <div class="text-sm text-slate-400 line-through mb-1">
+                            通常価格 ¥2,280/4ヶ月
+                        </div>
+                        <div class="text-rose-400">
+                            ¥300<span
+                                class="text-sm text-slate-400 font-medium ml-1"
+                                >/4ヶ月</span
+                            >
+                        </div>
+                        <div class="text-[10px] text-rose-300 font-bold mt-1">
+                            プレミアムからのアップグレード特別価格
+                        </div>
                     {:else}
                         ¥2,280<span
                             class="text-sm text-slate-400 font-medium ml-1"
@@ -367,8 +485,8 @@
                     {/if}
                 </div>
                 <p class="text-xs text-pink-400 font-bold h-4">
-                    {#if billingCycle === "season"}月あたり 約¥570
-                        (Premiumよりお得!){/if}
+                    {#if billingCycle === "season" && !isPremiumUser}月あたり
+                        約¥570 (Premiumよりお得!){/if}
                 </p>
                 <p class="text-slate-300 text-sm mt-4 leading-relaxed h-10">
                     大学攻略の完全版。<br />全ての機能が使い放題。
@@ -392,9 +510,9 @@
                         >
                     </div>
                     <span
-                        >Premiumの<strong
+                        >ノート生成 <strong
                             class="text-white border-b border-indigo-500/50"
-                            >全機能</strong
+                            >完全無制限</strong
                         ></span
                     >
                 </li>
@@ -414,7 +532,10 @@
                         >
                     </div>
                     <span
-                        ><strong class="text-white">動画・URL解析</strong> 全解禁</span
+                        >動画・音声ファイルの解析 <strong
+                            class="text-white border-b border-indigo-500/50"
+                            >完全無制限</strong
+                        ></span
                     >
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-300">
@@ -433,7 +554,10 @@
                         >
                     </div>
                     <span
-                        ><strong class="text-white">共有ノート閲覧</strong> 無制限</span
+                        >みんなの講義ノート検索 <strong
+                            class="text-white border-b border-indigo-500/50"
+                            >（見放題）</strong
+                        ></span
                     >
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-300">
@@ -451,7 +575,32 @@
                             /></svg
                         >
                     </div>
-                    <span>A評価攻略ガイド</span>
+                    <span
+                        >バインダーでの<strong class="text-white"
+                            >試験対策まとめ機能</strong
+                        ></span
+                    >
+                </li>
+                <li class="flex items-start gap-3 text-sm text-slate-300">
+                    <div class="bg-indigo-500/20 p-0.5 rounded-full">
+                        <svg
+                            class="w-3 h-3 text-indigo-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            ><path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="3"
+                                d="M5 13l4 4L19 7"
+                            /></svg
+                        >
+                    </div>
+                    <span
+                        >アプリ内の<strong class="text-white"
+                            >全機能が使い放題</strong
+                        ></span
+                    >
                 </li>
             </ul>
 
@@ -464,11 +613,18 @@
                         billingCycle === "monthly"
                             ? "Ultimate_Monthly"
                             : "Ultimate_Season",
+                        isPremiumUser,
                     )}
                 disabled={isLoading !== ""}
                 class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 text-white font-bold text-sm hover:scale-[1.02] transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
             >
-                {#if isLoading === "Ultimate"}処理中...{:else}Ultimateに参加{/if}
+                {#if isLoading === "Ultimate_Monthy" || isLoading === "Ultimate_Season"}
+                    処理中...
+                {:else if isPremiumUser}
+                    お得にアップグレードする
+                {:else}
+                    Ultimateに参加
+                {/if}
             </button>
             <p
                 class="mt-4 text-[10px] text-slate-300 text-center leading-relaxed opacity-60"
@@ -489,6 +645,60 @@
                 （返金ポリシー含む）に同意したものとみなされます。
             </p>
         </div>
+    </div>
+
+    <!-- Promo Code Section -->
+    <div
+        class="mt-8 w-full max-w-md mx-auto bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative z-20 animate-in fade-in slide-in-from-bottom-8 delay-300"
+    >
+        <h3
+            class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 text-center"
+        >
+            プロモコードでプレミアムへアップグレード
+        </h3>
+
+        {#if redeemSuccess}
+            <div
+                class="text-center p-4 bg-emerald-50 rounded-2xl border border-emerald-100"
+            >
+                <p class="text-emerald-600 font-bold text-sm">
+                    🎉 {redeemedPlanName}にアップグレードされました！
+                </p>
+                <p class="text-xs text-emerald-500 mt-1">
+                    ホーム画面へ移動します...
+                </p>
+            </div>
+        {:else}
+            {#if redeemError}
+                <div
+                    class="mb-3 p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 text-center"
+                >
+                    {redeemError}
+                </div>
+            {/if}
+            <div class="flex gap-2">
+                <input
+                    type="text"
+                    bind:value={promoCode}
+                    placeholder="招待コードを入力..."
+                    class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono uppercase"
+                    disabled={isRedeeming}
+                />
+                <button
+                    onclick={redeemCode}
+                    disabled={isRedeeming || !promoCode.trim()}
+                    class="px-5 py-3 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[6rem] shadow-sm"
+                >
+                    {#if isRedeeming}
+                        <div
+                            class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"
+                        ></div>
+                    {:else}
+                        適用
+                    {/if}
+                </button>
+            </div>
+        {/if}
     </div>
 
     <!-- Payment Methods -->

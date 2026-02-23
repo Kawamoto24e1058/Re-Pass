@@ -16,6 +16,13 @@
     let showConfetti = $state(false);
     let successMessage = $state(false);
     let isSlowSync = $state(false);
+
+    let promoCode = $state("");
+    let isRedeeming = $state(false);
+    let redeemError = $state<string | null>(null);
+    let redeemSuccess = $state(false);
+    let redeemedPlanName = $state("");
+
     let planLevel = $derived.by(() => {
         const p = String(userData?.plan || "")
             .toLowerCase()
@@ -154,6 +161,51 @@
         }
     }
 
+    async function redeemCode() {
+        if (!authUser || !promoCode.trim()) return;
+        isRedeeming = true;
+        redeemError = null;
+
+        try {
+            const token = await authUser.getIdToken();
+            const res = await fetch("/api/redeem-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ code: promoCode }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "適用に失敗しました");
+            }
+
+            const rawPlan = data.targetPlan?.toLowerCase() || "";
+            redeemedPlanName =
+                rawPlan === "ultimate"
+                    ? "アルティメットプラン"
+                    : "プレミアムプラン";
+
+            redeemSuccess = true;
+            successMessage = true;
+            triggerConfetti(document.body);
+
+            // Force refresh user profile
+            await forceRefresh();
+
+            setTimeout(() => {
+                redeemSuccess = false;
+                promoCode = "";
+            }, 3000);
+        } catch (e: any) {
+            redeemError = e.message;
+        } finally {
+            isRedeeming = false;
+        }
+    }
+
     function formatDate(timestamp: number) {
         if (!timestamp) return "-";
         return new Date(timestamp * 1000).toLocaleDateString("ja-JP", {
@@ -276,9 +328,9 @@
                 </svg>
             </div>
             <div>
-                <p class="font-bold">ご購入ありがとうございます！</p>
+                <p class="font-bold">プランの反映が完了しました！</p>
                 <p class="text-sm text-indigo-100">
-                    プランが正常に反映されました。
+                    新しいプランが正常に適用されました。
                 </p>
             </div>
         </div>
@@ -465,46 +517,99 @@
                                     >
                                         <span class="text-indigo-500 font-bold"
                                             >✓</span
-                                        > 授業分析（月5回まで）
+                                        > ノート生成（1日1回まで）
                                     </li>
                                     <li
                                         class="flex items-center gap-2 text-sm text-slate-600"
                                     >
                                         <span class="text-indigo-500 font-bold"
                                             >✓</span
-                                        > 文字数制限（500文字）
+                                        > PDF・画像・Webサイト(URL)の解析
                                     </li>
-                                {:else}
                                     <li
                                         class="flex items-center gap-2 text-sm text-slate-600"
                                     >
                                         <span class="text-indigo-500 font-bold"
                                             >✓</span
-                                        > 授業分析（無制限）
+                                        > リアルタイム音声文字起こし
                                     </li>
-                                    {#if planLevel === "ULTIMATE"}
-                                        <li
-                                            class="flex items-center gap-2 text-sm text-slate-600"
+                                {:else if planLevel === "PREMIUM"}
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
                                         >
-                                            <span
-                                                class="text-indigo-500 font-bold"
-                                                >✓</span
-                                            > 動画・オーディオ分析
-                                        </li>
-                                    {/if}
-                                    <li
-                                        class="flex items-center gap-2 text-sm text-slate-600"
-                                    >
-                                        <span class="text-indigo-500 font-bold"
-                                            >✓</span
-                                        > 高度な分析モード
+                                        ノート生成
+                                        <strong class="text-indigo-600 ml-1"
+                                            >無制限</strong
+                                        >
                                     </li>
                                     <li
                                         class="flex items-center gap-2 text-sm text-slate-600"
                                     >
                                         <span class="text-indigo-500 font-bold"
                                             >✓</span
-                                        > 長文サポート
+                                        >
+                                        課題・問題アシスト
+                                        <strong class="text-indigo-600 ml-1"
+                                            >無制限</strong
+                                        >
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > シラバス画像からの自動履修登録
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        >
+                                        動画・音声ファイルの解析
+                                        <span
+                                            class="text-xs text-slate-500 ml-1"
+                                            >（1日3回まで）</span
+                                        >
+                                    </li>
+                                {:else if planLevel === "ULTIMATE"}
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > アプリ内の全機能が使い放題
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > ノート生成・課題アシスト 完全無制限
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > 動画・音声・URL解析 完全無制限
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > みんなの講義ノート検索（見放題）
+                                    </li>
+                                    <li
+                                        class="flex items-center gap-2 text-sm text-slate-600"
+                                    >
+                                        <span class="text-indigo-500 font-bold"
+                                            >✓</span
+                                        > バインダーでの試験対策まとめ機能
                                     </li>
                                 {/if}
                             </ul>
@@ -637,6 +742,57 @@
                             /></svg
                         >
                     </button>
+                </div>
+
+                <!-- Promo Code Section in Settings -->
+                <div
+                    class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8"
+                >
+                    <h3
+                        class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4"
+                    >
+                        プロモコードでプレミアムへアップグレード
+                    </h3>
+
+                    {#if redeemSuccess}
+                        <div
+                            class="text-center p-4 bg-emerald-50 rounded-2xl border border-emerald-100"
+                        >
+                            <p class="text-emerald-600 font-bold">
+                                🎉 {redeemedPlanName}にアップグレードされました！
+                            </p>
+                        </div>
+                    {:else}
+                        {#if redeemError}
+                            <div
+                                class="mb-4 p-3 bg-red-50 text-red-600 text-sm font-bold rounded-xl border border-red-100"
+                            >
+                                {redeemError}
+                            </div>
+                        {/if}
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <input
+                                type="text"
+                                bind:value={promoCode}
+                                placeholder="招待コードを入力"
+                                class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono uppercase"
+                                disabled={isRedeeming}
+                            />
+                            <button
+                                onclick={redeemCode}
+                                disabled={isRedeeming || !promoCode.trim()}
+                                class="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto w-full flex items-center justify-center min-w-[8rem]"
+                            >
+                                {#if isRedeeming}
+                                    <div
+                                        class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"
+                                    ></div>
+                                {:else}
+                                    適用する
+                                {/if}
+                            </button>
+                        </div>
+                    {/if}
                 </div>
 
                 <p class="text-center text-xs text-slate-400 py-8">

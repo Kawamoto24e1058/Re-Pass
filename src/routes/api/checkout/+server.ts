@@ -22,7 +22,7 @@ export async function POST({ request, url }) {
     const stripe = new Stripe(secretKey);
 
     try {
-        const { priceId, userId: bodyUserId, email } = await request.json();
+        const { priceId, userId: bodyUserId, email, isUpgrade } = await request.json();
         const baseUrl = url.origin;
 
         // --- Auth Check (Prefer ID Token) ---
@@ -50,7 +50,8 @@ export async function POST({ request, url }) {
         const ULTIMATE_SEASON = PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON;
         const targetPlan = (priceId === ULTIMATE_MONTHLY || priceId === ULTIMATE_SEASON) ? 'ultimate' : 'premium';
 
-        const session = await stripe.checkout.sessions.create({
+        // Prepare session payload
+        const sessionPayload: Stripe.Checkout.SessionCreateParams = {
             payment_method_types: ['card'],
             currency: 'jpy',
             line_items: [
@@ -59,7 +60,7 @@ export async function POST({ request, url }) {
                     quantity: 1,
                 },
             ],
-            mode: mode as any,
+            mode: mode as Stripe.Checkout.SessionCreateParams.Mode,
             success_url: `${baseUrl}/settings/subscription?success=true`,
             cancel_url: `${baseUrl}/pricing`,
             customer_email: email,
@@ -67,9 +68,17 @@ export async function POST({ request, url }) {
             metadata: {
                 userId: userId,
                 plan: targetPlan,
-                priceId: priceId
+                priceId: priceId,
+                isUpgrade: isUpgrade ? "true" : "false" // Tag this session as an upgrade
             }
-        } as any);
+        };
+
+        // Example discount attachment for future scaling:
+        // if (isUpgrade && targetPlan === 'ultimate') {
+        //   sessionPayload.discounts = [{ coupon: 'YOUR_STRIPE_COUPON_ID' }];
+        // }
+
+        const session = await stripe.checkout.sessions.create(sessionPayload);
 
         return json({ url: session.url });
     } catch (error: any) {

@@ -52,6 +52,7 @@
     targetUrl,
     interimTranscript,
     stagedImages,
+    taskFile,
   } from "$lib/stores/sessionStore";
   import { recognitionService } from "$lib/services/recognitionService";
   import { page } from "$app/stores";
@@ -69,6 +70,10 @@
   let isDragOverMainTarget = $state(false);
   let selectedLectureIds = $state(new Set<string>());
   let movingLectureId = $state<string | null>(null);
+  let selectedDerivativeMode = $state<"note" | "thoughts" | "report" | null>(
+    null,
+  );
+  let derivativeTargetLength = $state(400);
 
   // User & Data State
   let user = $state<any>(null);
@@ -299,7 +304,7 @@
         body: JSON.stringify({
           text: $transcript || lecture.content,
           mode: mode,
-          length: targetLength,
+          length: derivativeTargetLength,
         }),
       });
 
@@ -597,13 +602,37 @@
 
     // Quota Checks
     const usageCount = userData?.usageCount || 0;
-    if (!isPremium && usageCount >= 5) {
+
+    // Free plan: MAX 1 total generate per day
+    const today = new Date().toISOString().split("T")[0];
+    const dailyCount = userData?.dailyUsageCount || 0; // Read from DB, assuming sync or fallback
+
+    if (!isPremium && usageCount >= 1) {
+      // Adjusted from 5 to 1 for Free Plan
       showUpgradeModal = true;
+      upgradeModalTitle = "無料プランの解析上限";
+      upgradeModalMessage =
+        "Freeプランでのノート解析は「1日1回」までとなります。プレミアムプランなら無制限にご利用いただけます。";
+      toastMessage = "無料枠(1回)を使い切りました";
       return;
     }
-    if (($videoFile || $audioFile || $targetUrl) && !isUltimate) {
+
+    // Premium plan MEDIA limits: MAX 3 media analyses per day
+    if (isPremium && !isUltimate && ($videoFile || $audioFile)) {
+      const mediaUsageCount = userData?.mediaUsageCount || 0;
+      if (mediaUsageCount >= 3) {
+        showUpgradeModal = true;
+        upgradeModalTitle = "メディア解析上限";
+        upgradeModalMessage =
+          "プレミアムプランのメディア解析は「1日3回」までとなります。アルティメットプランなら完全無制限にご利用いただけます。";
+        toastMessage = "本日のメディア解析上限(3回)に達しました";
+        return;
+      }
+    }
+
+    if (($videoFile || $audioFile) && !isPremium) {
       showUpgradeModal = true;
-      toastMessage = "動画・音声解析はアルティメットプラン限定です";
+      toastMessage = "メディア解析はプレミアムプラン以上の機能です";
       return;
     }
 
@@ -638,6 +667,13 @@
         }
       }
 
+      // Upload Task File
+      let taskUrl = "";
+      if ($taskFile) {
+        toastMessage = "課題画像をアップロード中...";
+        taskUrl = await uploadToStorage($taskFile);
+      }
+
       const formData = new FormData();
       if (audioUrl) formData.append("audioUrl", audioUrl);
       if (videoUrl) formData.append("videoUrl", videoUrl);
@@ -660,8 +696,10 @@
       formData.append("url", $targetUrl || "");
       formData.append("mode", $analysisMode);
       formData.append("plan", userData?.plan || "free");
-      // targetLength is passed implicitly or we should add it if API supports it
-      // formData.append("targetLength", $targetLength.toString());
+      if (taskUrl) {
+        formData.append("imageUrl", taskUrl);
+        formData.append("isTaskAssist", "true");
+      }
 
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -692,6 +730,7 @@
         content: $transcript,
         analysis: data.result,
         analyses: { [$analysisMode]: data.result },
+        isShared: $isShared ?? true,
         createdAt: serverTimestamp(),
         subjectId: selectedSubjectId || null,
         uid: user.uid,
@@ -814,11 +853,15 @@
       if (type === "txt") txtFile.set(input.files[0]);
       if (type === "audio") audioFile.set(input.files[0]);
       if (type === "video") {
+        // Changed mapping for the integrated MEDIA button
         videoFile.set(input.files[0]);
         extractAudio(input.files[0]);
       }
       if (type === "single_image") {
         imageFile.set(input.files[0]);
+      }
+      if (type === "task") {
+        taskFile.set(input.files[0]);
       }
       if (type === "staged_image") {
         // Append to existing staged images
@@ -1451,12 +1494,30 @@
     fileStore: File | null,
     accept: string,
     iconPath: string,
+    isDisabled: boolean = false,
   )}
     <button
-      onclick={() => document.getElementById(`file-input-${id}`)?.click()}
+      onclick={() => {
+        if (isDisabled) {
+          showUpgradeModal = true;
+          upgradeModalTitle = "プレミアムプラン限定";
+          upgradeModalMessage =
+            label === "MEDIA"
+              ? "動画や音声の解析はプレミアムプラン以上の機能です。"
+              : label === "📝 課題・問題"
+                ? "課題アシスト機能はプレミアムプラン以上の機能です。"
+                : "この機能はプレミアムプラン限定です。";
+          return;
+        }
+        document.getElementById(`file-input-${id}`)?.click();
+      }}
       class="relative group flex items-center gap-3 p-3 w-full h-20 rounded-xl border-2 transition-all duration-200 {fileStore
         ? 'bg-white border-indigo-200 ring-1 ring-indigo-200'
-        : 'bg-slate-50 border-gray-200 hover:bg-gray-100'} hover:brightness-95 active:scale-[0.98]"
+        : isDisabled
+          ? 'bg-slate-50 border-gray-100 opacity-60'
+          : 'bg-slate-50 border-gray-200 hover:bg-gray-100'} {!isDisabled
+        ? 'hover:brightness-95 active:scale-[0.98]'
+        : ''}"
     >
       <!-- Icon Container -->
       <div
@@ -1526,7 +1587,8 @@
               | "staged_image"
               | "txt"
               | "audio"
-              | "video",
+              | "video"
+              | "task",
           )}
       />
     </button>
@@ -1804,9 +1866,9 @@
             </p>
             <div class="flex flex-wrap justify-center gap-4">
               <button
-                onclick={() => handleDerivativeGenerate("note")}
+                onclick={() => (selectedDerivativeMode = "note")}
                 class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-                {$analysisMode === 'note'
+                {selectedDerivativeMode === 'note'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
                   : lectureAnalyses['note']
                     ? 'bg-white border border-indigo-200 text-indigo-600'
@@ -1815,9 +1877,9 @@
                 {lectureAnalyses["note"] ? "✅ " : ""}ノート形式
               </button>
               <button
-                onclick={() => handleDerivativeGenerate("thoughts")}
+                onclick={() => (selectedDerivativeMode = "thoughts")}
                 class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-                {$analysisMode === 'thoughts'
+                {selectedDerivativeMode === 'thoughts'
                   ? 'bg-amber-500 text-white shadow-lg shadow-amber-100'
                   : lectureAnalyses['thoughts']
                     ? 'bg-white border border-amber-200 text-amber-600'
@@ -1826,9 +1888,9 @@
                 {lectureAnalyses["thoughts"] ? "✅ " : ""}感想文形式
               </button>
               <button
-                onclick={() => handleDerivativeGenerate("report")}
+                onclick={() => (selectedDerivativeMode = "report")}
                 class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-                {$analysisMode === 'report'
+                {selectedDerivativeMode === 'report'
                   ? 'bg-slate-800 text-white shadow-lg shadow-slate-200'
                   : lectureAnalyses['report']
                     ? 'bg-white border border-slate-400 text-slate-800'
@@ -1837,6 +1899,87 @@
                 {lectureAnalyses["report"] ? "✅ " : ""}レポート形式
               </button>
             </div>
+
+            <!-- Derivative Length Slider -->
+            {#if selectedDerivativeMode === "thoughts" || selectedDerivativeMode === "report"}
+              <div
+                class="mt-8 max-w-lg mx-auto bg-slate-50 p-6 rounded-2xl border border-slate-200 transition-all"
+              >
+                <div class="flex justify-between items-end mb-4">
+                  <span
+                    class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
+                    >目標文字数</span
+                  >
+                  <span
+                    class="text-xs font-bold text-slate-400 bg-white px-2 py-1 rounded-lg shadow-sm border border-slate-100"
+                  >
+                    {Math.round(derivativeTargetLength / 400)}枚分
+                  </span>
+                </div>
+
+                <div class="relative w-full pt-6 pb-2">
+                  <span
+                    class="absolute -top-3 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
+                    style="left: {((derivativeTargetLength - 100) / 3900) *
+                      100}%"
+                  >
+                    {derivativeTargetLength}文字
+                  </span>
+                  <input
+                    type="range"
+                    min="100"
+                    max="4000"
+                    step="50"
+                    bind:value={derivativeTargetLength}
+                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 relative z-10 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  />
+
+                  <div
+                    class="relative w-full mt-2 text-xs text-slate-400 font-bold"
+                  >
+                    <span
+                      class="absolute"
+                      style="left: 0%; transform: translateX(0);">100</span
+                    >
+                    <span
+                      class="absolute"
+                      style="left: 10.25%; transform: translateX(-50%);"
+                      >500</span
+                    >
+                    <span
+                      class="absolute"
+                      style="left: 48.71%; transform: translateX(-50%);"
+                      >2000</span
+                    >
+                    <span
+                      class="absolute"
+                      style="right: 0%; transform: translateX(0);">4000</span
+                    >
+                  </div>
+                </div>
+              </div>
+            {/if}
+
+            {#if selectedDerivativeMode}
+              <div class="mt-8 flex justify-center">
+                <button
+                  onclick={() => {
+                    handleDerivativeGenerate(selectedDerivativeMode!);
+                  }}
+                  disabled={derivativeAnalyzing}
+                  class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {#if derivativeAnalyzing}
+                    <div
+                      class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+                    ></div>
+                    生成中...
+                  {:else}
+                    <span>🚀 選択した形式で生成する</span>
+                  {/if}
+                </button>
+              </div>
+            {/if}
           </div>
         {/if}
       </div>
@@ -1983,7 +2126,17 @@
                       </div>
 
                       <button
-                        onclick={generateFinalSummary}
+                        onclick={(e) => {
+                          if (!isUltimate) {
+                            e.preventDefault();
+                            upgradeModalTitle = "アルティメットプラン限定機能";
+                            upgradeModalMessage =
+                              "「試験対策ノート生成」機能はアルティメットプラン専用です。複数の講義をまたいだ高度な要約を作成するには、アップグレードを行ってください。";
+                            showUltimateModal = true;
+                            return;
+                          }
+                          generateFinalSummary();
+                        }}
                         disabled={analyzingFinal}
                         class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
@@ -2467,6 +2620,7 @@
                                 current.filter((_, i) => i !== idx),
                               );
                             }}
+                            aria-label="画像を削除"
                             class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
                           >
                             <svg
@@ -2510,19 +2664,21 @@
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {@render FileInputCard(
                       "video",
-                      "VIDEO",
+                      "MEDIA",
                       "text-purple-400",
-                      $videoFile,
-                      "video/*",
+                      $videoFile || $audioFile,
+                      "video/*,audio/*",
                       "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z", // PlayCircle
+                      !isPremium,
                     )}
                     {@render FileInputCard(
-                      "audio",
-                      "AUDIO",
+                      "task",
+                      "📝 課題・問題",
                       "text-pink-400",
-                      $audioFile,
-                      "audio/*",
-                      "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z", // Mic
+                      $taskFile,
+                      "image/*",
+                      "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", // Document text
+                      !isPremium,
                     )}
                   </div>
                 </div>
@@ -2639,32 +2795,51 @@
                       >
                     </div>
                   {:else}
-                    <button
-                      onclick={handleAnalyze}
-                      disabled={!$courseId &&
-                        !$isRecording &&
-                        !$pdfFile &&
-                        !$imageFile &&
-                        !$txtFile &&
-                        !$videoFile &&
-                        !$targetUrl &&
-                        !$transcript}
-                      class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
-                    >
-                      <span class="text-lg">解析を開始</span>
-                      <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        ><path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M14 5l7 7m0 0l-7 7m7-7H3"
-                        /></svg
+                    <div class="flex flex-col items-center gap-4">
+                      <button
+                        onclick={handleAnalyze}
+                        disabled={!$courseId &&
+                          !$isRecording &&
+                          !$pdfFile &&
+                          !$imageFile &&
+                          !$txtFile &&
+                          !$videoFile &&
+                          !$targetUrl &&
+                          !$transcript}
+                        class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
                       >
-                    </button>
+                        <span class="text-lg">解析を開始</span>
+                        <svg
+                          class="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"
+                          /></svg
+                        >
+                      </button>
+
+                      <!-- isShared Toggle Switch -->
+                      <label
+                        class="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100 transition-all hover:border-indigo-100"
+                      >
+                        <input
+                          type="checkbox"
+                          bind:checked={$isShared}
+                          class="sr-only peer"
+                        />
+                        <div
+                          class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500 relative"
+                        ></div>
+                        <span class="text-sm font-bold text-slate-600"
+                          >このノートをみんなに公開する</span
+                        >
+                      </label>
+                    </div>
                   {/if}
                 </label>
               </div>

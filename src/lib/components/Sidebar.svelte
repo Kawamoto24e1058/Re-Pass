@@ -25,6 +25,7 @@
         expandedSubjects,
         isSidebarOpen,
     } from "$lib/stores";
+    import UpgradeModal from "$lib/components/UpgradeModal.svelte";
 
     // Props
     let props = $props<{
@@ -57,6 +58,12 @@
     let newSubjectName = $state("");
     let newSubjectColor = $state("bg-indigo-500");
     let flashTargetId = $state<string | null>(null);
+
+    // Upgrade Modal State
+    let showUpgradeModal = $state(false);
+    let upgradeModalTitle = $state("");
+    let upgradeModalMessage = $state("");
+    let isUltimate = $derived(userData?.plan === "ultimate");
 
     function toggleSubject(id: string) {
         expandedSubjects.update((s) => {
@@ -617,7 +624,17 @@
                 <!-- Search Link -->
                 <a
                     href="/search"
-                    onclick={() => isSidebarOpen.set(false)}
+                    onclick={(e) => {
+                        if (!isUltimate) {
+                            e.preventDefault();
+                            showUpgradeModal = true;
+                            upgradeModalTitle = "アルティメットプラン限定";
+                            upgradeModalMessage =
+                                "「みんなのノートを検索」機能はアルティメットプラン以上の限定機能です。アップグレードして世界中の最高のノートにアクセスしましょう。";
+                            return;
+                        }
+                        isSidebarOpen.set(false);
+                    }}
                     class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
                 >
                     <div
@@ -1011,5 +1028,17 @@
                 </button>
             </div>
         </div>
+    </div>
+{/if}
+
+{#if showUpgradeModal}
+    <div
+        class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-auto"
+    >
+        <UpgradeModal
+            title={upgradeModalTitle}
+            message={upgradeModalMessage}
+            onClose={() => (showUpgradeModal = false)}
+        />
     </div>
 {/if}

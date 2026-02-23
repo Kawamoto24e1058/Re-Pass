@@ -9,16 +9,77 @@
         message = "この機能を利用するにはプランのアップグレードが必要です。",
         features = [
             {
-                title: "高度な解析モード",
-                desc: "レポートや感想文形式での書き出し",
+                title: "アプリ内の全機能が使い放題",
+                desc: "ノート生成や課題アシストが無制限になります",
             },
-            { title: "上限の拡張", desc: "文字数制限や回数制限の解除" },
-            { title: "優先サポート", desc: "不具合対応や要望の優先受領" },
+            {
+                title: "動画・音声ファイルの完全解析",
+                desc: "音声・動画等の録画講義の無制限解析が可能に",
+            },
+            {
+                title: "講義ノート検索・試験対策",
+                desc: "みんなのノートが見放題、バインダーでまとめ機能が解禁",
+            },
         ],
     } = $props();
+    import { auth } from "$lib/firebase";
+    import { userProfile } from "$lib/stores";
+
+    let isPremiumUser = $derived($userProfile?.plan === "premium");
+
+    let promoCode = $state("");
+    let isRedeeming = $state(false);
+    let redeemError = $state<string | null>(null);
+    let redeemSuccess = $state(false);
+    let redeemedPlanName = $state("");
 
     function handleUpgrade() {
         goto("/pricing");
+    }
+
+    async function redeemCode() {
+        if (!promoCode.trim()) return;
+        isRedeeming = true;
+        redeemError = null;
+
+        try {
+            const user = auth.currentUser;
+            if (!user) {
+                redeemError = "ログインが必要です";
+                return;
+            }
+            const token = await user.getIdToken();
+            const res = await fetch("/api/redeem-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ code: promoCode }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "適用に失敗しました");
+            }
+
+            const rawPlan = data.targetPlan?.toLowerCase() || "";
+            redeemedPlanName =
+                rawPlan === "ultimate"
+                    ? "アルティメットプラン"
+                    : "プレミアムプラン";
+
+            redeemSuccess = true;
+            // 短時間待ってから閉じてリロード
+            setTimeout(() => {
+                onClose();
+                window.location.reload();
+            }, 2000);
+        } catch (e: any) {
+            redeemError = e.message;
+        } finally {
+            isRedeeming = false;
+        }
     }
 
     $effect(() => {
@@ -124,7 +185,11 @@
                         onclick={handleUpgrade}
                         class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 text-white font-bold text-base shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                     >
-                        <span>プランを確認する</span>
+                        <span
+                            >{isPremiumUser
+                                ? "お得にアップグレードする"
+                                : "プランを確認する"}</span
+                        >
                         <svg
                             class="w-5 h-5"
                             fill="none"
@@ -145,6 +210,55 @@
                     >
                         閉じる
                     </button>
+
+                    <!-- Promo Code Section -->
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        {#if redeemSuccess}
+                            <div
+                                class="text-center p-3 bg-emerald-50 rounded-xl border border-emerald-100"
+                            >
+                                <p class="text-emerald-600 font-bold text-sm">
+                                    🎉 {redeemedPlanName}にアップグレードされました！
+                                </p>
+                                <p class="text-xs text-emerald-500 mt-1">
+                                    画面を更新します...
+                                </p>
+                            </div>
+                        {:else}
+                            <p
+                                class="text-xs font-bold text-slate-500 mb-2 flex items-center justify-between"
+                            >
+                                プロモコードでプレミアムへアップグレード
+                                {#if redeemError}
+                                    <span class="text-red-500 font-medium"
+                                        >{redeemError}</span
+                                    >
+                                {/if}
+                            </p>
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    bind:value={promoCode}
+                                    placeholder="コードを入力..."
+                                    class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono uppercase"
+                                    disabled={isRedeeming}
+                                />
+                                <button
+                                    onclick={redeemCode}
+                                    disabled={isRedeeming || !promoCode.trim()}
+                                    class="px-4 py-2 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[5rem]"
+                                >
+                                    {#if isRedeeming}
+                                        <div
+                                            class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"
+                                        ></div>
+                                    {:else}
+                                        適用
+                                    {/if}
+                                </button>
+                            </div>
+                        {/if}
+                    </div>
                 </div>
             </div>
         </div>
