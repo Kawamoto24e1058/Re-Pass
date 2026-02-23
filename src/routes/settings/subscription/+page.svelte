@@ -613,6 +613,18 @@
                                     </li>
                                 {/if}
                             </ul>
+
+                            {#if planLevel === "ULTIMATE"}
+                                <div
+                                    class="mt-6 p-3 bg-slate-50 rounded-xl border border-slate-100 italic"
+                                >
+                                    <p
+                                        class="text-[10px] text-slate-400 leading-relaxed"
+                                    >
+                                        ※Ultimateプランのメディア解析は原則無制限ですが、システム保護のため、常識の範囲を大きく超える機械的な大量アップロードが検知された場合、一時的に制限をかける場合があります。
+                                    </p>
+                                </div>
+                            {/if}
                         </div>
 
                         {#if subDetails?.subscribed}

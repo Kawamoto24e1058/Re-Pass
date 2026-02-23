@@ -1982,10 +1982,14 @@
 
   {#if user}
     <UpgradeModal
-      isOpen={showUpgradeModal}
-      onClose={() => (showUpgradeModal = false)}
+      isOpen={showUpgradeModal || showUltimateModal}
+      onClose={() => {
+        showUpgradeModal = false;
+        showUltimateModal = false;
+      }}
       title={upgradeModalTitle}
       message={upgradeModalMessage}
+      billingCycle="monthly"
     />
     <EnrollModal
       isOpen={$isEnrollModalOpen}

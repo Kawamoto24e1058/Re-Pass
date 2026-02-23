@@ -69,14 +69,16 @@ export async function POST({ request, url }) {
                 userId: userId,
                 plan: targetPlan,
                 priceId: priceId,
-                isUpgrade: isUpgrade ? "true" : "false" // Tag this session as an upgrade
+                isUpgrade: isUpgrade ? "true" : "false"
             }
         };
 
-        // Example discount attachment for future scaling:
-        // if (isUpgrade && targetPlan === 'ultimate') {
-        //   sessionPayload.discounts = [{ coupon: 'YOUR_STRIPE_COUPON_ID' }];
-        // }
+        // プレミアムからのアップグレードの場合、ここで日割り計算(proration_behavior)や割引を適用する
+        // 将来的にStripeの既存サブスクリプションを変更する場合は、sessionPayloadの構成を調整します
+        if (isUpgrade && targetPlan === 'ultimate') {
+            console.log(`[Checkout] Upgrade requested for user ${userId} to Ultimate`);
+            // Example: sessionPayload.subscription_data = { proration_behavior: 'always_invoice' };
+        }
 
         const session = await stripe.checkout.sessions.create(sessionPayload);
 

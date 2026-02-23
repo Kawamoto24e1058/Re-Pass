@@ -21,6 +21,7 @@
                 desc: "みんなのノートが見放題、バインダーでまとめ機能が解禁",
             },
         ],
+        billingCycle = "monthly",
     } = $props();
     import { auth } from "$lib/firebase";
     import { userProfile } from "$lib/stores";
@@ -179,6 +180,34 @@
                         </li>
                     {/each}
                 </ul>
+
+                {#if isPremiumUser}
+                    <div
+                        class="mb-6 p-4 bg-rose-50 rounded-2xl border border-rose-100 text-center"
+                    >
+                        {#if billingCycle === "monthly"}
+                            <p class="text-xs text-slate-500 line-through mb-1">
+                                通常価格 ¥1,480
+                            </p>
+                            <p class="text-red-500 font-bold text-lg">
+                                プレミアム限定：＋¥700/月で、動画解析を無制限に。ノート検索も解放。
+                            </p>
+                        {:else}
+                            <p class="text-xs text-slate-500 line-through mb-1">
+                                通常価格 ¥4,480
+                            </p>
+                            <p class="text-red-500 font-bold text-lg">
+                                プレミアム限定：＋¥2,500で、今学期の動画が無制限に。試験対策もフル活用。
+                            </p>
+                        {/if}
+                    </div>
+                {/if}
+
+                <div
+                    class="text-[10px] text-slate-400 mb-6 leading-relaxed opacity-80 bg-slate-50 p-3 rounded-xl border border-slate-100"
+                >
+                    ※Ultimateプランのメディア解析は原則無制限ですが、システム保護のため、常識の範囲を大きく超える機械的な大量アップロードが検知された場合、一時的に制限をかける場合があります。
+                </div>
 
                 <div class="flex flex-col gap-3">
                     <button

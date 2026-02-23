@@ -919,4 +919,5 @@
     onClose={() => (showUltimateModal = false)}
     title={upgradeModalTitle}
     message={upgradeModalMessage}
+    billingCycle="monthly"
 />

@@ -324,7 +324,7 @@
                     class="text-4xl font-black text-slate-900 mb-2 transition-all duration-300"
                 >
                     {#if billingCycle === "monthly"}
-                        ¥980<span
+                        ¥780<span
                             class="text-sm text-slate-400 font-medium ml-1"
                             >/月</span
                         >
@@ -445,40 +445,26 @@
                             <div
                                 class="text-sm text-slate-400 line-through mb-1"
                             >
-                                通常価格 ¥1,180/月
+                                通常価格 ¥1,480/月
                             </div>
-                            <div class="text-rose-400">
-                                ¥200<span
-                                    class="text-sm text-slate-400 font-medium ml-1"
-                                    >/月</span
-                                >
-                            </div>
-                            <div
-                                class="text-[10px] text-rose-300 font-bold mt-1"
-                            >
-                                プレミアムからのアップグレード特別価格
+                            <div class="text-red-500 font-bold text-lg">
+                                プレミアム限定：＋¥700/月で、動画解析を無制限に。ノート検索も解放。
                             </div>
                         {:else}
-                            ¥1,180<span
+                            ¥1,480<span
                                 class="text-sm text-slate-400 font-medium ml-1"
                                 >/月</span
                             >
                         {/if}
                     {:else if isPremiumUser}
                         <div class="text-sm text-slate-400 line-through mb-1">
-                            通常価格 ¥2,280/4ヶ月
+                            通常価格 ¥4,480/4ヶ月
                         </div>
-                        <div class="text-rose-400">
-                            ¥300<span
-                                class="text-sm text-slate-400 font-medium ml-1"
-                                >/4ヶ月</span
-                            >
-                        </div>
-                        <div class="text-[10px] text-rose-300 font-bold mt-1">
-                            プレミアムからのアップグレード特別価格
+                        <div class="text-red-500 font-bold text-lg">
+                            プレミアム限定：＋¥2,500で、今学期の動画が無制限に。試験対策もフル活用。
                         </div>
                     {:else}
-                        ¥2,280<span
+                        ¥4,480<span
                             class="text-sm text-slate-400 font-medium ml-1"
                             >/4ヶ月</span
                         >
@@ -603,6 +589,12 @@
                     >
                 </li>
             </ul>
+
+            <div
+                class="text-[10px] text-slate-500 mt-4 leading-relaxed opacity-60 px-2 mb-4"
+            >
+                ※Ultimateプランのメディア解析は原則無制限ですが、システム保護のため、常識の範囲を大きく超える機械的な大量アップロードが検知された場合、一時的に制限をかける場合があります。
+            </div>
 
             <button
                 onclick={() =>
