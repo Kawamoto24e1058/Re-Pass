@@ -292,19 +292,20 @@
       const lecture = $lectures.find((l) => l.id === currentLectureId);
       if (!lecture) throw new Error("Lecture not found");
 
-      // Ideally call a shared service or API
       const idToken = await user.getIdToken();
+
+      const formData = new FormData();
+      formData.append("mode", mode);
+      formData.append("targetLength", derivativeTargetLength.toString());
+      formData.append("documentText", $transcript || lecture.content || "");
+      formData.append("plan", userData?.plan || "free");
+
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({
-          text: $transcript || lecture.content,
-          mode: mode,
-          length: derivativeTargetLength,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
