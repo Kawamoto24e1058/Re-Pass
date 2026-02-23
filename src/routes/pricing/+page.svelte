@@ -29,7 +29,8 @@
     import { Browser } from "@capacitor/browser";
     import { Capacitor } from "@capacitor/core";
 
-    let isPremiumUser = $derived($userProfile?.plan === "premium");
+    let currentPlan = $derived($userProfile?.plan || "free");
+    let isPremiumUser = $derived(currentPlan === "premium");
 
     async function handlePurchase(
         priceId: string,
@@ -295,9 +296,13 @@
 
             <button
                 onclick={selectFreePlan}
-                class="w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200 transition-all"
+                disabled={currentPlan === "free"}
+                class="w-full py-3 rounded-xl transition-all font-bold text-sm {currentPlan ===
+                'free'
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
             >
-                無料で始める
+                {currentPlan === "free" ? "加入中" : "無料で始める"}
             </button>
         </div>
 
@@ -329,7 +334,7 @@
                             >/月</span
                         >
                     {:else}
-                        ¥1,980<span
+                        ¥2,480<span
                             class="text-sm text-slate-400 font-medium ml-1"
                             >/4ヶ月</span
                         >
@@ -393,10 +398,19 @@
                             ? "Premium_Monthly"
                             : "Premium_Season",
                     )}
-                disabled={isLoading !== ""}
-                class="w-full py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all disabled:opacity-50"
+                disabled={isLoading !== "" || currentPlan === "premium"}
+                class="w-full py-3 rounded-xl transition-all font-bold text-sm {currentPlan ===
+                'premium'
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-900 text-white hover:bg-slate-800'} disabled:opacity-50"
             >
-                {#if isLoading === "Premium"}処理中...{:else}PREMIUMを選択{/if}
+                {#if isLoading === "Premium"}
+                    処理中...
+                {:else if currentPlan === "premium"}
+                    加入中
+                {:else}
+                    PREMIUMを選択
+                {/if}
             </button>
             <p
                 class="mt-4 text-[10px] text-slate-400 text-center leading-relaxed"
@@ -458,13 +472,13 @@
                         {/if}
                     {:else if isPremiumUser}
                         <div class="text-sm text-slate-400 line-through mb-1">
-                            通常価格 ¥4,480/4ヶ月
+                            通常価格 ¥4,980/4ヶ月
                         </div>
                         <div class="text-red-500 font-bold text-lg">
                             プレミアム限定：＋¥2,500で、今学期の動画が無制限に。試験対策もフル活用。
                         </div>
                     {:else}
-                        ¥4,480<span
+                        ¥4,980<span
                             class="text-sm text-slate-400 font-medium ml-1"
                             >/4ヶ月</span
                         >
@@ -607,11 +621,16 @@
                             : "Ultimate_Season",
                         isPremiumUser,
                     )}
-                disabled={isLoading !== ""}
-                class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 text-white font-bold text-sm hover:scale-[1.02] transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+                disabled={isLoading !== "" || currentPlan === "ultimate"}
+                class="w-full py-4 rounded-xl transition-all shadow-lg font-bold text-sm {currentPlan ===
+                'ultimate'
+                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-indigo-600 to-pink-600 text-white hover:scale-[1.02] shadow-indigo-600/20'} disabled:opacity-50"
             >
                 {#if isLoading === "Ultimate_Monthy" || isLoading === "Ultimate_Season"}
                     処理中...
+                {:else if currentPlan === "ultimate"}
+                    加入中
                 {:else if isPremiumUser}
                     お得にアップグレードする
                 {:else}

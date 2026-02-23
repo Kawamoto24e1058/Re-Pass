@@ -88,7 +88,20 @@
                             販売価格
                         </div>
                         <div class="w-2/3 text-slate-600 font-medium">
-                            各プランの購入ページに表示された価格（消費税込み）
+                            <ul class="list-none p-0 m-0 space-y-1">
+                                <li>・Free: ¥0</li>
+                                <li>
+                                    ・Premium: ¥780/月 または
+                                    ¥2,480/4ヶ月（シーズンパス）
+                                </li>
+                                <li>
+                                    ・Ultimate: ¥1,480/月 または
+                                    ¥4,980/4ヶ月（シーズンパス）
+                                </li>
+                            </ul>
+                            <p class="mt-2 text-xs text-slate-400">
+                                ※表示価格はすべて消費税込みです。
+                            </p>
                         </div>
                     </div>
                     <div class="flex border-b border-slate-100 py-6">
@@ -128,14 +141,14 @@
                             返品・キャンセルについて
                         </div>
                         <div class="w-2/3 text-slate-600 font-medium">
-                            デジタルコンテンツの性質上、決済完了後の返品・返金・キャンセルには応じられません。解約は設定画面よりいつでも可能です（次回更新が停止されます）。
+                            サービスの性質上，購入後のキャンセルや返金は原則受け付けません。月の途中やシーズンパス期間中の解約でも，日割り計算による返金は行わず，次回の更新日（有効期限）まで引き続き利用可能です。
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-20 pt-10 border-t border-slate-100 text-center">
                     <p class="text-sm text-slate-400">
-                        最終更新日：2026年2月12日
+                        最終更新日：2026年2月23日
                     </p>
                 </div>
             </div>

@@ -130,7 +130,7 @@
                                     【重要】返金不可について
                                 </p>
                                 <p>
-                                    本サービスはデジタルコンテンツおよびサービスの性質上，決済完了後のユーザー都合によるキャンセル・返金には一切応じられません。サブスクリプションの解約は次回の更新を停止するものであり，既に支払われた期間分の料金の返金は行わないものとします。プラン購入前にサービス内容を十分にご確認ください。
+                                    サービスの性質上，購入後のキャンセルや返金は原則受け付けません。月の途中やシーズンパス期間中の解約でも，日割り計算による返金は行わず，次回の更新日（有効期限）まで引き続き利用可能です。
                                 </p>
                             </div>
                         </div>
@@ -160,8 +160,11 @@
                                 </li>
                                 <li>
                                     <span class="font-bold underline"
-                                        >自己のアカウントを第三者に譲渡，貸与，または共有する行為</span
+                                        >自己のアカウントを第三者に譲渡，貸与，または共有する行為（複数人での使い回しを含みます）</span
                                     >
+                                </li>
+                                <li>
+                                    本サービスを利用して，所属する教育機関の規則に反する不正行為（AIの出力をそのまま自身の成果物として提出するなど）を行う行為
                                 </li>
                                 <li>
                                     当方のサーバーまたはネットワークの機能を破壊したり，妨害したりする行為
@@ -171,28 +174,126 @@
                                 </li>
                             </ul>
                         </div>
-                        <section>
-                            <h2
-                                class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3"
+                    </section>
+
+                    <section>
+                        <h2
+                            class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3"
+                        >
+                            <span
+                                class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm"
+                                >06</span
                             >
-                                <span
-                                    class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm"
-                                    >06</span
-                                >
-                                未成年者の利用
-                            </h2>
-                            <div class="pl-11 text-slate-600 leading-relaxed">
-                                <p>
-                                    ユーザーが未成年者である場合は，親権者など法定代理人の同意を得た上で本サービスを利用するものとします。本規約に同意した時点で，法定代理人の同意を得ているものとみなします。
-                                </p>
-                            </div>
-                        </section>
+                            未成年者の利用
+                        </h2>
+                        <div class="pl-11 text-slate-600 leading-relaxed">
+                            <p>
+                                ユーザーが未成年者である場合は，親権者など法定代理人の同意を得た上で本サービスを利用するものとします。本規約に同意した時点で，法定代理人の同意を得ているものとみなします。
+                            </p>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2
+                            class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3"
+                        >
+                            <span
+                                class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm"
+                                >07</span
+                            >
+                            知的財産権とユーザーの責任
+                        </h2>
+                        <div
+                            class="pl-11 text-slate-600 leading-relaxed space-y-4"
+                        >
+                            <p>
+                                ユーザーが本サービスにアップロード，共有，または作成する資料（講義スライド，過去問，ノート等）に関連して，著作権侵害を含む第三者の知的財産権等の権利侵害が生じた場合，ユーザーは自己の責任と費用で解決するものとし，当方は一切の責任を負いません。
+                            </p>
+                            <p>
+                                当方は，知的財産権侵害の疑いがある等，相当な理由があると判断した場合，ユーザーに通知することなく，当該データの削除または非公開化を行うことができるものとします。
+                            </p>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2
+                            class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3"
+                        >
+                            <span
+                                class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm"
+                                >08</span
+                            >
+                            AI機能に関する免責
+                        </h2>
+                        <div
+                            class="pl-11 text-slate-600 leading-relaxed space-y-4"
+                        >
+                            <p>
+                                生成AIが提供する出力内容（課題アシスト，要約，試験対策情報等）は統計的な確率に基づいて生成されるものであり，その正確性，完全性，有用性を保証するものではありません。
+                            </p>
+                            <p>
+                                本サービスは学習を支援するツールであり，特定の単位取得，成績向上，または試験の合格を約束または保証するものではありません。最終的な事実確認や学習への利用はユーザーの自己責任で行うものとします。
+                            </p>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2
+                            class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3"
+                        >
+                            <span
+                                class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm"
+                                >09</span
+                            >
+                            不正行為（アカデミック・ディスオネスト）の禁止
+                        </h2>
+                        <div
+                            class="pl-11 text-slate-600 leading-relaxed space-y-4"
+                        >
+                            <p>
+                                ユーザーは，所属する大学その他の教育機関の規則・ポリシーを遵守する責任を負います。AIの生成物をそのまま自身の成果物として提出する等の，教育機関により禁止される不正行為に本サービスを利用することを禁じます。
+                            </p>
+                            <p>
+                                本サービスの利用の結果，ユーザーが所属機関から停学，退学その他の処分を受けた場合でも，当方は一切関与せず，何らの補償も行わないものとします。
+                            </p>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2
+                            class="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3"
+                        >
+                            <span
+                                class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm"
+                                >10</span
+                            >
+                            サービスの停止・中断の免責
+                        </h2>
+                        <div
+                            class="pl-11 text-slate-600 leading-relaxed space-y-4"
+                        >
+                            <p>
+                                当方は，以下のいずれかの事由があると判断した場合，ユーザーに事前に通知することなく本サービスの全部または一部の提供を停止または中断することができるものとします。
+                            </p>
+                            <ul class="list-disc space-y-2 ml-4">
+                                <li>システムの保守点検または更新を行う場合</li>
+                                <li>
+                                    AI提供企業のAPI障害，サーバー障害，通信回線等の停止が生じた場合
+                                </li>
+                                <li>
+                                    天災地変等の不可抗力または不慮の事故によりサービスの提供が困難な場合
+                                </li>
+                            </ul>
+                            <p>
+                                当方は，本サービスの提供の停止または中断により，ユーザーまたは第三者が被ったいかなる不利益（試験準備の遅延，機会の損失等）または損害についても，理由を問わず一切の責任を負わないものとします。
+                            </p>
+                        </div>
                     </section>
                 </div>
 
                 <div class="mt-20 pt-10 border-t border-slate-100 text-center">
                     <p class="text-sm text-slate-400">
-                        最終更新日：2026年2月12日
+                        最終更新日：2026年2月23日
                     </p>
                 </div>
             </div>

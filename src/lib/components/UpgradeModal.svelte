@@ -194,7 +194,7 @@
                             </p>
                         {:else}
                             <p class="text-xs text-slate-500 line-through mb-1">
-                                通常価格 ¥4,480
+                                通常価格 ¥4,980
                             </p>
                             <p class="text-red-500 font-bold text-lg">
                                 プレミアム限定：＋¥2,500で、今学期の動画が無制限に。試験対策もフル活用。
