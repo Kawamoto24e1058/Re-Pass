@@ -313,7 +313,11 @@
       }
 
       const data = await response.json();
-      const newResult = data.analysis;
+      const newResult = data.result;
+
+      if (!newResult) {
+        throw new Error("Invalid response format from server");
+      }
 
       // Update store
       lectureAnalyses[mode] = newResult;
