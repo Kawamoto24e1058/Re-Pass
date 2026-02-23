@@ -831,12 +831,3 @@
     title={upgradeModalTitle}
     message={upgradeModalMessage}
 />
-
-<!-- Debug Footer (Temporary for verification) -->
-<div
-    class="fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-2 text-[10px] font-mono flex gap-4 z-[9999] opacity-80 pointer-events-none"
->
-    <span>DB Plan: {userData?.plan || "N/A"}</span>
-    <span>isUltimate: {isUltimate}</span>
-    <span class="text-slate-400 opacity-50 ml-auto">Debug Mode ON</span>
-</div>

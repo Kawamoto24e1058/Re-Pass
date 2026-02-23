@@ -14,7 +14,12 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/stores";
 	import Sidebar from "$lib/components/Sidebar.svelte";
-	import { subjects, lectures, isSidebarOpen } from "$lib/stores";
+	import {
+		subjects,
+		lectures,
+		isSidebarOpen,
+		isEnrollModalOpen,
+	} from "$lib/stores";
 	import {
 		user as userStore,
 		userProfile,
@@ -226,7 +231,7 @@
 >
 	<!-- Mobile Header (Global) -->
 	<header
-		class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
+		class="lg:hidden fixed top-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white/80 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
 	>
 		<button
 			onclick={toggleSidebar}
@@ -299,6 +304,7 @@
 				onSelectSubject={(subjectId: string | null) => {
 					isSidebarOpen.set(false);
 				}}
+				onOpenEnrollModal={() => isEnrollModalOpen.set(true)}
 				onSignOut={async () => {
 					await auth.signOut();
 					goto("/login");
