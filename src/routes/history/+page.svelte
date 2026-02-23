@@ -12,11 +12,14 @@
     } from "firebase/firestore";
     import { user as userStore } from "$lib/userStore";
     import { goto } from "$app/navigation";
+    import { page } from "$app/stores";
     import { fade, fly } from "svelte/transition";
 
     let lectures = $state<any[]>([]);
     let loading = $state(true);
     let user = $state<any>(null);
+    let pageTitle = $state("未分類の履歴");
+    let pageDesc = $state("科目バインダーに整理されていない講義の一覧です。");
 
     // Subscribe to user store
     $effect(() => {
@@ -26,16 +29,53 @@
     onMount(() => {
         const unsubscribeAuth = auth.onAuthStateChanged(async (currentUser) => {
             if (currentUser) {
-                // Fetch Uncategorized Lectures (subjectId == null)
-                const q = query(
-                    collection(db, `users/${currentUser.uid}/lectures`),
-                    // where("subjectId", "==", null), // Firestore equality for null can be tricky, often just fetching all root collection items that are NOT in a subcollection is easier if structure allows.
-                    // In this app's structure:
-                    // Root lectures are `users/{uid}/lectures` -> These are uncategorized/inbox.
-                    // Subject lectures are `users/{uid}/subjects/{sid}/lectures`.
-                    // So querying the root `lectures` collection IS querying uncategorized ones.
-                    orderBy("createdAt", "desc"),
-                );
+                // Read parameters
+                const courseIdParam = $page.url.searchParams.get("courseId");
+                const courseNameParam =
+                    $page.url.searchParams.get("courseName");
+
+                let q;
+
+                if (courseIdParam === "null") {
+                    // Uncategorized mode
+                    pageTitle = "未分類の履歴";
+                    pageDesc =
+                        "どの講義（バインダー）にも属していないノートの履歴です。";
+                    q = query(
+                        collection(db, `users/${currentUser.uid}/lectures`),
+                        where("courseName", "==", "未分類"),
+                        orderBy("createdAt", "desc"),
+                    );
+                } else if (courseIdParam) {
+                    // Filter by specific course ID
+                    pageTitle = courseNameParam
+                        ? `${courseNameParam} のノート`
+                        : "講義の履歴";
+                    pageDesc =
+                        "この講義バインダーに保存されたノートの一覧です。";
+                    q = query(
+                        collection(db, `users/${currentUser.uid}/lectures`),
+                        where("courseId", "==", courseIdParam),
+                        orderBy("createdAt", "desc"),
+                    );
+                } else if (courseNameParam) {
+                    // Fallback to name match for backward compatibility
+                    pageTitle = `${courseNameParam} のノート`;
+                    pageDesc = "この講義に紐づくノートの一覧です。";
+                    q = query(
+                        collection(db, `users/${currentUser.uid}/lectures`),
+                        where("courseName", "==", courseNameParam),
+                        orderBy("createdAt", "desc"),
+                    );
+                } else {
+                    // All histories
+                    pageTitle = "すべての履歴";
+                    pageDesc = "これまでに作成したすべてのノート履歴一覧です。";
+                    q = query(
+                        collection(db, `users/${currentUser.uid}/lectures`),
+                        orderBy("createdAt", "desc"),
+                    );
+                }
 
                 const unsubscribe = onSnapshot(q, (snapshot) => {
                     lectures = snapshot.docs.map((doc) => ({
@@ -80,10 +120,10 @@
         <div class="mb-8 flex items-center justify-between">
             <div>
                 <h1 class="text-2xl md:text-3xl font-bold text-slate-800 mb-2">
-                    未分類の履歴
+                    {pageTitle}
                 </h1>
                 <p class="text-slate-500 text-sm">
-                    科目バインダーに整理されていない講義の一覧です。
+                    {pageDesc}
                 </p>
             </div>
             <a

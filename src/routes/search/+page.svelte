@@ -13,6 +13,7 @@
         doc,
     } from "firebase/firestore";
     import { goto } from "$app/navigation";
+    import { page } from "$app/stores";
     import UpgradeModal from "$lib/components/UpgradeModal.svelte";
     import { fade, fly } from "svelte/transition";
     import { subjects, lectures } from "$lib/stores";
@@ -55,9 +56,23 @@
     const academicYearStart = new Date(currentYear, 3, 1); // April 1st of current academic year
 
     import { user as userStore, userProfile } from "$lib/userStore";
+    let autoSearchedQuery = $state("");
     $effect(() => {
         user = $userStore;
         userData = $userProfile;
+
+        // Auto search handling
+        if (user && !loading) {
+            const q =
+                $page.url.searchParams.get("q") ||
+                $page.url.searchParams.get("course");
+            if (q && q !== autoSearchedQuery) {
+                autoSearchedQuery = q;
+                searchQuery = q;
+                // Defer slightly to ensure state is ready
+                setTimeout(() => handleSearch(), 0);
+            }
+        }
     });
 
     onMount(() => {

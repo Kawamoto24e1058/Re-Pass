@@ -1,6 +1,7 @@
 <script lang="ts">
     import { fade, fly, slide } from "svelte/transition";
     import { goto } from "$app/navigation";
+    import { getRandomColor, getRandomIcon } from "$lib/utils/metaUtils";
     import {
         collection,
         addDoc,
@@ -77,6 +78,8 @@
                 {
                     courseName: manualCourseName.trim(),
                     instructor: manualInstructor.trim(),
+                    color: getRandomColor(),
+                    icon: getRandomIcon(),
                     createdAt: serverTimestamp(),
                 },
             );
@@ -148,6 +151,8 @@
                     {
                         courseName: course.courseName.trim(),
                         instructor: course.instructor.trim(),
+                        color: getRandomColor(),
+                        icon: getRandomIcon(),
                         createdAt: serverTimestamp(),
                     },
                 );

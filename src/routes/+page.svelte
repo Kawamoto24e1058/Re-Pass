@@ -654,10 +654,17 @@
         data.result?.subtitle || data.result?.title || "要約";
       const combinedTitle = `${$lectureTitle} : ${generatedSubtitle}`;
 
+      // 1. Find the selected course ID from enrolledCoursesList
+      const selectedCourse = Object.values(enrolledCoursesList || {}).find(
+        (c: any) => c.courseName === $lectureTitle,
+      ) as any;
+      const selectedCourseId = selectedCourse ? selectedCourse.id : null;
+
       const lectureData = {
         title: combinedTitle,
         lectureTitle: combinedTitle,
-        courseName: $lectureTitle, // Keep original course name
+        courseName: $lectureTitle || "未分類", // Update to handle empty as "未分類"
+        courseId: selectedCourseId, // Add the binder ID
         content: $transcript,
         analysis: data.result,
         analyses: { [$analysisMode]: data.result },
