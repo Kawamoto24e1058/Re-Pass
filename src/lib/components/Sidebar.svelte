@@ -491,10 +491,10 @@
         </div>
     </div>
 
-    <!-- Navigation Sections -->
-    <div class="flex-1 overflow-y-auto px-3 space-y-6 pb-4">
+    <!-- Navigation Sections (Unified Scroll Container) -->
+    <div class="flex-1 overflow-y-auto flex flex-col gap-6 pb-4 px-3">
         <!-- Folders / Subjects -->
-        <div>
+        <div class="shrink-0">
             <div
                 class="px-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center"
             >
@@ -599,30 +599,190 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Momodai Community -->
-    <div class="px-3 mt-4 mb-2">
-        <!-- Momodai Community Section -->
-        <div class="mb-6">
-            <h3
-                class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2 flex items-center justify-between"
-            >
-                <span>キャンパスコミュニティ</span>
-                <span
-                    class="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded text-[10px]"
-                    >BETA</span
+        <!-- Momodai Community -->
+        <div class="shrink-0">
+            <!-- Momodai Community Section -->
+            <div class="mb-6">
+                <h3
+                    class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2 flex items-center justify-between"
                 >
-            </h3>
+                    <span>キャンパスコミュニティ</span>
+                    <span
+                        class="bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded text-[10px]"
+                        >BETA</span
+                    >
+                </h3>
 
-            <!-- Search Link -->
-            <a
-                href="/search"
-                onclick={() => isSidebarOpen.set(false)}
-                class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
+                <!-- Search Link -->
+                <a
+                    href="/search"
+                    onclick={() => isSidebarOpen.set(false)}
+                    class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
+                >
+                    <div
+                        class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
+                        </svg>
+                    </div>
+                    <span>講義ノートを探す</span>
+                </a>
+
+                <!-- Enrolled Courses -->
+                <div class="mt-2 pt-2 border-t border-slate-100">
+                    <div class="mb-2 px-2 flex justify-between items-center">
+                        <span
+                            class="text-[10px] text-slate-400 font-medium tracking-wider"
+                            >🔍 みんなのノートを検索</span
+                        >
+                        <button
+                            onclick={() => {
+                                isSidebarOpen.set(false);
+                                props.onOpenEnrollModal?.();
+                            }}
+                            class="text-[10px] text-indigo-600 font-bold bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 px-2 py-0.5 rounded shadow-sm border border-indigo-100 transition-all active:scale-95"
+                        >
+                            ⚙️ 登録
+                        </button>
+                    </div>
+                    {#if enrolledCoursesList.length > 0}
+                        <div class="space-y-0.5">
+                            {#each enrolledCoursesList as course}
+                                {@const normalizedName = course.courseName
+                                    .toLowerCase()
+                                    .replace(/\s+/g, "")}
+                                {@const count =
+                                    sharedCounts[normalizedName] || 0}
+                                <a
+                                    href="/search?courseId={course.id}&courseName={encodeURIComponent(
+                                        course.courseName,
+                                    )}"
+                                    onclick={() => isSidebarOpen.set(false)}
+                                    class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
+                                >
+                                    <div
+                                        class="flex items-center gap-2 truncate"
+                                    >
+                                        <svg
+                                            class="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400 transition-colors flex-shrink-0"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                            />
+                                        </svg>
+                                        <span class="truncate"
+                                            >{course.courseName}</span
+                                        >
+                                    </div>
+                                    {#if count > 0}
+                                        <span
+                                            class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100"
+                                        >
+                                            {count}
+                                        </span>
+                                    {/if}
+                                </a>
+                            {/each}
+                        </div>
+                    {:else}
+                        <div
+                            class="px-2 py-3 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 mt-1"
+                        >
+                            <p class="text-[10px] text-slate-400">
+                                登録された講義がありません
+                            </p>
+                        </div>
+                    {/if}
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Status & User -->
+        <div class="p-2 border-t border-slate-200/60 bg-white/40 flex-shrink-0">
+            <!-- Usage Status -->
+            <div
+                class="mb-2 bg-white/60 rounded-xl p-2.5 border border-slate-100 shadow-sm"
             >
                 <div
-                    class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
+                    class="flex items-center justify-between text-xs font-semibold mb-2"
+                >
+                    <span
+                        class="{planLevel === 'ULTIMATE'
+                            ? 'text-amber-600'
+                            : 'text-slate-700'} tracking-wider">{planName}</span
+                    >
+                    <span class="text-slate-400">{usageText}</span>
+                </div>
+                <div
+                    class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden"
+                >
+                    <div
+                        class="h-full rounded-full {planColor}"
+                        style="width: {usagePercent}%"
+                    ></div>
+                </div>
+                {#if planLevel === "ULTIMATE"}
+                    <a
+                        href="/settings/subscription"
+                        class="w-full mt-3 text-[10px] font-bold text-center text-slate-600 bg-slate-50 hover:bg-slate-100 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
+                    >
+                        <svg
+                            class="w-3 h-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                        </svg>
+                        プラン管理
+                    </a>
+                {:else if planLevel === "PREMIUM"}
+                    <a
+                        href="/pricing"
+                        class="w-full mt-3 text-[10px] font-bold text-center text-amber-600 bg-amber-50 hover:bg-amber-100 py-1.5 rounded-lg transition-colors block border border-amber-100"
+                    >
+                        ULTIMATEにアップグレード
+                    </a>
+                {:else}
+                    <a
+                        href="/pricing"
+                        class="w-full mt-3 text-[10px] font-bold text-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 py-1.5 rounded-lg transition-colors block"
+                    >
+                        PREMIUMにアップグレード
+                    </a>
+                {/if}
+            </div>
+
+            <!-- Settings Link -->
+            <a
+                href="/settings"
+                class="block mb-2 mx-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-3 group"
+            >
+                <div
+                    class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors"
                 >
                     <svg
                         class="w-4 h-4"
@@ -634,265 +794,110 @@
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
                         />
-                    </svg>
-                </div>
-                <span>講義ノートを探す</span>
-            </a>
-
-            <!-- Enrolled Courses -->
-            <div class="mt-2 pt-2 border-t border-slate-100">
-                <div class="mb-2 px-2 flex justify-between items-center">
-                    <span
-                        class="text-[10px] text-slate-400 font-medium tracking-wider"
-                        >🔍 みんなのノートを検索</span
-                    >
-                    <button
-                        onclick={() => {
-                            isSidebarOpen.set(false);
-                            props.onOpenEnrollModal?.();
-                        }}
-                        class="text-[10px] text-indigo-600 font-bold bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 px-2 py-0.5 rounded shadow-sm border border-indigo-100 transition-all active:scale-95"
-                    >
-                        ⚙️ 登録
-                    </button>
-                </div>
-                {#if enrolledCoursesList.length > 0}
-                    <div class="space-y-0.5">
-                        {#each enrolledCoursesList as course}
-                            {@const normalizedName = course.courseName
-                                .toLowerCase()
-                                .replace(/\s+/g, "")}
-                            {@const count = sharedCounts[normalizedName] || 0}
-                            <a
-                                href="/search?courseId={course.id}&courseName={encodeURIComponent(
-                                    course.courseName,
-                                )}"
-                                onclick={() => isSidebarOpen.set(false)}
-                                class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
-                            >
-                                <div class="flex items-center gap-2 truncate">
-                                    <svg
-                                        class="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400 transition-colors flex-shrink-0"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                        />
-                                    </svg>
-                                    <span class="truncate"
-                                        >{course.courseName}</span
-                                    >
-                                </div>
-                                {#if count > 0}
-                                    <span
-                                        class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100"
-                                    >
-                                        {count}
-                                    </span>
-                                {/if}
-                            </a>
-                        {/each}
-                    </div>
-                {:else}
-                    <div
-                        class="px-2 py-3 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 mt-1"
-                    >
-                        <p class="text-[10px] text-slate-400">
-                            登録された講義がありません
-                        </p>
-                    </div>
-                {/if}
-            </div>
-        </div>
-    </div>
-
-    <!-- Bottom Status & User -->
-    <div class="p-2 border-t border-slate-200/60 bg-white/40 flex-shrink-0">
-        <!-- Usage Status -->
-        <div
-            class="mb-2 bg-white/60 rounded-xl p-2.5 border border-slate-100 shadow-sm"
-        >
-            <div
-                class="flex items-center justify-between text-xs font-semibold mb-2"
-            >
-                <span
-                    class="{planLevel === 'ULTIMATE'
-                        ? 'text-amber-600'
-                        : 'text-slate-700'} tracking-wider">{planName}</span
-                >
-                <span class="text-slate-400">{usageText}</span>
-            </div>
-            <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div
-                    class="h-full rounded-full {planColor}"
-                    style="width: {usagePercent}%"
-                ></div>
-            </div>
-            {#if planLevel === "ULTIMATE"}
-                <a
-                    href="/settings/subscription"
-                    class="w-full mt-3 text-[10px] font-bold text-center text-slate-600 bg-slate-50 hover:bg-slate-100 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1"
-                >
-                    <svg
-                        class="w-3 h-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                         />
                     </svg>
-                    プラン管理
-                </a>
-            {:else if planLevel === "PREMIUM"}
-                <a
-                    href="/pricing"
-                    class="w-full mt-3 text-[10px] font-bold text-center text-amber-600 bg-amber-50 hover:bg-amber-100 py-1.5 rounded-lg transition-colors block border border-amber-100"
-                >
-                    ULTIMATEにアップグレード
-                </a>
-            {:else}
-                <a
-                    href="/pricing"
-                    class="w-full mt-3 text-[10px] font-bold text-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 py-1.5 rounded-lg transition-colors block"
-                >
-                    PREMIUMにアップグレード
-                </a>
-            {/if}
-        </div>
+                </div>
+                設定
+            </a>
 
-        <!-- Settings Link -->
-        <a
-            href="/settings"
-            class="block mb-2 mx-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-3 group"
-        >
-            <div
-                class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors"
-            >
-                <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+            <!-- User Profile & Menu -->
+            <div class="relative user-menu-container">
+                <button
+                    onclick={(e) => {
+                        e.stopPropagation();
+                        toggleMenu();
+                    }}
+                    class="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/50 transition-colors text-left"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                </svg>
+                    <div
+                        class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0 overflow-hidden"
+                    >
+                        {#if props.user?.photoURL}
+                            <img
+                                src={props.user.photoURL}
+                                alt="User"
+                                class="w-full h-full object-cover"
+                            />
+                        {:else}
+                            {nickname.substring(0, 1).toUpperCase()}
+                        {/if}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-bold text-slate-800 truncate">
+                            {nickname}
+                        </div>
+                        <div class="text-[10px] text-slate-400 truncate">
+                            {props.user?.email}
+                        </div>
+                    </div>
+                    <svg
+                        class="w-4 h-4 text-slate-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                        /></svg
+                    >
+                </button>
+
+                <!-- Popover Menu -->
+                {#if isMenuOpen}
+                    <div
+                        class="absolute bottom-full left-0 w-full mb-2 bg-white/80 backdrop-blur-xl border border-white/50 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 z-50"
+                    >
+                        <div class="p-1">
+                            <button
+                                onclick={openEditModal}
+                                class="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                <svg
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    ><path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.5"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    /></svg
+                                >
+                                プロフィール編集
+                            </button>
+                            <div class="h-px bg-slate-100 my-1"></div>
+                            <button
+                                onclick={props.onSignOut}
+                                class="w-full text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                <svg
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    ><path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.5"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                                    /></svg
+                                >
+                                ログアウト
+                            </button>
+                        </div>
+                    </div>
+                {/if}
             </div>
-            設定
-        </a>
-
-        <!-- User Profile & Menu -->
-        <div class="relative user-menu-container">
-            <button
-                onclick={(e) => {
-                    e.stopPropagation();
-                    toggleMenu();
-                }}
-                class="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/50 transition-colors text-left"
-            >
-                <div
-                    class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0 overflow-hidden"
-                >
-                    {#if props.user?.photoURL}
-                        <img
-                            src={props.user.photoURL}
-                            alt="User"
-                            class="w-full h-full object-cover"
-                        />
-                    {:else}
-                        {nickname.substring(0, 1).toUpperCase()}
-                    {/if}
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-xs font-bold text-slate-800 truncate">
-                        {nickname}
-                    </div>
-                    <div class="text-[10px] text-slate-400 truncate">
-                        {props.user?.email}
-                    </div>
-                </div>
-                <svg
-                    class="w-4 h-4 text-slate-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    ><path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 9l-7 7-7-7"
-                    /></svg
-                >
-            </button>
-
-            <!-- Popover Menu -->
-            {#if isMenuOpen}
-                <div
-                    class="absolute bottom-full left-0 w-full mb-2 bg-white/80 backdrop-blur-xl border border-white/50 rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 z-50"
-                >
-                    <div class="p-1">
-                        <button
-                            onclick={openEditModal}
-                            class="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
-                        >
-                            <svg
-                                class="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                ><path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="1.5"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                /></svg
-                            >
-                            プロフィール編集
-                        </button>
-                        <div class="h-px bg-slate-100 my-1"></div>
-                        <button
-                            onclick={props.onSignOut}
-                            class="w-full text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
-                        >
-                            <svg
-                                class="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                ><path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="1.5"
-                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                                /></svg
-                            >
-                            ログアウト
-                        </button>
-                    </div>
-                </div>
-            {/if}
         </div>
     </div>
 </aside>
