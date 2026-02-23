@@ -48,9 +48,9 @@ export async function POST({ request, url }) {
         const userDoc = await adminDb.collection('users').doc(userId).get();
         const userData = userDoc.data();
 
-        // Identify "Free Premium" users: on premium plan but no stripe customer ID (uses promo code/manual)
-        const isFreePremiumUser = userData?.plan === 'premium' && !userData?.stripeCustomerId;
-        console.log(`[Checkout] User ${userId} - Plan: ${userData?.plan}, HasStripeCustomer: ${!!userData?.stripeCustomerId}, isFreePremiumUser: ${isFreePremiumUser}`);
+        // Identify Premium users for upgrade discounts
+        const isPremiumUser = userData?.plan === 'premium';
+        console.log(`[Checkout] User ${userId} - Plan: ${userData?.plan}, HasStripeCustomer: ${!!userData?.stripeCustomerId}, isPremiumUser: ${isPremiumUser}`);
 
         const mode = 'subscription';
         // Determine target plan for metadata
@@ -58,7 +58,14 @@ export async function POST({ request, url }) {
         const ULTIMATE_SEASON = PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON;
         const targetPlan = (priceId === ULTIMATE_MONTHLY || priceId === ULTIMATE_SEASON) ? 'ultimate' : 'premium';
 
-        const UPGRADE_DISCOUNT_COUPON_ID = 'upgrade-discount-700';
+        let appliedDiscounts: { coupon: string }[] = [];
+        if (isPremiumUser && targetPlan === 'ultimate' && isUpgrade) {
+            if (priceId === ULTIMATE_MONTHLY) {
+                appliedDiscounts = [{ coupon: 'upgrade-discount-700' }];
+            } else if (priceId === ULTIMATE_SEASON) {
+                appliedDiscounts = [{ coupon: 'upgrade-discount-2480' }];
+            }
+        }
 
         // Prepare session payload
         const sessionPayload: Stripe.Checkout.SessionCreateParams = {
@@ -81,15 +88,13 @@ export async function POST({ request, url }) {
                 priceId: priceId,
                 isUpgrade: isUpgrade ? "true" : "false"
             },
-            discounts: (isFreePremiumUser && targetPlan === 'ultimate')
-                ? [{ coupon: UPGRADE_DISCOUNT_COUPON_ID }]
-                : []
+            discounts: appliedDiscounts
         };
 
         // プレミアムからのアップグレードの場合、ここで日割り計算(proration_behavior)や割引を適用する
         // 将来的にStripeの既存サブスクリプションを変更する場合は、sessionPayloadの構成を調整します
         if (isUpgrade && targetPlan === 'ultimate') {
-            console.log(`[Checkout] Upgrade requested for user ${userId} to Ultimate`);
+            console.log(`[Checkout] Upgrade requested for user ${userId} to Ultimate (Price: ${priceId})`);
             // Example: sessionPayload.subscription_data = { proration_behavior: 'always_invoice' };
         }
 

@@ -454,37 +454,60 @@
                         ? "(アップグレード)"
                         : ""}
                 </h3>
-                <div
-                    class="text-4xl font-black text-white mb-2 transition-all duration-300"
-                >
+                <div class="mb-2 transition-all duration-300">
                     {#if billingCycle === "monthly"}
                         {#if currentPlan === "premium"}
-                            <div
-                                class="text-sm text-slate-400 line-through mb-1"
-                            >
-                                通常価格 ¥1,480/月
+                            <div class="flex items-baseline gap-2 mb-1">
+                                <span
+                                    class="text-sm text-slate-400 font-medium line-through decoration-slate-500/50"
+                                    >通常 ¥1,480/月</span
+                                >
                             </div>
-                            <div class="text-red-500 font-bold text-lg">
-                                プレミアム限定：＋¥700/月で動画無制限＆検索解放
+                            <div class="text-4xl font-black text-white mb-2">
+                                +¥700<span
+                                    class="text-sm text-slate-400 font-medium ml-1"
+                                    >/月</span
+                                >
+                            </div>
+                            <div
+                                class="text-indigo-300 font-medium text-sm leading-relaxed"
+                            >
+                                プレミアム会員特典：差額の＋¥700/月で、動画解析を無制限に。ノート検索も解放されます。
                             </div>
                         {:else}
-                            ¥1,480<span
-                                class="text-sm text-slate-400 font-medium ml-1"
-                                >/月</span
-                            >
+                            <div class="text-4xl font-black text-white">
+                                ¥1,480<span
+                                    class="text-sm text-slate-400 font-medium ml-1"
+                                    >/月</span
+                                >
+                            </div>
                         {/if}
                     {:else if currentPlan === "premium"}
-                        <div class="text-sm text-slate-400 line-through mb-1">
-                            通常価格 ¥4,980/4ヶ月
+                        <div class="flex items-baseline gap-2 mb-1">
+                            <span
+                                class="text-sm text-slate-400 font-medium line-through decoration-slate-500/50"
+                                >通常 ¥4,980/4ヶ月</span
+                            >
                         </div>
-                        <div class="text-red-500 font-bold text-lg">
-                            プレミアム限定：＋¥2,500で今学期をフルアンロック
+                        <div class="text-4xl font-black text-white mb-2">
+                            +¥2,500<span
+                                class="text-sm text-slate-400 font-medium ml-1"
+                            >
+                                (一括)</span
+                            >
+                        </div>
+                        <div
+                            class="text-indigo-300 font-medium text-sm leading-relaxed"
+                        >
+                            プレミアム会員特典：一括＋¥2,500で、今学期の全機能をアンロック。試験対策をフルサポート。
                         </div>
                     {:else}
-                        ¥4,980<span
-                            class="text-sm text-slate-400 font-medium ml-1"
-                            >/4ヶ月</span
-                        >
+                        <div class="text-4xl font-black text-white">
+                            ¥4,980<span
+                                class="text-sm text-slate-400 font-medium ml-1"
+                                >/4ヶ月</span
+                            >
+                        </div>
                     {/if}
                 </div>
                 <p class="text-xs text-pink-400 font-bold h-4">
@@ -520,7 +543,7 @@
                     >
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-300">
-                    <div class="bg-indigo-500/20 p-0.5 rounded-full">
+                    <div class="bg-indigo-500/20 p-0.5 rounded-full mt-0.5">
                         <svg
                             class="w-3 h-3 text-indigo-400"
                             fill="none"
@@ -534,12 +557,38 @@
                             /></svg
                         >
                     </div>
-                    <span
-                        >動画・音声ファイルの解析 <strong
-                            class="text-white border-b border-indigo-500/50"
-                            >完全無制限</strong
-                        ></span
-                    >
+                    <div class="flex-1">
+                        <span
+                            >動画・音声ファイルの解析 <strong
+                                class="text-white border-b border-indigo-500/50"
+                                >完全無制限</strong
+                            ></span
+                        >
+                        {#if currentPlan === "premium"}
+                            <div
+                                class="mt-2 inline-flex items-start gap-1.5 px-2.5 py-1.5 bg-slate-800/80 border border-slate-700/50 text-slate-300 text-[10px] rounded-lg font-medium leading-relaxed"
+                            >
+                                <svg
+                                    class="w-3 h-3 text-amber-500/80 shrink-0 mt-0.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    ><path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    /></svg
+                                >
+                                <span
+                                    >現在（プレミアム）は動画解析が<strong
+                                        class="text-amber-400"
+                                        >1日3回に制限</strong
+                                    >されています</span
+                                >
+                            </div>
+                        {/if}
+                    </div>
                 </li>
                 <li class="flex items-start gap-3 text-sm text-slate-300">
                     <div class="bg-indigo-500/20 p-0.5 rounded-full">
