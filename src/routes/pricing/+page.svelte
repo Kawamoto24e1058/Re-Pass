@@ -398,16 +398,18 @@
                             ? "Premium_Monthly"
                             : "Premium_Season",
                     )}
-                disabled={isLoading !== "" || currentPlan === "premium"}
+                disabled={isLoading !== "" || currentPlan !== "free"}
                 class="w-full py-3 rounded-xl transition-all font-bold text-sm {currentPlan ===
-                'premium'
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-slate-900 text-white hover:bg-slate-800'} disabled:opacity-50"
+                'free'
+                    ? 'bg-slate-900 text-white hover:bg-slate-800'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'} disabled:opacity-50"
             >
-                {#if isLoading === "Premium"}
+                {#if isLoading === "Premium_Monthly" || isLoading === "Premium_Season"}
                     処理中...
                 {:else if currentPlan === "premium"}
                     加入中
+                {:else if currentPlan === "ultimate"}
+                    上位プランに加入中
                 {:else}
                     PREMIUMを選択
                 {/if}
@@ -462,7 +464,7 @@
                                 通常価格 ¥1,480/月
                             </div>
                             <div class="text-red-500 font-bold text-lg">
-                                プレミアム限定：＋¥700/月で、動画解析を無制限に。ノート検索も解放。
+                                プレミアム限定：＋¥700/月で動画無制限＆検索解放
                             </div>
                         {:else}
                             ¥1,480<span
@@ -475,7 +477,7 @@
                             通常価格 ¥4,980/4ヶ月
                         </div>
                         <div class="text-red-500 font-bold text-lg">
-                            プレミアム限定：＋¥2,500で、今学期の動画が無制限に。試験対策もフル活用。
+                            プレミアム限定：＋¥2,500で今学期をフルアンロック
                         </div>
                     {:else}
                         ¥4,980<span

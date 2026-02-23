@@ -58,6 +58,8 @@
     let newSubjectName = $state("");
     let newSubjectColor = $state("bg-indigo-500");
     let flashTargetId = $state<string | null>(null);
+    let isOpenBinder = $state(true);
+    let isOpenLectures = $state(true);
 
     // Upgrade Modal State
     let showUpgradeModal = $state(false);
@@ -502,109 +504,133 @@
     <div class="flex-1 overflow-y-auto flex flex-col gap-6 pb-4 px-3">
         <!-- Folders / Subjects -->
         <div class="shrink-0">
-            <div
-                class="px-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center"
+            <button
+                onclick={() => (isOpenBinder = !isOpenBinder)}
+                class="w-full px-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center hover:text-slate-600 transition-colors"
             >
                 <span>科目 (個人バインダー)</span>
-            </div>
-
-            <div class="space-y-1">
-                <!-- All History Link -->
-                <a
-                    href="/history"
-                    onclick={() => isSidebarOpen.set(false)}
-                    class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group {String(
-                        $page.url.pathname,
-                    ) === '/history' &&
-                    !$page.url.searchParams.has('courseName')
-                        ? 'bg-indigo-50 text-indigo-900 font-semibold'
+                <svg
+                    class="w-3.5 h-3.5 transform transition-transform duration-200 {isOpenBinder
+                        ? 'rotate-180'
                         : ''}"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
                 >
-                    <div
-                        class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
-                    >
-                        <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                            />
-                        </svg>
-                    </div>
-                    <span>すべての履歴</span>
-                </a>
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 9l-7 7-7-7"
+                    />
+                </svg>
+            </button>
 
-                <!-- Unassigned / Inbox -->
-                <a
-                    href="/history?courseId=null"
-                    onclick={() => isSidebarOpen.set(false)}
-                    class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group {String(
-                        $page.url.pathname,
-                    ) === '/history' &&
-                    $page.url.searchParams.get('courseId') === 'null'
-                        ? 'bg-indigo-50 text-indigo-900 font-semibold'
-                        : ''}"
+            {#if isOpenBinder}
+                <div
+                    class="space-y-1 animate-in fade-in slide-in-from-top-1 duration-200"
                 >
-                    <div
-                        class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
+                    <!-- All History Link -->
+                    <a
+                        href="/history"
+                        onclick={() => isSidebarOpen.set(false)}
+                        class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group {String(
+                            $page.url.pathname,
+                        ) === '/history' &&
+                        !$page.url.searchParams.has('courseName')
+                            ? 'bg-indigo-50 text-indigo-900 font-semibold'
+                            : ''}"
                     >
-                        <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
+                        <div
+                            class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
                         >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                            />
-                        </svg>
-                    </div>
-                    <span>未分類の履歴</span>
-                </a>
-
-                <!-- Autogenerated Binder from Enrolled Courses -->
-                <div class="mt-4 border-t border-slate-100 pt-2">
-                    {#if enrolledCoursesList.length > 0}
-                        {#each enrolledCoursesList as course}
-                            <a
-                                href="/history?courseId={course.id}&courseName={encodeURIComponent(
-                                    course.courseName,
-                                )}"
-                                onclick={() => isSidebarOpen.set(false)}
-                                class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors group {String(
-                                    $page.url.pathname,
-                                ) === '/history' &&
-                                $page.url.searchParams.get('courseName') ===
-                                    course.courseName
-                                    ? 'bg-indigo-50 text-indigo-900 font-semibold'
-                                    : 'text-slate-600 hover:bg-black/5 hover:text-indigo-600'}"
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
                             >
-                                <div class="flex items-center gap-3 truncate">
-                                    <div
-                                        class="w-2 h-2 rounded-full bg-slate-300 group-hover:bg-indigo-500 transition-colors flex-shrink-0"
-                                    ></div>
-                                    <span class="truncate"
-                                        >{course.courseName}</span
-                                    >
-                                </div>
-                            </a>
-                        {/each}
-                    {:else}
-                        <div class="px-3 py-2 text-xs text-slate-400 italic">
-                            登録された講義がありません
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                                />
+                            </svg>
                         </div>
-                    {/if}
+                        <span>すべての履歴</span>
+                    </a>
+
+                    <!-- Unassigned / Inbox -->
+                    <a
+                        href="/history?courseId=null"
+                        onclick={() => isSidebarOpen.set(false)}
+                        class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group {String(
+                            $page.url.pathname,
+                        ) === '/history' &&
+                        $page.url.searchParams.get('courseId') === 'null'
+                            ? 'bg-indigo-50 text-indigo-900 font-semibold'
+                            : ''}"
+                    >
+                        <div
+                            class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
+                        >
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                                />
+                            </svg>
+                        </div>
+                        <span>未分類の履歴</span>
+                    </a>
+
+                    <!-- Autogenerated Binder from Enrolled Courses -->
+                    <div class="mt-4 border-t border-slate-100 pt-2">
+                        {#if enrolledCoursesList.length > 0}
+                            {#each enrolledCoursesList as course}
+                                <a
+                                    href="/history?courseId={course.id}&courseName={encodeURIComponent(
+                                        course.courseName,
+                                    )}"
+                                    onclick={() => isSidebarOpen.set(false)}
+                                    class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors group {String(
+                                        $page.url.pathname,
+                                    ) === '/history' &&
+                                    $page.url.searchParams.get('courseName') ===
+                                        course.courseName
+                                        ? 'bg-indigo-50 text-indigo-900 font-semibold'
+                                        : 'text-slate-600 hover:bg-black/5 hover:text-indigo-600'}"
+                                >
+                                    <div
+                                        class="flex items-center gap-3 truncate"
+                                    >
+                                        <div
+                                            class="w-2 h-2 rounded-full bg-slate-300 group-hover:bg-indigo-500 transition-colors flex-shrink-0"
+                                        ></div>
+                                        <span class="truncate"
+                                            >{course.courseName}</span
+                                        >
+                                    </div>
+                                </a>
+                            {/each}
+                        {:else}
+                            <div
+                                class="px-3 py-2 text-xs text-slate-400 italic"
+                            >
+                                登録された講義がありません
+                            </div>
+                        {/if}
+                    </div>
                 </div>
-            </div>
+            {/if}
         </div>
 
         <!-- Momodai Community -->
@@ -659,73 +685,108 @@
 
                 <!-- Enrolled Courses -->
                 <div class="mt-2 pt-2 border-t border-slate-100">
-                    <div class="mb-2 px-2 flex justify-between items-center">
+                    <div
+                        role="button"
+                        tabindex="0"
+                        onclick={() => (isOpenLectures = !isOpenLectures)}
+                        onkeydown={(e) =>
+                            e.key === "Enter" &&
+                            (isOpenLectures = !isOpenLectures)}
+                        class="w-full mb-2 px-2 flex justify-between items-center hover:text-slate-600 transition-colors cursor-pointer"
+                    >
                         <span
-                            class="text-[10px] text-slate-400 font-medium tracking-wider"
-                            >🔍 みんなのノートを検索</span
+                            class="text-[10px] text-slate-400 font-medium tracking-wider uppercase"
+                            >講義リスト (コミュニティ)</span
                         >
-                        <button
-                            onclick={() => {
-                                isSidebarOpen.set(false);
-                                props.onOpenEnrollModal?.();
-                            }}
-                            class="text-[10px] text-indigo-600 font-bold bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 px-2 py-0.5 rounded shadow-sm border border-indigo-100 transition-all active:scale-95"
-                        >
-                            ⚙️ 登録
-                        </button>
-                    </div>
-                    {#if enrolledCoursesList.length > 0}
-                        <div class="space-y-0.5">
-                            {#each enrolledCoursesList as course}
-                                {@const normalizedName = course.courseName
-                                    .toLowerCase()
-                                    .replace(/\s+/g, "")}
-                                {@const count =
-                                    sharedCounts[normalizedName] || 0}
-                                <a
-                                    href="/search?courseId={course.id}&courseName={encodeURIComponent(
-                                        course.courseName,
-                                    )}"
-                                    onclick={() => isSidebarOpen.set(false)}
-                                    class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
-                                >
-                                    <div
-                                        class="flex items-center gap-2 truncate"
-                                    >
-                                        <svg
-                                            class="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400 transition-colors flex-shrink-0"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                            />
-                                        </svg>
-                                        <span class="truncate"
-                                            >{course.courseName}</span
-                                        >
-                                    </div>
-                                    {#if count > 0}
-                                        <span
-                                            class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100"
-                                        >
-                                            {count}
-                                        </span>
-                                    {/if}
-                                </a>
-                            {/each}
+                        <div class="flex items-center gap-2">
+                            <button
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    isSidebarOpen.set(false);
+                                    props.onOpenEnrollModal?.();
+                                }}
+                                class="text-[10px] text-indigo-600 font-bold bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 px-2 py-0.5 rounded shadow-sm border border-indigo-100 transition-all active:scale-95"
+                            >
+                                ⚙️ 登録
+                            </button>
+                            <svg
+                                class="w-3 h-3 text-slate-400 transform transition-transform duration-200 {isOpenLectures
+                                    ? 'rotate-180'
+                                    : ''}"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 9l-7 7-7-7"
+                                />
+                            </svg>
                         </div>
-                    {:else}
+                    </div>
+
+                    {#if isOpenLectures}
                         <div
-                            class="px-2 py-3 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 mt-1"
+                            class="animate-in fade-in slide-in-from-top-1 duration-200"
                         >
-                            <p class="text-[10px] text-slate-400">
-                                登録された講義がありません
-                            </p>
+                            {#if enrolledCoursesList.length > 0}
+                                <div class="space-y-0.5">
+                                    {#each enrolledCoursesList as course}
+                                        {@const normalizedName =
+                                            course.courseName
+                                                .toLowerCase()
+                                                .replace(/\s+/g, "")}
+                                        {@const count =
+                                            sharedCounts[normalizedName] || 0}
+                                        <a
+                                            href="/search?courseId={course.id}&courseName={encodeURIComponent(
+                                                course.courseName,
+                                            )}"
+                                            onclick={() =>
+                                                isSidebarOpen.set(false)}
+                                            class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
+                                        >
+                                            <div
+                                                class="flex items-center gap-2 truncate"
+                                            >
+                                                <svg
+                                                    class="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-400 transition-colors flex-shrink-0"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                                    />
+                                                </svg>
+                                                <span class="truncate"
+                                                    >{course.courseName}</span
+                                                >
+                                            </div>
+                                            {#if count > 0}
+                                                <span
+                                                    class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100"
+                                                >
+                                                    {count}
+                                                </span>
+                                            {/if}
+                                        </a>
+                                    {/each}
+                                </div>
+                            {:else}
+                                <div
+                                    class="px-2 py-3 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 mt-1"
+                                >
+                                    <p class="text-[10px] text-slate-400">
+                                        登録された講義がありません
+                                    </p>
+                                </div>
+                            {/if}
                         </div>
                     {/if}
                 </div>
