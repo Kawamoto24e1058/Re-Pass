@@ -52,7 +52,7 @@
     targetUrl,
     interimTranscript,
     stagedImages,
-    taskFile,
+    taskText,
   } from "$lib/stores/sessionStore";
   import { recognitionService } from "$lib/services/recognitionService";
   import { page } from "$app/stores";
@@ -75,6 +75,7 @@
   );
   let derivativeTargetLength = $state(400);
 
+  let showTaskInput = $state(false);
   // User & Data State
   let user = $state<any>(null);
   let userData = $state<any>(null);
@@ -594,7 +595,8 @@
       !$videoFile &&
       !$targetUrl &&
       !$transcript &&
-      $stagedImages.length === 0
+      $stagedImages.length === 0 &&
+      !$taskText.trim()
     ) {
       toastMessage = "学習素材を入力してください";
       return;
@@ -667,13 +669,6 @@
         }
       }
 
-      // Upload Task File
-      let taskUrl = "";
-      if ($taskFile) {
-        toastMessage = "課題画像をアップロード中...";
-        taskUrl = await uploadToStorage($taskFile);
-      }
-
       const formData = new FormData();
       if (audioUrl) formData.append("audioUrl", audioUrl);
       if (videoUrl) formData.append("videoUrl", videoUrl);
@@ -684,6 +679,12 @@
       stagedImageUrls.forEach((url) => {
         formData.append("imageUrl", url);
       });
+
+      // Task Text
+      if ($taskText.trim()) {
+        formData.append("taskText", $taskText.trim());
+        formData.append("isTaskAssist", "true");
+      }
 
       // Explicitly separate text inputs for the prompt
       let documentText = "";
@@ -696,10 +697,6 @@
       formData.append("url", $targetUrl || "");
       formData.append("mode", $analysisMode);
       formData.append("plan", userData?.plan || "free");
-      if (taskUrl) {
-        formData.append("imageUrl", taskUrl);
-        formData.append("isTaskAssist", "true");
-      }
 
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -859,9 +856,6 @@
       }
       if (type === "single_image") {
         imageFile.set(input.files[0]);
-      }
-      if (type === "task") {
-        taskFile.set(input.files[0]);
       }
       if (type === "staged_image") {
         // Append to existing staged images
@@ -2671,16 +2665,72 @@
                       "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z", // PlayCircle
                       !isPremium,
                     )}
-                    {@render FileInputCard(
-                      "task",
-                      "📝 課題・問題",
-                      "text-pink-400",
-                      $taskFile,
-                      "image/*",
-                      "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", // Document text
-                      !isPremium,
-                    )}
+                    <button
+                      onclick={() => (showTaskInput = !showTaskInput)}
+                      class="h-16 rounded-xl border-2 border-dashed {showTaskInput
+                        ? 'bg-pink-50 border-pink-300 text-pink-600'
+                        : 'border-slate-200 text-slate-400'} hover:border-pink-300 hover:bg-pink-50 transition-all flex items-center px-4 gap-3 relative group {!isPremium
+                        ? 'opacity-50'
+                        : ''}"
+                    >
+                      <div
+                        class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center text-pink-400 group-hover:scale-110 transition-transform"
+                      >
+                        <svg
+                          class="w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                      </div>
+                      <div class="text-left">
+                        <span class="block text-sm font-bold"
+                          >📝 課題・問題入力</span
+                        >
+                        <span class="block text-[10px] opacity-60"
+                          >{showTaskInput
+                            ? "入力を閉じる"
+                            : "テキストで入力"}</span
+                        >
+                      </div>
+                      {#if !isPremium}
+                        <div class="absolute top-2 right-2">
+                          <svg
+                            class="w-3 h-3 text-slate-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                            ><path
+                              fill-rule="evenodd"
+                              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                              clip-rule="evenodd"
+                            /></svg
+                          >
+                        </div>
+                      {/if}
+                    </button>
                   </div>
+
+                  {#if showTaskInput}
+                    <div
+                      class="mt-4 p-4 bg-pink-50/30 border border-pink-100 rounded-2xl animate-in slide-in-from-top-2 duration-300"
+                    >
+                      <textarea
+                        bind:value={$taskText}
+                        placeholder="解きたい課題・問題、またはわからない箇所を具体的に入力してください..."
+                        class="w-full h-32 bg-white border border-pink-100 rounded-xl p-4 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all resize-none shadow-inner"
+                      ></textarea>
+                      <p class="mt-2 text-[10px] text-pink-500/70 font-medium">
+                        ※TA（ティーチングアシスタント）モードで解析し、ヒントや解き方を提案します。
+                      </p>
+                    </div>
+                  {/if}
                 </div>
 
                 <!-- URL Analysis -->
@@ -2759,89 +2809,78 @@
               <div
                 class="mt-8 flex flex-col md:flex-row justify-end items-center gap-6"
               >
-                <!-- Share Toggle -->
-                <label class="flex items-center gap-3 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    bind:checked={$isShared}
-                    class="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-colors"
-                  />
-                  <span
-                    class="text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors"
-                    >データの共有・改善への協力を許可する</span
-                  >
-
-                  {#if analyzing}
-                    <!-- Progress Bar -->
-                    <div class="w-full max-w-md ml-auto">
-                      <div
-                        class="flex justify-between text-xs font-bold text-slate-500 mb-2"
-                      >
-                        <span>{progressStatus}</span>
-                        <span>{progressValue}%</span>
-                      </div>
-                      <div
-                        class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
-                      >
-                        <div
-                          class="h-full bg-indigo-600 transition-all duration-300"
-                          style="width: {progressValue}%"
-                        ></div>
-                      </div>
-                      <button
-                        onclick={handleCancelAnalysis}
-                        class="mt-2 text-xs text-slate-400 hover:text-red-500 underline"
-                        >キャンセル</button
-                      >
+                {#if analyzing}
+                  <!-- Progress Bar -->
+                  <div class="w-full max-w-md ml-auto">
+                    <div
+                      class="flex justify-between text-xs font-bold text-slate-500 mb-2"
+                    >
+                      <span>{progressStatus}</span>
+                      <span>{progressValue}%</span>
                     </div>
-                  {:else}
-                    <div class="flex flex-col items-center gap-4">
-                      <button
-                        onclick={handleAnalyze}
-                        disabled={!$courseId &&
-                          !$isRecording &&
-                          !$pdfFile &&
+                    <div
+                      class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
+                    >
+                      <div
+                        class="h-full bg-indigo-600 transition-all duration-300"
+                        style="width: {progressValue}%"
+                      ></div>
+                    </div>
+                    <button
+                      onclick={handleCancelAnalysis}
+                      class="mt-2 text-xs text-slate-400 hover:text-red-500 underline"
+                      >キャンセル</button
+                    >
+                  </div>
+                {:else}
+                  <div class="flex flex-col items-center gap-4">
+                    <button
+                      onclick={handleAnalyze}
+                      disabled={analyzing ||
+                        (!$pdfFile &&
                           !$imageFile &&
                           !$txtFile &&
                           !$videoFile &&
+                          !$audioFile &&
                           !$targetUrl &&
-                          !$transcript}
-                        class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                          !$transcript.trim() &&
+                          !$taskText.trim() &&
+                          $stagedImages.length === 0)}
+                      class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                    >
+                      <span class="text-lg">解析を開始</span>
+                      <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        ><path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        /></svg
                       >
-                        <span class="text-lg">解析を開始</span>
-                        <svg
-                          class="w-5 h-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          ><path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13 10V3L4 14h7v7l9-11h-7z"
-                          /></svg
-                        >
-                      </button>
+                    </button>
 
-                      <!-- isShared Toggle Switch -->
-                      <label
-                        class="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100 transition-all hover:border-indigo-100"
+                    <!-- isShared Toggle Switch -->
+                    <label
+                      class="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100 transition-all hover:border-indigo-100"
+                    >
+                      <input
+                        type="checkbox"
+                        bind:checked={$isShared}
+                        class="sr-only peer"
+                      />
+                      <div
+                        class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500 relative"
+                      ></div>
+                      <span class="text-sm font-bold text-slate-600"
+                        >このノートをみんなに公開する</span
                       >
-                        <input
-                          type="checkbox"
-                          bind:checked={$isShared}
-                          class="sr-only peer"
-                        />
-                        <div
-                          class="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500 relative"
-                        ></div>
-                        <span class="text-sm font-bold text-slate-600"
-                          >このノートをみんなに公開する</span
-                        >
-                      </label>
-                    </div>
-                  {/if}
-                </label>
+                    </label>
+                  </div>
+                {/if}
               </div>
 
               <!-- Floating Mic Button (Bottom Right) -->

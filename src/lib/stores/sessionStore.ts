@@ -22,7 +22,7 @@ export const imageFile = writable<File | null>(null);
 export const videoFile = writable<File | null>(null);
 export const targetUrl = writable<string>("");
 export const stagedImages = writable<File[]>([]);
-export const taskFile = writable<File | null>(null);
+export const taskText = writable<string>("");
 
 // --- Actions ---
 export function resetSession() {
@@ -42,5 +42,5 @@ export function resetSession() {
     videoFile.set(null);
     targetUrl.set("");
     stagedImages.set([]);
-    taskFile.set(null);
+    taskText.set("");
 }

@@ -25,8 +25,8 @@ export async function POST({ request }) {
             );
         }
 
-        const upperCode = code.trim().toUpperCase();
-        const promoCodeRef = adminDb.collection("promo_codes").doc(upperCode);
+        const exactCode = code.trim();
+        const promoCodeRef = adminDb.collection("promo_codes").doc(exactCode);
         const userRef = adminDb.collection("users").doc(uid);
 
         let targetPlan = "";

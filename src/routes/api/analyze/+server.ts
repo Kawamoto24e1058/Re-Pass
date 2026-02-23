@@ -62,7 +62,8 @@ export const POST = async ({ request }) => {
     let documentText = formData.get('documentText') as string || "";
     const targetUrl = formData.get('url') as string;
     const evaluationCriteria = formData.get('evaluationCriteria') as string || "";
-    const isTaskAssist = formData.get('isTaskAssist') === 'true';
+    const taskText = formData.get('taskText') as string || "";
+    const isTaskAssist = (formData.get('isTaskAssist') === 'true') || (taskText.length > 0);
 
     // --- Safe Usage Check & Gating ---
     if (uid) {
@@ -156,6 +157,10 @@ export const POST = async ({ request }) => {
     if (txtFileInput) {
       const textContent = await txtFileInput.text();
       documentText += `\n\n【追加テキストファイル内容】\n${textContent}`;
+    }
+
+    if (taskText) {
+      documentText += `\n\n【課題・問題の内容】\n${taskText}`;
     }
 
 

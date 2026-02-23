@@ -775,7 +775,7 @@
                                 type="text"
                                 bind:value={promoCode}
                                 placeholder="招待コードを入力"
-                                class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono uppercase"
+                                class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
                                 disabled={isRedeeming}
                             />
                             <button

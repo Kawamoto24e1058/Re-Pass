@@ -240,7 +240,7 @@
                                     type="text"
                                     bind:value={promoCode}
                                     placeholder="コードを入力..."
-                                    class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono uppercase"
+                                    class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
                                     disabled={isRedeeming}
                                 />
                                 <button
