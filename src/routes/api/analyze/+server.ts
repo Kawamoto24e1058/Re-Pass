@@ -252,11 +252,14 @@ export const POST = async ({ request }) => {
       });
     }
 
-    // Image
-    const imageUrl = formData.get('imageUrl') as string;
+    // Image (Multiple)
+    const imageUrls = formData.getAll('imageUrl') as string[];
     const imageFileInput = formData.get('image') as File;
-    if (imageUrl) {
-      await processFileUrl(imageUrl, 'image/jpeg', 'Image');
+
+    if (imageUrls && imageUrls.length > 0) {
+      for (let i = 0; i < imageUrls.length; i++) {
+        await processFileUrl(imageUrls[i], 'image/jpeg', `Image_${i + 1}`);
+      }
     } else if (imageFileInput) {
       console.log(`🖼️ Processing Image (Direct): ${imageFileInput.name || 'blob'}, type=${imageFileInput.type}, size=${imageFileInput.size} bytes`);
       const arrayBuffer = await imageFileInput.arrayBuffer();
@@ -349,17 +352,19 @@ export const POST = async ({ request }) => {
   }
   `;
 
+    const multiModalInstruction = "あなたには、同じ講義に関する複数の情報源（例：スライド資料、ノートの画像群、講義音声の文字起こし等）が与えられます。\n【重要】片方の情報だけに依存せず、両方の内容を突き合わせ、相互に補完し合っている重要なポイントを統合して一つの包括的なノート/要約を作成してください。\n";
+
     let systemPrompt = "";
     switch (mode) {
       case "thoughts":
-        systemPrompt = `あなたは講義を受講した「熱心な学生」です。丁寧語（です・ます調）でリアクションペーパーを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
+        systemPrompt = multiModalInstruction + `あなたは講義を受講した「熱心な学生」です。丁寧語（です・ます調）でリアクションペーパーを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
         break;
       case "report":
-        systemPrompt = `あなたは「論理的批評家」です。常体（だ・である調）で学術レポートを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
+        systemPrompt = multiModalInstruction + `あなたは「論理的批評家」です。常体（だ・である調）で学術レポートを作成します。\n${jsonSchema}\n**【最重要原則】**: 提供された資料のみに基づき解析すること。一般論での補完は厳禁。各見出しの直後に必ず空行を入れること。要旨は3行以内。`;
         break;
       case "note":
       default:
-        systemPrompt = `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を詳細に構造化します。\n${jsonSchema}\n
+        systemPrompt = multiModalInstruction + `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を詳細に構造化します。\n${jsonSchema}\n
 **【最重要原則】**:
 1. **提供された資料のみ**に基づき解析すること。一般論での補完は厳禁。
 2. **階層的な箇条書き**を多用し、読者がこのノートだけで講義を完全に復習できるようにすること。

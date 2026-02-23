@@ -21,6 +21,7 @@ export const audioFile = writable<File | null>(null);
 export const imageFile = writable<File | null>(null);
 export const videoFile = writable<File | null>(null);
 export const targetUrl = writable<string>("");
+export const stagedImages = writable<File[]>([]);
 
 // --- Actions ---
 export function resetSession() {
@@ -39,4 +40,5 @@ export function resetSession() {
     imageFile.set(null);
     videoFile.set(null);
     targetUrl.set("");
+    stagedImages.set([]);
 }

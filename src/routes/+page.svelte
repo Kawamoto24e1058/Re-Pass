@@ -51,6 +51,7 @@
     videoFile,
     targetUrl,
     interimTranscript,
+    stagedImages,
   } from "$lib/stores/sessionStore";
   import { recognitionService } from "$lib/services/recognitionService";
   import { page } from "$app/stores";
@@ -587,7 +588,8 @@
       !$imageFile &&
       !$videoFile &&
       !$targetUrl &&
-      !$transcript
+      !$transcript &&
+      $stagedImages.length === 0
     ) {
       toastMessage = "学習素材を入力してください";
       return;
@@ -626,11 +628,26 @@
       if ($pdfFile) pdfUrl = await uploadToStorage($pdfFile);
       if ($imageFile) imageUrl = await uploadToStorage($imageFile);
 
+      // Upload Staged Images
+      let stagedImageUrls: string[] = [];
+      if ($stagedImages && $stagedImages.length > 0) {
+        toastMessage = "画像をアップロード中...";
+        for (const img of $stagedImages) {
+          const sUrl = await uploadToStorage(img);
+          stagedImageUrls.push(sUrl);
+        }
+      }
+
       const formData = new FormData();
       if (audioUrl) formData.append("audioUrl", audioUrl);
       if (videoUrl) formData.append("videoUrl", videoUrl);
       if (pdfUrl) formData.append("pdfUrl", pdfUrl);
       if (imageUrl) formData.append("imageUrl", imageUrl);
+
+      // Append each staged image URL using the same key
+      stagedImageUrls.forEach((url) => {
+        formData.append("imageUrl", url);
+      });
       if ($txtFile) formData.append("txt", $txtFile);
       if ($targetUrl) formData.append("url", $targetUrl);
       formData.append("transcript", $transcript);
@@ -780,15 +797,21 @@
 
   function handleFileChange(e: Event, type: string) {
     const input = e.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      if (type === "pdf") pdfFile.set(file);
-      if (type === "txt") txtFile.set(file);
-      if (type === "image") imageFile.set(file);
-      if (type === "audio") audioFile.set(file);
+    if (input.files && input.files.length > 0) {
+      if (type === "pdf") pdfFile.set(input.files[0]);
+      if (type === "txt") txtFile.set(input.files[0]);
+      if (type === "audio") audioFile.set(input.files[0]);
       if (type === "video") {
-        videoFile.set(file);
-        extractAudio(file);
+        videoFile.set(input.files[0]);
+        extractAudio(input.files[0]);
+      }
+      if (type === "single_image") {
+        imageFile.set(input.files[0]);
+      }
+      if (type === "staged_image") {
+        // Append to existing staged images
+        const newFiles = Array.from(input.files);
+        stagedImages.update((current) => [...current, ...newFiles]);
       }
     }
   }
@@ -1480,10 +1503,18 @@
         id="file-input-{id}"
         hidden
         {accept}
+        multiple={id === "staged_image" ? true : undefined}
+        capture={id === "staged_image" ? "environment" : undefined}
         onchange={(e) =>
           handleFileChange(
             e,
-            id as "pdf" | "image" | "txt" | "audio" | "video",
+            id as
+              | "pdf"
+              | "single_image"
+              | "staged_image"
+              | "txt"
+              | "audio"
+              | "video",
           )}
       />
     </button>
@@ -2338,7 +2369,7 @@
                     >
                     学習資料 (A系統)
                   </h3>
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {@render FileInputCard(
                       "pdf",
                       "PDF",
@@ -2348,12 +2379,21 @@
                       "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", // FileText
                     )}
                     {@render FileInputCard(
-                      "image",
+                      "single_image",
                       "IMAGE",
                       "text-blue-400",
                       $imageFile,
                       "image/*",
                       "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z", // Image
+                    )}
+                    <!-- NEW CAMERA BUTTON -->
+                    {@render FileInputCard(
+                      "staged_image",
+                      "CAMERA",
+                      "text-orange-400",
+                      null, // Since this uses a staging array, we handle active state dynamically
+                      "image/*",
+                      "M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z", // Camera icon
                     )}
                     {@render FileInputCard(
                       "txt",
@@ -2365,6 +2405,76 @@
                     )}
                   </div>
                 </div>
+
+                <!-- Staging Area for Multiple Images -->
+                {#if $stagedImages.length > 0}
+                  <div
+                    class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl"
+                  >
+                    <h4
+                      class="text-xs font-bold text-slate-500 mb-3 flex items-center justify-between"
+                    >
+                      <span>📸 撮影された画像 ({$stagedImages.length}枚)</span>
+                      <button
+                        onclick={() =>
+                          document
+                            .getElementById(`file-input-staged_image`)
+                            ?.click()}
+                        class="text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-full flex items-center gap-1 transition-colors"
+                      >
+                        <svg
+                          class="w-3 h-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 4v16m8-8H4"
+                          /></svg
+                        >
+                        追加撮影
+                      </button>
+                    </h4>
+                    <div
+                      class="flex overflow-x-auto gap-3 pb-2 custom-scrollbar"
+                    >
+                      {#each $stagedImages as img, idx}
+                        <div
+                          class="relative w-24 h-24 flex-shrink-0 bg-white rounded-lg border border-slate-200 p-1 group"
+                        >
+                          <img
+                            src={URL.createObjectURL(img)}
+                            alt={`Captured ${idx}`}
+                            class="w-full h-full object-cover rounded-md"
+                          />
+                          <button
+                            onclick={() => {
+                              stagedImages.update((current) =>
+                                current.filter((_, i) => i !== idx),
+                              );
+                            }}
+                            class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                          >
+                            <svg
+                              class="w-4 h-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              ><path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                              /></svg
+                            >
+                          </button>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
 
                 <!-- Group B: Multimedia -->
                 <div>
