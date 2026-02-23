@@ -32,6 +32,7 @@
     endAt,
   } from "firebase/firestore";
   import { goto } from "$app/navigation";
+  import { browser } from "$app/environment";
   import { signOut } from "firebase/auth";
   import { subjects, lectures, currentBinder } from "$lib/stores";
   import { user as userStore, userProfile } from "$lib/userStore";
@@ -422,28 +423,30 @@
   let wakeLock: WakeLockSentinel | null = null;
 
   // Wake Lock & Navigation Warning
-  $: if (analyzing) {
-    // 1. Prevent Navigation
-    window.onbeforeunload = (e) => {
-      e.preventDefault();
-      e.returnValue = "解析処理を中断しますか？";
-      return "解析処理を中断しますか？";
-    };
+  $: if (browser) {
+    if (analyzing) {
+      // 1. Prevent Navigation
+      window.onbeforeunload = (e) => {
+        e.preventDefault();
+        e.returnValue = "解析処理を中断しますか？";
+        return "解析処理を中断しますか？";
+      };
 
-    // 2. Request Wake Lock
-    if ("wakeLock" in navigator && !wakeLock) {
-      navigator.wakeLock
-        .request("screen")
-        .then((sentinel) => {
-          wakeLock = sentinel;
-        })
-        .catch((err) => console.error("Wake Lock rejected:", err));
-    }
-  } else {
-    // Cleanup
-    window.onbeforeunload = null;
-    if (wakeLock) {
-      wakeLock.release().then(() => (wakeLock = null));
+      // 2. Request Wake Lock
+      if ("wakeLock" in navigator && !wakeLock) {
+        navigator.wakeLock
+          .request("screen")
+          .then((sentinel) => {
+            wakeLock = sentinel;
+          })
+          .catch((err) => console.error("Wake Lock rejected:", err));
+      }
+    } else {
+      // Cleanup
+      window.onbeforeunload = null;
+      if (wakeLock) {
+        wakeLock.release().then(() => (wakeLock = null));
+      }
     }
   }
 
