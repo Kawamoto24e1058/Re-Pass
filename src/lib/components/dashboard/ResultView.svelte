@@ -194,7 +194,10 @@
             prose-ul:my-6 prose-li:my-1 prose-li:text-slate-700
             prose-strong:text-indigo-900 prose-strong:font-bold
             prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
-            prose-blockquote:border-l-indigo-300 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg"
+            prose-blockquote:border-l-indigo-300 prose-blockquote:bg-indigo-50/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r-lg
+            [&>blockquote:has(strong:contains('口頭補足'))]:bg-yellow-50 [&>blockquote:has(strong:contains('口頭補足'))]:border-yellow-400 [&>blockquote:has(strong:contains('口頭補足'))]:text-yellow-900
+            [&>blockquote:has(strong:contains('テスト対策'))]:bg-rose-50 [&>blockquote:has(strong:contains('テスト対策'))]:border-rose-400 [&>blockquote:has(strong:contains('テスト対策'))]:text-rose-900
+            [&>blockquote:has(strong:contains('意図・背景'))]:bg-emerald-50 [&>blockquote:has(strong:contains('意図・背景'))]:border-emerald-400 [&>blockquote:has(strong:contains('意図・背景'))]:text-emerald-900"
                 >
                     {@html (
                         marked.parse(

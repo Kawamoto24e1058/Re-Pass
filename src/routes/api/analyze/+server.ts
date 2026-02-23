@@ -340,6 +340,25 @@ export const POST = async ({ request }) => {
       }
     }
 
+    // --- Final Input Validation & Pre-API Logging ---
+    const totalInputLength = (audioText?.length || 0) + (documentText?.length || 0);
+    const MAX_FREE_CHARS = 1000;
+    const MAX_PREMIUM_CHARS = 50000;
+
+    console.log('\n=== 🚀 Initiating Gemini API Call ===');
+    console.log(`Plan Status : ${isUltimate ? 'Ultimate' : isPremium ? 'Premium' : 'Free'}`);
+    console.log(`Total Text  : ${totalInputLength} chars`);
+    console.log(`Model Mode  : ${mode}`);
+    console.log('=====================================\n');
+
+    if (!isPremium && totalInputLength > MAX_FREE_CHARS) {
+      console.warn(`⚠️ Blocked: Free user attempted ${totalInputLength} chars (Limit: ${MAX_FREE_CHARS})`);
+      return json({ error: `無料プランの処理文字数上限（${MAX_FREE_CHARS}文字）を超過しました。プレミアムにアップグレードしてください。` }, { status: 403 });
+    } else if (isPremium && totalInputLength > MAX_PREMIUM_CHARS) {
+      console.warn(`⚠️ Blocked: Premium user attempted ${totalInputLength} chars (Limit: ${MAX_PREMIUM_CHARS})`);
+      return json({ error: `一度に処理できる最大文字数（${MAX_PREMIUM_CHARS}文字）を超過しました。内容を分割してください。` }, { status: 400 });
+    }
+
     // --- Generation Logic ---
     const tolerance = targetLength >= 1000 ? 0.05 : 0.1;
     const minLength = Math.floor(targetLength * (1 - tolerance));
@@ -362,7 +381,19 @@ export const POST = async ({ request }) => {
   }
   `;
 
-    const multiModalInstruction = "あなたには、同じ講義に関する複数の情報源（例：テキスト資料やスライド画像、さらに講義音声の文字起こし等）が与えられます。\n【重要ルール：複数データの統合】\n資料テキストと音声テキストの両方が提供されている場合、絶対に片方だけを要約してはいけません。\n必ず両方の内容を突き合わせ、スライド等の「資料」に記載されている視覚的・構造的な情報と、「音声」で語られている詳細な解説や具体例を補完し合い、一つの包括的で完璧なノートを作成してください。\n";
+    const multiModalInstruction = `あなたは超優秀な学術アシスタントです。提供された『スライド画像内のテキスト等の資料』と『講義の文字起こしや音声データ』の両方を深く分析してください。
+【重要ルール：複数データの高度な統合】
+資料テキストと音声テキストの両方が提供されている場合、絶対に片方だけを要約してはいけません。
+必ず両方の内容を突き合わせ、以下の点に強く注目して補足情報を生成してください：
+1. スライドに記載されていないが、講師が口頭で強調していた具体例や補足説明。
+2. 講師が「ここがテストに出る」「重要だ」「覚えておいて」と言及した箇所。
+3. スライドの箇条書きの背景にある、講師の意図や論理構成。
+
+生成する文章には、「講師の補足によると…」や「口頭での説明では…」といった形で、文字起こし由来の情報であることを明示してください。
+また、特に重要な口頭補足やテスト対策に関する内容は、以下のような書式（太字や引用ブロックなど）を用いて視覚的に目立たせてください。
+例：
+> **【口頭補足】**: 講師の補足によると、この理論は実際の現場では〇〇のように応用されるとのことです。
+> **【テスト対策】**: 講師が「ここは次回のテストで必ず問う」と明言していました。`;
 
     let systemPrompt = "";
     if (isTaskAssist) {
@@ -386,13 +417,13 @@ export const POST = async ({ request }) => {
         default:
           systemPrompt = multiModalInstruction + `あなたは「優秀な書記」です。事実関係の正確さを最優先し、講義内容を詳細に構造化します。\n${jsonSchema}\n
 **【最重要原則】**:
-1. **提供された資料のみ**に基づき解析すること。一般論での補完は厳禁。
+1. **提供された資料（スライドと音声）のみ**に基づき解析すること。一般論での補完は厳禁。
 2. **階層的な箇条書き**を多用し、読者がこのノートだけで講義を完全に復習できるようにすること。
-3. **具体的**な事例、ケーススタディ、エピソードは必ず省略せずに記述すること。
-4. **数式**（例えば $PaQa + PbQb = Bg$）が登場した場合は、LaTeX形式で記述し、変数の意味と式の意図を詳細に解説すること。
+3. **【重要】** スライドにある見出しに対し、必ず音声データから得られた「口頭での補足説明」や「具体例」を肉付けして記述すること。
+4. **数式**が登場した場合は、LaTeX形式で記述し、変数の意味と式の意図を詳細に解説すること。
 5. **専門用語**は用語辞典だけでなく、本文中でも文脈に沿って解説を加えること。
 6. 各見出しの直後に必ず空行を入れること。
-7. **タイムスタンプ**: 重要なトピックの切り替わりや議論の転換点には、必ず **[MM:SS]** 形式（例: [05:30]）でタイムスタンプを付記すること。`;
+7. 【口頭補足】や【テスト対策】、【意図・背景】などの特殊タグを積極的に用い、スライド外の情報を目立たせること。`;
           break;
       }
     }
@@ -416,10 +447,10 @@ ${systemPrompt}
 ${formatRules}
 
 【提供された資料テキスト（スライドや文書の抽出内容など）】
-${documentText || 'なし'}
+${documentText ? documentText : '（データなし：スライド等の視覚資料は提供されていません）'}
 
 【提供された音声テキスト（講義の録音文字起こしや動画字幕など）】
-${audioText || 'なし'}
+${audioText ? audioText : '（データなし：文字起こし等の音声資料は提供されていません。資料テキストのみで補完してください）'}
 ${evaluationCriteria ? `
 【追加指示：A評価攻略ガイド】
 この講義の評価基準は「${evaluationCriteria}」です。
@@ -529,6 +560,13 @@ ${evaluationCriteria ? `
       } catch (error: any) {
         console.error(`❌ Attempt ${retryCount + 1} failed: `, error.message);
         if (error.stack) console.error(error.stack);
+
+        // --- Safety Block Handling ---
+        const errorMsg = String(error.message).toLowerCase();
+        if (errorMsg.includes("safety") || errorMsg.includes("blocked") || errorMsg.includes("candidate was blocked")) {
+          console.warn("⚠️ Request blocked by Gemini Safety Settings.");
+          return json({ error: "不適切なコンテンツまたは安全基準に抵触する内容が含まれているため、AIが解析をブロックしました。" }, { status: 400 });
+        }
 
         if (error.status === 429 || error.status === 503) {
           retryCount++;
