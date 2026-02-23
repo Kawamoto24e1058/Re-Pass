@@ -501,7 +501,7 @@
                             +¥2,500<span
                                 class="text-sm text-slate-400 font-medium ml-1"
                             >
-                                (一括)</span
+                                /4ヶ月</span
                             >
                         </div>
                         <div

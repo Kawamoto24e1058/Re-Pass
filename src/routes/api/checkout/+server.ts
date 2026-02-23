@@ -63,7 +63,7 @@ export async function POST({ request, url }) {
             if (priceId === ULTIMATE_MONTHLY) {
                 appliedDiscounts = [{ coupon: 'upgrade-discount-700' }];
             } else if (priceId === ULTIMATE_SEASON) {
-                appliedDiscounts = [{ coupon: 'upgrade-discount-2480' }];
+                appliedDiscounts = [{ coupon: 'upgrade-discount-2500' }];
             }
         }
 
