@@ -3,7 +3,7 @@
     import { doc, setDoc, serverTimestamp } from "firebase/firestore";
     import { goto } from "$app/navigation";
     import { onMount } from "svelte";
-    import { userProfile } from "$lib/stores";
+    import { userProfile } from "$lib/userStore";
     import {
         PUBLIC_STRIPE_PUBLISHABLE_KEY,
         PUBLIC_STRIPE_PRICE_PREMIUM,
@@ -30,7 +30,6 @@
     import { Capacitor } from "@capacitor/core";
 
     let currentPlan = $derived($userProfile?.plan || "free");
-    let isPremiumUser = $derived(currentPlan === "premium");
 
     async function handlePurchase(
         priceId: string,
@@ -296,13 +295,13 @@
 
             <button
                 onclick={selectFreePlan}
-                disabled={currentPlan === "free"}
+                disabled={currentPlan !== "free"}
                 class="w-full py-3 rounded-xl transition-all font-bold text-sm {currentPlan ===
                 'free'
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
+                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'}"
             >
-                {currentPlan === "free" ? "加入中" : "無料で始める"}
+                {currentPlan === "free" ? "加入中" : "選択不可"}
             </button>
         </div>
 
@@ -451,13 +450,15 @@
                 <h3
                     class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-4"
                 >
-                    Ultimate {isPremiumUser ? "(アップグレード)" : ""}
+                    Ultimate {currentPlan === "premium"
+                        ? "(アップグレード)"
+                        : ""}
                 </h3>
                 <div
                     class="text-4xl font-black text-white mb-2 transition-all duration-300"
                 >
                     {#if billingCycle === "monthly"}
-                        {#if isPremiumUser}
+                        {#if currentPlan === "premium"}
                             <div
                                 class="text-sm text-slate-400 line-through mb-1"
                             >
@@ -472,7 +473,7 @@
                                 >/月</span
                             >
                         {/if}
-                    {:else if isPremiumUser}
+                    {:else if currentPlan === "premium"}
                         <div class="text-sm text-slate-400 line-through mb-1">
                             通常価格 ¥4,980/4ヶ月
                         </div>
@@ -487,7 +488,7 @@
                     {/if}
                 </div>
                 <p class="text-xs text-pink-400 font-bold h-4">
-                    {#if billingCycle === "season" && !isPremiumUser}月あたり
+                    {#if billingCycle === "season" && currentPlan !== "premium"}月あたり
                         約¥570 (Premiumよりお得!){/if}
                 </p>
                 <p class="text-slate-300 text-sm mt-4 leading-relaxed h-10">
@@ -621,7 +622,7 @@
                         billingCycle === "monthly"
                             ? "Ultimate_Monthly"
                             : "Ultimate_Season",
-                        isPremiumUser,
+                        currentPlan === "premium",
                     )}
                 disabled={isLoading !== "" || currentPlan === "ultimate"}
                 class="w-full py-4 rounded-xl transition-all shadow-lg font-bold text-sm {currentPlan ===
@@ -633,7 +634,7 @@
                     処理中...
                 {:else if currentPlan === "ultimate"}
                     加入中
-                {:else if isPremiumUser}
+                {:else if currentPlan === "premium"}
                     お得にアップグレードする
                 {:else}
                     Ultimateに参加

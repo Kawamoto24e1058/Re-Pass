@@ -2,7 +2,7 @@
 import { json } from '@sveltejs/kit';
 import Stripe from 'stripe';
 import { env } from '$env/dynamic/private';
-import { adminAuth } from '$lib/server/firebase-admin';
+import { adminAuth, adminDb } from '$lib/server/firebase-admin';
 import {
     PUBLIC_STRIPE_PRICE_SEASON,
     PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY,
@@ -44,11 +44,21 @@ export async function POST({ request, url }) {
             return json({ error: 'Missing required parameters' }, { status: 400 });
         }
 
+        // --- Fetch User Data for Status Check ---
+        const userDoc = await adminDb.collection('users').doc(userId).get();
+        const userData = userDoc.data();
+
+        // Identify "Free Premium" users: on premium plan but no stripe customer ID (uses promo code/manual)
+        const isFreePremiumUser = userData?.plan === 'premium' && !userData?.stripeCustomerId;
+        console.log(`[Checkout] User ${userId} - Plan: ${userData?.plan}, HasStripeCustomer: ${!!userData?.stripeCustomerId}, isFreePremiumUser: ${isFreePremiumUser}`);
+
         const mode = 'subscription';
         // Determine target plan for metadata
         const ULTIMATE_MONTHLY = PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY;
         const ULTIMATE_SEASON = PUBLIC_STRIPE_PRICE_ULTIMATE_SEASON;
         const targetPlan = (priceId === ULTIMATE_MONTHLY || priceId === ULTIMATE_SEASON) ? 'ultimate' : 'premium';
+
+        const UPGRADE_DISCOUNT_COUPON_ID = 'upgrade-discount-700';
 
         // Prepare session payload
         const sessionPayload: Stripe.Checkout.SessionCreateParams = {
@@ -70,7 +80,10 @@ export async function POST({ request, url }) {
                 plan: targetPlan,
                 priceId: priceId,
                 isUpgrade: isUpgrade ? "true" : "false"
-            }
+            },
+            discounts: (isFreePremiumUser && targetPlan === 'ultimate')
+                ? [{ coupon: UPGRADE_DISCOUNT_COUPON_ID }]
+                : []
         };
 
         // プレミアムからのアップグレードの場合、ここで日割り計算(proration_behavior)や割引を適用する
