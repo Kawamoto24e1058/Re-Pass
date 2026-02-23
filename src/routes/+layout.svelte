@@ -231,7 +231,7 @@
 >
 	<!-- Mobile Header (Global) -->
 	<header
-		class="lg:hidden fixed top-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white/80 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4"
+		class="lg:hidden fixed top-0 left-0 right-0 min-h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white/80 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4 pb-2"
 	>
 		<button
 			onclick={toggleSidebar}

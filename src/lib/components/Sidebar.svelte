@@ -461,7 +461,7 @@
     {#if $isSidebarOpen}
         <button
             onclick={() => isSidebarOpen.set(false)}
-            class="lg:hidden absolute top-4 right-4 p-4 -m-2 text-slate-400 hover:text-indigo-600 transition-colors z-50"
+            class="lg:hidden absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 p-4 -m-2 text-slate-400 hover:text-indigo-600 transition-colors z-50"
             aria-label="メニューを閉じる"
         >
             <svg
@@ -481,7 +481,7 @@
     {/if}
 
     <!-- Sidebar Header -->
-    <div class="p-6 pb-2">
+    <div class="px-6 pb-2 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-6">
         <div class="flex items-center justify-between mb-6">
             <button
                 onclick={handleLogoClick}
@@ -492,7 +492,7 @@
     </div>
 
     <!-- Navigation Sections -->
-    <div class="flex-1 overflow-y-auto px-3 space-y-6">
+    <div class="flex-1 overflow-y-auto px-3 space-y-6 pb-4">
         <!-- Folders / Subjects -->
         <div>
             <div
@@ -646,7 +646,7 @@
                 <div class="mb-2 px-2 flex justify-between items-center">
                     <span
                         class="text-[10px] text-slate-400 font-medium tracking-wider"
-                        >履修中の講義</span
+                        >🔍 みんなのノートを検索</span
                     >
                     <button
                         onclick={() => {
@@ -714,7 +714,7 @@
     </div>
 
     <!-- Bottom Status & User -->
-    <div class="p-2 border-t border-slate-200/60 bg-white/40">
+    <div class="p-2 border-t border-slate-200/60 bg-white/40 flex-shrink-0">
         <!-- Usage Status -->
         <div
             class="mb-2 bg-white/60 rounded-xl p-2.5 border border-slate-100 shadow-sm"

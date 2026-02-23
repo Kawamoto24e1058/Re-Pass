@@ -11,6 +11,8 @@
         Timestamp,
         updateDoc,
         doc,
+        collection,
+        onSnapshot,
     } from "firebase/firestore";
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
@@ -57,19 +59,48 @@
 
     import { user as userStore, userProfile } from "$lib/userStore";
     let autoSearchedQuery = $state("");
+    let enrolledCoursesList = $state<any[]>([]);
+    let unsubscribeEnrolledCourses: any = null;
     $effect(() => {
         user = $userStore;
         userData = $userProfile;
 
+        // Fetch enrolled_courses collection
+        if (user && !loading && !unsubscribeEnrolledCourses) {
+            const qEnrolled = query(
+                collection(db, `users/${user.uid}/enrolled_courses`),
+                orderBy("createdAt", "desc"),
+            );
+            unsubscribeEnrolledCourses = onSnapshot(qEnrolled, (snapshot) => {
+                enrolledCoursesList = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+            });
+        }
+    });
+
+    // Cleanup listener on destroy
+    import { onDestroy } from "svelte";
+    onDestroy(() => {
+        if (unsubscribeEnrolledCourses) unsubscribeEnrolledCourses();
+    });
+
+    $effect(() => {
         // Auto search handling
         if (user && !loading) {
             const q =
                 $page.url.searchParams.get("q") ||
-                $page.url.searchParams.get("course");
+                $page.url.searchParams.get("course") ||
+                $page.url.searchParams.get("courseName");
             if (q && q !== autoSearchedQuery) {
                 autoSearchedQuery = q;
                 searchQuery = q;
                 // Defer slightly to ensure state is ready
+                setTimeout(() => handleSearch(), 0);
+            } else if (!q && autoSearchedQuery) {
+                autoSearchedQuery = "";
+                searchQuery = "";
                 setTimeout(() => handleSearch(), 0);
             }
         }
@@ -291,22 +322,22 @@
                     </button>
                 </div>
             </div>
-            <!-- Suggested Tags (Optional, currently hardcoded or derived) -->
-            {#if userData?.enrolledCourses?.length}
+            <!-- Suggested Tags -->
+            {#if enrolledCoursesList.length > 0}
                 <div class="mt-4 flex flex-wrap gap-2">
                     <span
                         class="text-xs font-bold text-slate-400 uppercase mr-2 py-1"
                         >My Courses:</span
                     >
-                    {#each userData.enrolledCourses as course}
+                    {#each enrolledCoursesList as course}
                         <button
                             onclick={() => {
-                                searchQuery = course;
+                                searchQuery = course.courseName;
                                 handleSearch();
                             }}
                             class="bg-white border border-slate-200 text-slate-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-slate-50 hover:text-indigo-600 transition-colors"
                         >
-                            {course}
+                            {course.courseName}
                         </button>
                     {/each}
                 </div>
@@ -432,9 +463,10 @@
                                     </span>
                                     <span
                                         class="text-[10px] text-slate-400 font-medium"
-                                        >by {userData?.faculty
-                                            ? "ビジネスデザイン学部生"
-                                            : "桃大生"}</span
+                                        >by {lecture.authorName ||
+                                            (userData?.faculty
+                                                ? "ビジネスデザイン学部生"
+                                                : "桃大生")}</span
                                     >
                                 </div>
                                 <span

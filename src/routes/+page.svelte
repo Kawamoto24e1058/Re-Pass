@@ -695,6 +695,11 @@
         createdAt: serverTimestamp(),
         subjectId: selectedSubjectId || null,
         uid: user.uid,
+        authorName:
+          userData?.nickname ||
+          user.displayName ||
+          user.email?.split("@")[0] ||
+          "匿名ユーザー",
         sourceType: $videoFile
           ? "video"
           : $audioFile
