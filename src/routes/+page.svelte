@@ -55,6 +55,8 @@
   import { recognitionService } from "$lib/services/recognitionService";
   import { page } from "$app/stores";
   import UpgradeModal from "$lib/components/UpgradeModal.svelte";
+  import EnrollModal from "$lib/components/EnrollModal.svelte";
+  import { isEnrollModalOpen } from "$lib/stores";
 
   // --- Simplified State Variables ---
   let isEditing = $state(false);
@@ -85,11 +87,26 @@
   });
 
   // Derived courses for display (with retry/fallback)
-  let displayCourses = $derived(
-    userData?.enrolledCourses && userData.enrolledCourses.length > 0
-      ? userData.enrolledCourses
-      : [{ name: "テスト講義A (DB空)", value: "test1" }],
-  );
+  let enrolledCoursesList = $state<any[]>([]);
+  let unsubscribeEnrolledCourses: any = null;
+
+  $effect(() => {
+    if (user) {
+      const q = query(
+        collection(db, `users/${user.uid}/enrolled_courses`),
+        orderBy("createdAt", "desc"),
+      );
+      unsubscribeEnrolledCourses = onSnapshot(q, (snapshot) => {
+        enrolledCoursesList = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+      });
+    }
+    return () => {
+      if (unsubscribeEnrolledCourses) unsubscribeEnrolledCourses();
+    };
+  });
 
   // UI State
   let toastMessage = $state<string | null>(null);
@@ -1783,6 +1800,10 @@
       title={upgradeModalTitle}
       message={upgradeModalMessage}
     />
+    <EnrollModal
+      isOpen={$isEnrollModalOpen}
+      onClose={() => ($isEnrollModalOpen = false)}
+    />
   {/if}
 
   <!-- Main Content -->
@@ -2114,21 +2135,28 @@
                   class="absolute top-full left-0 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
                 >
                   <div class="max-h-60 overflow-y-auto custom-scrollbar">
-                    {#if userData?.enrolledCourses && userData.enrolledCourses.length > 0}
-                      {#each userData.enrolledCourses as courseName}
+                    {#if enrolledCoursesList && enrolledCoursesList.length > 0}
+                      {#each enrolledCoursesList as course}
                         <button
                           type="button"
                           onclick={() => {
-                            $lectureTitle = courseName;
+                            $lectureTitle = course.courseName;
                             isCourseDropdownOpen = false;
                           }}
                           class="w-full text-left px-4 py-3 hover:bg-purple-50 hover:text-purple-600 transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between group {$lectureTitle ===
-                          courseName
+                          course.courseName
                             ? 'bg-purple-50 text-purple-700 font-bold'
                             : 'text-slate-700'}"
                         >
-                          <span class="text-lg">{courseName}</span>
-                          {#if $lectureTitle === courseName}
+                          <span class="text-lg">
+                            {course.courseName}
+                            {#if course.instructor}
+                              <span class="text-xs text-slate-500 ml-2"
+                                >({course.instructor})</span
+                              >
+                            {/if}
+                          </span>
+                          {#if $lectureTitle === course.courseName}
                             <svg
                               class="w-5 h-5 text-purple-600"
                               fill="none"
@@ -2146,11 +2174,23 @@
                         </button>
                       {/each}
                     {:else}
-                      <div class="p-6 text-center text-slate-400 text-sm">
-                        <p class="font-bold mb-1">履修中の講義がありません</p>
-                        <p class="text-xs">
-                          サイドバーからコースを追加してください
+                      <div class="p-6 text-center text-slate-500 text-sm">
+                        <p class="font-bold mb-2 text-slate-600">
+                          履修中の講義がありません
                         </p>
+                        <p class="text-xs mb-4">
+                          時間割から講義を追加して、AIに学習させましょう。
+                        </p>
+                        <button
+                          type="button"
+                          onclick={() => {
+                            isCourseDropdownOpen = false;
+                            $isEnrollModalOpen = true;
+                          }}
+                          class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-xl shadow-sm hover:bg-indigo-700 transition"
+                        >
+                          ⚙️ 履修講義を登録する
+                        </button>
                       </div>
                     {/if}
                   </div>
@@ -2202,59 +2242,71 @@
 
                 <!-- Right: Length -->
                 <div>
-                  <div class="flex justify-between items-center mb-4">
-                    <label
-                      for="target-length"
-                      class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
-                      >目標文字数</label
-                    >
-                    <span
-                      class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg"
-                      >{manuscriptPages}枚分</span
-                    >
-                  </div>
-
-                  <div class="relative w-full pt-6 pb-2">
-                    <span
-                      class="absolute -top-3 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
-                      style="left: {(($targetLength - 100) / 3900) * 100}%"
-                    >
-                      {$targetLength}文字
-                    </span>
-                    <input
-                      id="target-length"
-                      type="range"
-                      min="100"
-                      max="4000"
-                      step="50"
-                      bind:value={$targetLength}
-                      oninput={handleLengthChange}
-                      class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 relative z-10 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                    />
-
-                    <div
-                      class="relative w-full mt-2 text-xs text-slate-400 font-bold"
-                    >
-                      <span
-                        class="absolute"
-                        style="left: 0%; transform: translateX(0);">100</span
+                  {#if $analysisMode !== "note"}
+                    <div class="flex justify-between items-center mb-4">
+                      <label
+                        for="target-length"
+                        class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
+                        >目標文字数</label
                       >
                       <span
-                        class="absolute"
-                        style="left: 10.25%; transform: translateX(-50%);"
-                        >500</span
-                      >
-                      <span
-                        class="absolute"
-                        style="left: 48.71%; transform: translateX(-50%);"
-                        >2000</span
-                      >
-                      <span
-                        class="absolute"
-                        style="right: 0%; transform: translateX(0);">4000</span
+                        class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg"
+                        >{manuscriptPages}枚分</span
                       >
                     </div>
-                  </div>
+
+                    <div class="relative w-full pt-6 pb-2">
+                      <span
+                        class="absolute -top-3 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
+                        style="left: {(($targetLength - 100) / 3900) * 100}%"
+                      >
+                        {$targetLength}文字
+                      </span>
+                      <input
+                        id="target-length"
+                        type="range"
+                        min="100"
+                        max="4000"
+                        step="50"
+                        bind:value={$targetLength}
+                        oninput={handleLengthChange}
+                        class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 relative z-10 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                      />
+
+                      <div
+                        class="relative w-full mt-2 text-xs text-slate-400 font-bold"
+                      >
+                        <span
+                          class="absolute"
+                          style="left: 0%; transform: translateX(0);">100</span
+                        >
+                        <span
+                          class="absolute"
+                          style="left: 10.25%; transform: translateX(-50%);"
+                          >500</span
+                        >
+                        <span
+                          class="absolute"
+                          style="left: 48.71%; transform: translateX(-50%);"
+                          >2000</span
+                        >
+                        <span
+                          class="absolute"
+                          style="right: 0%; transform: translateX(0);"
+                          >4000</span
+                        >
+                      </div>
+                    </div>
+                  {:else}
+                    <div
+                      class="h-full flex items-center justify-center p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200"
+                    >
+                      <p class="text-xs font-bold text-slate-400 text-center">
+                        ノート作成モードでは文字数制限はありません。<br />
+                        網羅的に詳細なノートを作成します。
+                      </p>
+                    </div>
+                  {/if}
                 </div>
               </div>
 

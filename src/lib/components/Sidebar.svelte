@@ -41,6 +41,7 @@
         draggingLectureId?: string | null;
         onClose?: () => void;
         onLogoClick?: () => void;
+        onOpenEnrollModal?: () => void;
     }>();
 
     // Local State
@@ -207,6 +208,9 @@
     let editingSubjectId = $state<string | null>(null); // Track if we are editing
     let sharedCounts = $state<Record<string, number>>({});
 
+    let enrolledCoursesList = $state<any[]>([]);
+    let unsubscribeEnrolledCourses = $state<(() => void) | null>(null);
+
     // Fetch shared counts when enrolled courses change
     $effect(() => {
         if (userData?.normalizedEnrolledCourses?.length > 0) {
@@ -233,6 +237,27 @@
                 }
             });
         }
+    });
+
+    onMount(() => {
+        if (props.user) {
+            const coursesQuery = query(
+                collection(db, `users/${props.user.uid}/enrolled_courses`),
+                orderBy("createdAt", "desc"),
+            );
+            unsubscribeEnrolledCourses = onSnapshot(
+                coursesQuery,
+                (snapshot) => {
+                    enrolledCoursesList = snapshot.docs.map((d) => ({
+                        id: d.id,
+                        ...d.data(),
+                    }));
+                },
+            );
+        }
+        return () => {
+            if (unsubscribeEnrolledCourses) unsubscribeEnrolledCourses();
+        };
     });
 
     async function handleSubjectSubmit() {
@@ -817,39 +842,63 @@
             </a>
 
             <!-- Enrolled Courses -->
-            {#if userData?.enrolledCourses?.length > 0}
-                <div class="mt-2 pt-2 border-t border-slate-100">
-                    <div
-                        class="px-2 mb-1 text-[10px] text-slate-400 font-medium"
+            <div class="mt-2 pt-2 border-t border-slate-100">
+                <div class="mb-2 px-2 flex justify-between items-center">
+                    <span
+                        class="text-[10px] text-slate-400 font-medium tracking-wider"
+                        >履修中の講義</span
                     >
-                        履修中の講義
-                    </div>
-                    {#each userData.enrolledCourses as course, i}
-                        {@const normalizedName =
-                            userData.normalizedEnrolledCourses?.[i] ||
-                            course.toLowerCase().replace(/\s+/g, "")}
-                        {@const count = sharedCounts[normalizedName] || 0}
-                        <a
-                            href="/search?q={encodeURIComponent(course)}"
-                            class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
-                        >
-                            <div class="flex items-center gap-2 truncate">
-                                <span
-                                    class="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-indigo-400 transition-colors"
-                                ></span>
-                                <span class="truncate">{course}</span>
-                            </div>
-                            {#if count > 0}
-                                <span
-                                    class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100"
-                                >
-                                    {count}
-                                </span>
-                            {/if}
-                        </a>
-                    {/each}
+                    <button
+                        onclick={() => {
+                            isSidebarOpen.set(false);
+                            props.onOpenEnrollModal?.();
+                        }}
+                        class="text-[10px] text-indigo-600 font-bold bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 px-2 py-0.5 rounded shadow-sm border border-indigo-100 transition-all active:scale-95"
+                    >
+                        ⚙️ 登録
+                    </button>
                 </div>
-            {/if}
+                {#if enrolledCoursesList.length > 0}
+                    <div class="space-y-0.5">
+                        {#each enrolledCoursesList as course}
+                            {@const normalizedName = course.courseName
+                                .toLowerCase()
+                                .replace(/\s+/g, "")}
+                            {@const count = sharedCounts[normalizedName] || 0}
+                            <a
+                                href="/search?q={encodeURIComponent(
+                                    course.courseName,
+                                )}"
+                                class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
+                            >
+                                <div class="flex items-center gap-2 truncate">
+                                    <span
+                                        class="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-indigo-400 transition-colors"
+                                    ></span>
+                                    <span class="truncate"
+                                        >{course.courseName}</span
+                                    >
+                                </div>
+                                {#if count > 0}
+                                    <span
+                                        class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[10px] font-bold border border-indigo-100"
+                                    >
+                                        {count}
+                                    </span>
+                                {/if}
+                            </a>
+                        {/each}
+                    </div>
+                {:else}
+                    <div
+                        class="px-2 py-3 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 mt-1"
+                    >
+                        <p class="text-[10px] text-slate-400">
+                            登録された講義がありません
+                        </p>
+                    </div>
+                {/if}
+            </div>
         </div>
     </div>
 
