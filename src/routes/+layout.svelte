@@ -38,77 +38,79 @@
 		transcript,
 	} from "$lib/stores/sessionStore";
 
-	let { children } = $props<{ children: any }>();
-	let loading = $state(true); // App state
-	let user = $state<any>(null);
+	// Props
+	export let data: any = {};
+	// In Svelte 4/legacy, children are passed via <slot />, not as a prop.
+	// Since +layout.svelte is a layout, we just use <slot /> in the markup.
+	let loading = true; // App state
+	let user = null;
 	let lectureUnsubscribes: (() => void)[] = [];
-	let lecturesMap = $state<Record<string, any[]>>({});
+	let lecturesMap: Record<string, any[]> = {};
 
-	$effect(() => {
+	$: {
 		const allLectures = Object.values(lecturesMap)
 			.flat()
-			.sort((a, b) => {
+			.sort((a: any, b: any) => {
 				const tA = a.createdAt?.seconds || 0;
 				const tB = b.createdAt?.seconds || 0;
 				return tB - tA;
 			});
 		lectures.set(allLectures);
-	});
+	}
 
 	function cleanupLectureListeners() {
 		lectureUnsubscribes.forEach((unsub) => unsub());
 		lectureUnsubscribes = [];
 	}
 
-	$effect(() => {
+	$: {
 		if (!user) {
 			cleanupLectureListeners();
 			lecturesMap = {};
-			return;
-		}
+		} else {
+			cleanupLectureListeners();
 
-		cleanupLectureListeners();
-
-		// 1. Root Lectures
-		const rootQuery = query(
-			collection(db, `users/${user.uid}/lectures`),
-			orderBy("createdAt", "desc"),
-		);
-		const unsubRoot = onSnapshot(rootQuery, (snapshot) => {
-			lecturesMap["root"] = snapshot.docs.map((d) => ({
-				id: d.id,
-				path: d.ref.path,
-				...d.data(),
-			}));
-			console.log(
-				"📚 [+layout] Root lectures fetched:",
-				lecturesMap["root"].length,
+			// 1. Root Lectures
+			const rootQuery = query(
+				collection(db, `users/${user.uid}/lectures`),
+				orderBy("createdAt", "desc"),
 			);
-		});
-		lectureUnsubscribes.push(unsubRoot);
-
-		// 2. Subject Lectures
-		if ($subjects.length > 0) {
-			$subjects.forEach((subject) => {
-				const subQuery = query(
-					collection(
-						db,
-						`users/${user.uid}/subjects/${subject.id}/lectures`,
-					),
-					orderBy("createdAt", "desc"),
+			const unsubRoot = onSnapshot(rootQuery, (snapshot) => {
+				lecturesMap["root"] = snapshot.docs.map((d) => ({
+					id: d.id,
+					path: d.ref.path,
+					...d.data(),
+				}));
+				console.log(
+					"📚 [+layout] Root lectures fetched:",
+					lecturesMap["root"].length,
 				);
-				const unsubSub = onSnapshot(subQuery, (snapshot) => {
-					lecturesMap[subject.id] = snapshot.docs.map((d) => ({
-						id: d.id,
-						path: d.ref.path,
-						subjectId: subject.id,
-						...d.data(),
-					}));
-				});
-				lectureUnsubscribes.push(unsubSub);
 			});
+			lectureUnsubscribes.push(unsubRoot);
+
+			// 2. Subject Lectures
+			if ($subjects.length > 0) {
+				$subjects.forEach((subject) => {
+					const subQuery = query(
+						collection(
+							db,
+							`users/${user.uid}/subjects/${subject.id}/lectures`,
+						),
+						orderBy("createdAt", "desc"),
+					);
+					const unsubSub = onSnapshot(subQuery, (snapshot) => {
+						lecturesMap[subject.id] = snapshot.docs.map((d) => ({
+							id: d.id,
+							path: d.ref.path,
+							subjectId: subject.id,
+							...d.data(),
+						}));
+					});
+					lectureUnsubscribes.push(unsubSub);
+				});
+			}
 		}
-	});
+	}
 
 	onMount(() => {
 		let unsubscribeSubjects: () => void;
@@ -234,7 +236,7 @@
 		class="lg:hidden fixed top-0 left-0 right-0 min-h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white/80 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4 pb-2"
 	>
 		<button
-			onclick={toggleSidebar}
+			on:click={toggleSidebar}
 			class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
 			aria-label="メニューを開く"
 		>
@@ -287,7 +289,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
-				onclick={() => isSidebarOpen.set(false)}
+				on:click={() => isSidebarOpen.set(false)}
 			></div>
 		{/if}
 
@@ -314,7 +316,7 @@
 
 		<div class="flex-1 flex flex-col min-w-0 relative">
 			<main class="flex-1">
-				{@render children()}
+				<slot />
 			</main>
 
 			<!-- Global Footer -->
@@ -360,7 +362,7 @@
 <!-- Return to Work Button -->
 {#if $page.url.pathname !== "/" && ($isRecording || $lectureTitle || $pdfFile || $audioFile || $videoFile || $transcript)}
 	<button
-		onclick={() => goto("/")}
+		on:click={() => goto("/")}
 		class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-6 py-4 rounded-full shadow-2xl font-bold flex items-center gap-3 animate-in slide-in-from-bottom-10 hover:scale-105 transition-transform border border-slate-700"
 	>
 		<span class="relative flex h-3 w-3">

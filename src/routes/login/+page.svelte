@@ -304,7 +304,7 @@
             {#if mode === "choice"}
                 <div in:fade={{ duration: 200 }} class="space-y-3">
                     <button
-                        onclick={() => handleSocialLogin(googleProvider)}
+                        on:click={() => handleSocialLogin(googleProvider)}
                         class="w-full py-4 px-6 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50"
                         disabled={loading}
                     >
@@ -332,7 +332,7 @@
                     </button>
 
                     <button
-                        onclick={() => handleSocialLogin(microsoftProvider)}
+                        on:click={() => handleSocialLogin(microsoftProvider)}
                         class="w-full py-4 px-6 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50"
                         disabled={loading}
                     >
@@ -379,13 +379,13 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <button
-                            onclick={() => (mode = "email")}
+                            on:click={() => (mode = "email")}
                             class="py-4 rounded-2xl bg-slate-900 text-white font-bold text-[13px] shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all active:scale-[0.98]"
                         >
                             メール
                         </button>
                         <button
-                            onclick={() => (mode = "phone")}
+                            on:click={() => (mode = "phone")}
                             class="py-4 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold text-[13px] hover:bg-slate-50 transition-all active:scale-[0.98]"
                         >
                             電話番号
@@ -424,7 +424,7 @@
                     </div>
 
                     <button
-                        onclick={handleEmailAuth}
+                        on:click={handleEmailAuth}
                         disabled={loading || (isRegistering && !isAgreed)}
                         class="w-full py-5 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-500 transition-all disabled:opacity-50"
                     >
@@ -437,7 +437,7 @@
 
                     <div class="flex flex-col items-center gap-4 mt-6">
                         <button
-                            onclick={() => {
+                            on:click={() => {
                                 isRegistering = !isRegistering;
                                 error = "";
                             }}
@@ -448,7 +448,7 @@
                                 : "新しくアカウントを作成する"}
                         </button>
                         <button
-                            onclick={() => (mode = "choice")}
+                            on:click={() => (mode = "choice")}
                             class="text-xs font-bold text-slate-300 hover:text-slate-400"
                             >戻る</button
                         >
@@ -476,14 +476,14 @@
                         SMSで認証コードを送信します。
                     </p>
                     <button
-                        onclick={handlePhoneSubmit}
+                        on:click={handlePhoneSubmit}
                         disabled={loading || !isAgreed}
                         class="w-full py-5 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-500 transition-all disabled:opacity-50"
                     >
                         {loading ? "送信中..." : "認証コードを送信"}
                     </button>
                     <button
-                        onclick={() => (mode = "choice")}
+                        on:click={() => (mode = "choice")}
                         class="w-full text-xs font-bold text-slate-300 hover:text-slate-400 py-2"
                         >戻る</button
                     >
@@ -506,14 +506,14 @@
                         />
                     </div>
                     <button
-                        onclick={handleVerifyCode}
+                        on:click={handleVerifyCode}
                         disabled={loading}
                         class="w-full py-5 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl shadow-indigo-100 hover:bg-indigo-500 transition-all"
                     >
                         {loading ? "確認中..." : "番号を認証して開始"}
                     </button>
                     <button
-                        onclick={() => (mode = "phone")}
+                        on:click={() => (mode = "phone")}
                         class="w-full text-xs font-bold text-slate-300 hover:text-slate-400 py-2"
                         >やり直す</button
                     >

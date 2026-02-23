@@ -28,44 +28,42 @@
     import UpgradeModal from "$lib/components/UpgradeModal.svelte";
 
     // Props
-    let props = $props<{
-        user: any;
-        lectures?: any[];
-        subjects?: any[];
-        currentLectureId?: string | null;
-        selectedSubjectId?: string | null;
-        onLoadLecture: (lecture: any) => void;
-        onSelectSubject: (subjectId: string | null) => void;
-        onSignOut: () => void;
-        onDragStart?: (lectureId: string) => void;
-        onDragEnd?: () => void;
-        draggingLectureId?: string | null;
-        onClose?: () => void;
-        onLogoClick?: () => void;
-        onOpenEnrollModal?: () => void;
-    }>();
+    export let user: any;
+    export let lectures: any[] = [];
+    export let subjects: any[] = [];
+    export let currentLectureId: string | null = null;
+    export let selectedSubjectId: string | null = null;
+    export let onLoadLecture: (lecture: any) => void;
+    export let onSelectSubject: (subjectId: string | null) => void;
+    export let onSignOut: () => void;
+    export let onDragStart: (lectureId: string) => void = () => {};
+    export let onDragEnd: () => void = () => {};
+    export let draggingLectureId: string | null = null;
+    export let onClose: () => void = () => {};
+    export let onLogoClick: () => void = () => {};
+    export let onOpenEnrollModal: () => void = () => {};
 
     // Local State
-    let userData = $state<any>(null);
-    let nickname = $state("");
-    let isMenuOpen = $state(false);
-    let isEditModalOpen = $state(false);
-    let editNicknameValue = $state("");
-    let unsubscribeUser = $state<(() => void) | null>(null);
-    let dragTargetId = $state<string | null>(null);
+    let userData: any = null;
+    let nickname = "";
+    let isMenuOpen = false;
+    let isEditModalOpen = false;
+    let editNicknameValue = "";
+    let unsubscribeUser = null;
+    let dragTargetId = null;
     // Subject State
-    let isSubjectModalOpen = $state(false);
-    let newSubjectName = $state("");
-    let newSubjectColor = $state("bg-indigo-500");
-    let flashTargetId = $state<string | null>(null);
-    let isOpenBinder = $state(true);
-    let isOpenLectures = $state(true);
+    let isSubjectModalOpen = false;
+    let newSubjectName = "";
+    let newSubjectColor = "bg-indigo-500";
+    let flashTargetId = null;
+    let isOpenBinder = true;
+    let isOpenLectures = true;
 
     // Upgrade Modal State
-    let showUpgradeModal = $state(false);
-    let upgradeModalTitle = $state("");
-    let upgradeModalMessage = $state("");
-    let isUltimate = $derived(userData?.plan === "ultimate");
+    let showUpgradeModal = false;
+    let upgradeModalTitle = "";
+    let upgradeModalMessage = "";
+    $: isUltimate = userData?.plan === "ultimate";
 
     function toggleSubject(id: string) {
         expandedSubjects.update((s) => {
@@ -81,12 +79,12 @@
 
     // Logo Click Handler: Force Home Navigation and Reset State
     function handleLogoClick() {
-        if (props.onLogoClick) {
-            props.onLogoClick();
+        if (onLogoClick) {
+            onLogoClick();
         } else {
             // Clear sidebar selection
             currentBinder.set(null);
-            props.onSelectSubject(null);
+            onSelectSubject(null);
         }
 
         // Force navigate to home with full invalidation
@@ -146,22 +144,20 @@
 
     // Listener for user profile & subjects
     onMount(() => {
-        if (props.user) {
-            const userRef = doc(db, "users", props.user.uid);
+        if (user) {
+            const userRef = doc(db, "users", user.uid);
             unsubscribeUser = onSnapshot(userRef, (docSnap) => {
                 if (docSnap.exists()) {
                     userData = docSnap.data();
                     // Priority: Firestore Nickname > Auth DisplayName > Auth Email
                     nickname =
                         userData.nickname ||
-                        props.user.displayName ||
-                        props.user.email?.split("@")[0] ||
+                        user.displayName ||
+                        user.email?.split("@")[0] ||
                         "User";
                 } else {
                     nickname =
-                        props.user.displayName ||
-                        props.user.email?.split("@")[0] ||
-                        "User";
+                        user.displayName || user.email?.split("@")[0] || "User";
                 }
             });
 
@@ -196,10 +192,10 @@
     }
 
     async function saveNickname() {
-        if (!props.user) return;
+        if (!user) return;
         try {
             await setDoc(
-                doc(db, "users", props.user.uid),
+                doc(db, "users", user.uid),
                 {
                     nickname: editNicknameValue,
                 },
@@ -214,44 +210,38 @@
 
     // --- Subject Management ---
 
-    let editingSubjectId = $state<string | null>(null); // Track if we are editing
-    let sharedCounts = $state<Record<string, number>>({});
+    let editingSubjectId = null; // Track if we are editing
+    let sharedCounts = {};
 
-    let enrolledCoursesList = $state<any[]>([]);
-    let unsubscribeEnrolledCourses = $state<(() => void) | null>(null);
+    let enrolledCoursesList = [];
+    let unsubscribeEnrolledCourses = null;
 
     // Fetch shared counts when enrolled courses change
-    $effect(() => {
-        if (userData?.normalizedEnrolledCourses?.length > 0) {
-            const courses = userData.normalizedEnrolledCourses;
-            courses.forEach(async (normalizedName: string) => {
-                // Optimization: Could batch this or use a separate aggregation collection
-                try {
-                    // Use collectionGroup to query all 'lectures' collections
-                    const q = query(
-                        collectionGroup(db, "lectures"),
-                        where("normalizedCourseName", "==", normalizedName),
-                        where("isShared", "==", true),
-                        limit(10), // Limit to check existence/count cap
-                    );
-                    const snapshot = await getDocs(q);
-                    sharedCounts[normalizedName] = snapshot.size;
-                } catch (e) {
-                    console.error(
-                        "Error fetching count for",
-                        normalizedName,
-                        e,
-                    );
-                    // Fallback or silent fail if index is missing
-                }
-            });
-        }
-    });
+    $: if (userData?.normalizedEnrolledCourses?.length > 0) {
+        const courses = userData.normalizedEnrolledCourses;
+        courses.forEach(async (normalizedName) => {
+            // Optimization: Could batch this or use a separate aggregation collection
+            try {
+                // Use collectionGroup to query all 'lectures' collections
+                const q = query(
+                    collectionGroup(db, "lectures"),
+                    where("normalizedCourseName", "==", normalizedName),
+                    where("isShared", "==", true),
+                    limit(10), // Limit to check existence/count cap
+                );
+                const snapshot = await getDocs(q);
+                sharedCounts[normalizedName] = snapshot.size;
+            } catch (e) {
+                console.error("Error fetching count for", normalizedName, e);
+                // Fallback or silent fail if index is missing
+            }
+        });
+    }
 
     onMount(() => {
-        if (props.user) {
+        if (user) {
             const coursesQuery = query(
-                collection(db, `users/${props.user.uid}/enrolled_courses`),
+                collection(db, `users/${user.uid}/enrolled_courses`),
                 orderBy("createdAt", "desc"),
             );
             unsubscribeEnrolledCourses = onSnapshot(
@@ -276,11 +266,7 @@
             if (editingSubjectId) {
                 // Update Existing
                 await updateDoc(
-                    doc(
-                        db,
-                        `users/${props.user.uid}/subjects`,
-                        editingSubjectId,
-                    ),
+                    doc(db, `users/${user.uid}/subjects`, editingSubjectId),
                     {
                         name: newSubjectName,
                         color: newSubjectColor,
@@ -288,14 +274,11 @@
                 );
             } else {
                 // Create New
-                await addDoc(
-                    collection(db, `users/${props.user.uid}/subjects`),
-                    {
-                        name: newSubjectName,
-                        color: newSubjectColor,
-                        createdAt: serverTimestamp(),
-                    },
-                );
+                await addDoc(collection(db, `users/${user.uid}/subjects`), {
+                    name: newSubjectName,
+                    color: newSubjectColor,
+                    createdAt: serverTimestamp(),
+                });
             }
 
             closeSubjectModal();
@@ -334,11 +317,9 @@
         )
             return;
         try {
-            await deleteDoc(
-                doc(db, `users/${props.user.uid}/subjects`, subjectId),
-            );
-            if (props.selectedSubjectId === subjectId) {
-                props.onSelectSubject(null);
+            await deleteDoc(doc(db, `users/${user.uid}/subjects`, subjectId));
+            if (selectedSubjectId === subjectId) {
+                onSelectSubject(null);
             }
         } catch (e) {
             console.error("Error deleting subject", e);
@@ -352,12 +333,12 @@
         if (e.dataTransfer) {
             e.dataTransfer.setData("text/plain", lectureId);
             e.dataTransfer.effectAllowed = "move";
-            if (props.onDragStart) props.onDragStart(lectureId);
+            if (onDragStart) onDragStart(lectureId);
         }
     }
 
     function handleDragEnd() {
-        if (props.onDragEnd) props.onDragEnd();
+        if (onDragEnd) onDragEnd();
     }
 
     function handleDragOver(e: DragEvent, targetId: string | null) {
@@ -378,7 +359,7 @@
         const lectureId = e.dataTransfer?.getData("text/plain");
         if (!lectureId) return;
 
-        const lecture = props.lectures.find((l: any) => l.id === lectureId);
+        const lecture = lectures.find((l: any) => l.id === lectureId);
         if (!lecture) return;
 
         // If target is unassigned (null), handle it
@@ -391,8 +372,8 @@
         try {
             const oldPath = lecture.path;
             const newPath = finalTargetSubjectId
-                ? `users/${props.user.uid}/subjects/${finalTargetSubjectId}/lectures/${lectureId}`
-                : `users/${props.user.uid}/lectures/${lectureId}`;
+                ? `users/${user.uid}/subjects/${finalTargetSubjectId}/lectures/${lectureId}`
+                : `users/${user.uid}/lectures/${lectureId}`;
 
             // 1. Get current data
             const sourceRef = doc(db, oldPath);
@@ -430,34 +411,32 @@
     }
 
     // Derived state for plan
-    let planLevel = $derived.by(() => {
+    $: planLevel = (() => {
         const p = String(userData?.plan || "")
             .trim()
             .toLowerCase();
         if (p === "ultimate") return "ULTIMATE";
         if (p === "premium" || p === "pro") return "PREMIUM";
         return "FREE";
-    });
+    })();
 
-    let planColor = $derived(
+    $: planColor =
         planLevel === "ULTIMATE"
             ? "bg-gradient-to-r from-amber-400 to-yellow-600 shadow-lg shadow-amber-500/20"
             : planLevel === "PREMIUM"
               ? "bg-gradient-to-r from-indigo-500 to-pink-500 shadow-lg shadow-indigo-500/20"
-              : "bg-slate-300",
-    );
+              : "bg-slate-300";
 
-    let planName = $derived(
+    $: planName =
         planLevel === "ULTIMATE"
             ? "アルティメットプラン"
             : planLevel === "PREMIUM"
               ? "プレミアムプラン"
-              : "フリープラン",
-    );
+              : "フリープラン";
 
-    let usagePercent = $derived(planLevel === "FREE" ? 33 : 100);
+    $: usagePercent = planLevel === "FREE" ? 33 : 100;
 
-    let usageText = $derived(planLevel === "FREE" ? "残り 3回/日" : "無制限");
+    $: usageText = planLevel === "FREE" ? "残り 3回/日" : "無制限";
 </script>
 
 <!-- Sidebar -->
@@ -469,7 +448,7 @@
     <!-- Mobile Close Button -->
     {#if $isSidebarOpen}
         <button
-            onclick={() => isSidebarOpen.set(false)}
+            on:click={() => isSidebarOpen.set(false)}
             class="lg:hidden absolute top-[calc(1rem+env(safe-area-inset-top))] right-4 p-4 -m-2 text-slate-400 hover:text-indigo-600 transition-colors z-50"
             aria-label="メニューを閉じる"
         >
@@ -493,7 +472,7 @@
     <div class="px-6 pb-2 pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pt-6">
         <div class="flex items-center justify-between mb-6">
             <button
-                onclick={handleLogoClick}
+                on:click={handleLogoClick}
                 class="font-bold text-slate-900 tracking-tight text-xl bg-gradient-to-r from-indigo-700 to-pink-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-none p-0"
                 title="ホームに戻る">Re-Pass</button
             >
@@ -505,7 +484,7 @@
         <!-- Folders / Subjects -->
         <div class="shrink-0">
             <button
-                onclick={() => (isOpenBinder = !isOpenBinder)}
+                on:click={() => (isOpenBinder = !isOpenBinder)}
                 class="w-full px-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center hover:text-slate-600 transition-colors"
             >
                 <span>科目 (個人バインダー)</span>
@@ -533,7 +512,7 @@
                     <!-- All History Link -->
                     <a
                         href="/history"
-                        onclick={() => isSidebarOpen.set(false)}
+                        on:click={() => isSidebarOpen.set(false)}
                         class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group {String(
                             $page.url.pathname,
                         ) === '/history' &&
@@ -564,7 +543,7 @@
                     <!-- Unassigned / Inbox -->
                     <a
                         href="/history?courseId=null"
-                        onclick={() => isSidebarOpen.set(false)}
+                        on:click={() => isSidebarOpen.set(false)}
                         class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group {String(
                             $page.url.pathname,
                         ) === '/history' &&
@@ -600,7 +579,7 @@
                                     href="/history?courseId={course.id}&courseName={encodeURIComponent(
                                         course.courseName,
                                     )}"
-                                    onclick={() => isSidebarOpen.set(false)}
+                                    on:click={() => isSidebarOpen.set(false)}
                                     class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors group {String(
                                         $page.url.pathname,
                                     ) === '/history' &&
@@ -650,7 +629,7 @@
                 <!-- Search Link -->
                 <a
                     href="/search"
-                    onclick={(e) => {
+                    on:click={(e) => {
                         if (!isUltimate) {
                             e.preventDefault();
                             showUpgradeModal = true;
@@ -688,8 +667,8 @@
                     <div
                         role="button"
                         tabindex="0"
-                        onclick={() => (isOpenLectures = !isOpenLectures)}
-                        onkeydown={(e) =>
+                        on:click={() => (isOpenLectures = !isOpenLectures)}
+                        on:keydown={(e) =>
                             e.key === "Enter" &&
                             (isOpenLectures = !isOpenLectures)}
                         class="w-full mb-2 px-2 flex justify-between items-center hover:text-slate-600 transition-colors cursor-pointer"
@@ -700,10 +679,10 @@
                         >
                         <div class="flex items-center gap-2">
                             <button
-                                onclick={(e) => {
+                                on:click={(e) => {
                                     e.stopPropagation();
                                     isSidebarOpen.set(false);
-                                    props.onOpenEnrollModal?.();
+                                    onOpenEnrollModal?.();
                                 }}
                                 class="text-[10px] text-indigo-600 font-bold bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 px-2 py-0.5 rounded shadow-sm border border-indigo-100 transition-all active:scale-95"
                             >
@@ -744,7 +723,7 @@
                                             href="/search?courseId={course.id}&courseName={encodeURIComponent(
                                                 course.courseName,
                                             )}"
-                                            onclick={() =>
+                                            on:click={() =>
                                                 isSidebarOpen.set(false)}
                                             class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
                                         >
@@ -888,7 +867,7 @@
             <!-- User Profile & Menu -->
             <div class="relative user-menu-container">
                 <button
-                    onclick={(e) => {
+                    on:click={(e) => {
                         e.stopPropagation();
                         toggleMenu();
                     }}
@@ -897,9 +876,9 @@
                     <div
                         class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-pink-100 border border-white shadow-sm flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0 overflow-hidden"
                     >
-                        {#if props.user?.photoURL}
+                        {#if user?.photoURL}
                             <img
-                                src={props.user.photoURL}
+                                src={user.photoURL}
                                 alt="User"
                                 class="w-full h-full object-cover"
                             />
@@ -912,7 +891,7 @@
                             {nickname}
                         </div>
                         <div class="text-[10px] text-slate-400 truncate">
-                            {props.user?.email}
+                            {user?.email}
                         </div>
                     </div>
                     <svg
@@ -936,7 +915,7 @@
                     >
                         <div class="p-1">
                             <button
-                                onclick={openEditModal}
+                                on:click={openEditModal}
                                 class="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
                             >
                                 <svg
@@ -955,7 +934,7 @@
                             </button>
                             <div class="h-px bg-slate-100 my-1"></div>
                             <button
-                                onclick={props.onSignOut}
+                                on:click={onSignOut}
                                 class="w-full text-left px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
                             >
                                 <svg
@@ -1016,7 +995,7 @@
                     <div class="flex flex-wrap gap-2">
                         {#each subjectColors as color}
                             <button
-                                onclick={() => (newSubjectColor = color.value)}
+                                on:click={() => (newSubjectColor = color.value)}
                                 class="w-8 h-8 rounded-full {color.value} shadow-sm border-2 transition-all {newSubjectColor ===
                                 color.value
                                     ? 'border-slate-800 scale-110'
@@ -1030,13 +1009,13 @@
 
             <div class="flex gap-3">
                 <button
-                    onclick={closeSubjectModal}
+                    on:click={closeSubjectModal}
                     class="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors"
                 >
                     キャンセル
                 </button>
                 <button
-                    onclick={handleSubjectSubmit}
+                    on:click={handleSubjectSubmit}
                     disabled={!newSubjectName.trim()}
                     class="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -1076,13 +1055,13 @@
 
             <div class="flex gap-3">
                 <button
-                    onclick={() => (isEditModalOpen = false)}
+                    on:click={() => (isEditModalOpen = false)}
                     class="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors"
                 >
                     キャンセル
                 </button>
                 <button
-                    onclick={saveNickname}
+                    on:click={saveNickname}
                     class="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-colors"
                 >
                     保存

@@ -2,8 +2,8 @@
     import { onMount } from "svelte";
     import { fade } from "svelte/transition";
 
-    let { onComplete } = $props<{ onComplete: () => void }>();
-    let progress = $state(0);
+    export let onComplete: () => void;
+    let progress = 0;
 
     onMount(() => {
         // Prevent scrolling while loading

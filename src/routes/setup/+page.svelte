@@ -161,7 +161,7 @@
                     >
                         {#each filteredUniversities as uni}
                             <button
-                                onclick={() => selectUni(uni)}
+                                on:click={() => selectUni(uni)}
                                 class="w-full text-left px-6 py-3 hover:bg-indigo-50 text-sm font-bold text-slate-700 transition-colors border-b border-slate-50 last:border-0"
                             >
                                 {uni}
@@ -194,7 +194,7 @@
             {/if}
 
             <button
-                onclick={handleSave}
+                on:click={handleSave}
                 disabled={loading || !university.trim()}
                 class="w-full py-5 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl shadow-indigo-200 hover:bg-indigo-500 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:shadow-none"
             >

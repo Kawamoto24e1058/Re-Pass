@@ -15,36 +15,37 @@
     import { db } from "$lib/firebase";
     import { user as userStore, userProfile } from "$lib/userStore";
 
-    let { isOpen = false, onClose } = $props();
+    export let isOpen = false;
+    export let onClose: () => void;
 
-    let activeTab = $state<"manual" | "image">("manual");
+    let activeTab: "manual" | "image" = "manual";
 
     // Manual Input State
-    let manualCourseName = $state("");
-    let manualInstructor = $state("");
+    let manualCourseName = "";
+    let manualInstructor = "";
 
     // Enrolled Courses State
-    let enrolledCourses = $state<any[]>([]);
+    let enrolledCourses: any[] = [];
     let unsubscribeCourses: any = null;
 
     // Image Upload State
-    let imageFile = $state<File | null>(null);
-    let imageUploading = $state(false);
-    let previewCourses = $state<{ courseName: string; instructor: string }[]>(
-        [],
-    );
-    let errorMessage = $state("");
-    let isSaving = $state(false);
+    let imageFile: File | null = null;
+    let imageUploading = false;
+    let previewCourses: { courseName: string; instructor: string }[] = [];
+    let errorMessage = "";
+    let isSaving = false;
 
-    $effect(() => {
-        if (isOpen) {
+    $: if (isOpen) {
+        if (typeof document !== "undefined") {
             document.body.style.overflow = "hidden";
-            // Subscribe to courses
-            if ($userStore) {
-                const q = query(
-                    collection(db, `users/${$userStore.uid}/enrolled_courses`),
-                    orderBy("createdAt", "desc"),
-                );
+        }
+        // Subscribe to courses
+        if ($userStore) {
+            const q = query(
+                collection(db, `users/${$userStore.uid}/enrolled_courses`),
+                orderBy("createdAt", "desc"),
+            );
+            if (!unsubscribeCourses) {
                 unsubscribeCourses = onSnapshot(q, (snapshot) => {
                     enrolledCourses = snapshot.docs.map((d) => ({
                         id: d.id,
@@ -52,22 +53,23 @@
                     }));
                 });
             }
-        } else {
-            document.body.style.overflow = "";
-            if (unsubscribeCourses) unsubscribeCourses();
-            // Reset state
-            activeTab = "manual";
-            manualCourseName = "";
-            manualInstructor = "";
-            imageFile = null;
-            previewCourses = [];
-            errorMessage = "";
         }
-        return () => {
+    } else {
+        if (typeof document !== "undefined") {
             document.body.style.overflow = "";
-            if (unsubscribeCourses) unsubscribeCourses();
-        };
-    });
+        }
+        if (unsubscribeCourses) {
+            unsubscribeCourses();
+            unsubscribeCourses = null;
+        }
+        // Reset state
+        activeTab = "manual";
+        manualCourseName = "";
+        manualInstructor = "";
+        imageFile = null;
+        previewCourses = [];
+        errorMessage = "";
+    }
 
     async function addManualCourse() {
         if (!manualCourseName.trim()) return;
@@ -170,7 +172,7 @@
         }
     }
 
-    let isPremium = $derived($userProfile && $userProfile.plan !== "free");
+    $: isPremium = $userProfile && $userProfile.plan !== "free";
 </script>
 
 {#if isOpen}
@@ -183,10 +185,10 @@
         <div
             transition:fade={{ duration: 200 }}
             class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            onclick={onClose}
+            on:click={onClose}
             role="button"
             tabindex="0"
-            onkeydown={(e) => e.key === "Escape" && onClose()}
+            on:keydown={(e) => e.key === "Escape" && onClose()}
         ></div>
 
         <!-- Modal Content -->
@@ -204,7 +206,7 @@
                     <span class="text-2xl">⚙️</span> 履修講義の登録
                 </h2>
                 <button
-                    onclick={onClose}
+                    on:click={onClose}
                     class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                     aria-label="閉じる"
                 >
@@ -231,7 +233,7 @@
                     'manual'
                         ? 'border-indigo-600 text-indigo-600'
                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}"
-                    onclick={() => (activeTab = "manual")}
+                    on:click={() => (activeTab = "manual")}
                 >
                     ✍️ 手入力で登録
                 </button>
@@ -240,7 +242,7 @@
                     'image'
                         ? 'border-indigo-600 text-indigo-600'
                         : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}"
-                    onclick={() => (activeTab = "image")}
+                    on:click={() => (activeTab = "image")}
                 >
                     📸 画像から自動登録 <span
                         class="text-xs ml-1 bg-gradient-to-r from-amber-400 to-amber-600 text-white px-2 py-0.5 rounded-full"
@@ -281,7 +283,7 @@
                                         placeholder="講義名 (例: 経済学入門)"
                                         bind:value={manualCourseName}
                                         class="w-full px-4 py-3 bg-white border border-indigo-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-700 font-medium"
-                                        onkeydown={(e) =>
+                                        on:keydown={(e) =>
                                             e.key === "Enter" &&
                                             addManualCourse()}
                                     />
@@ -292,13 +294,13 @@
                                         placeholder="担当教員 (任意)"
                                         bind:value={manualInstructor}
                                         class="w-full px-4 py-3 bg-white border border-indigo-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-700 font-medium"
-                                        onkeydown={(e) =>
+                                        on:keydown={(e) =>
                                             e.key === "Enter" &&
                                             addManualCourse()}
                                     />
                                 </div>
                                 <button
-                                    onclick={addManualCourse}
+                                    on:click={addManualCourse}
                                     disabled={!manualCourseName.trim()}
                                     class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 whitespace-nowrap"
                                 >
@@ -361,7 +363,7 @@
                                                 {/if}
                                             </div>
                                             <button
-                                                onclick={() =>
+                                                on:click={() =>
                                                     deleteCourse(course.id)}
                                                 class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
                                                 title="削除"
@@ -412,7 +414,7 @@
                                         この機能は有料プラン限定です。時間割やシラバスの写真を撮るだけで、ワンタップで講義リストを構築します。
                                     </p>
                                     <button
-                                        onclick={() => {
+                                        on:click={() => {
                                             onClose();
                                             goto("/pricing");
                                         }}
@@ -433,7 +435,7 @@
                                         <span class="text-xl">✨</span> 以下の講義が見つかりました
                                     </h3>
                                     <button
-                                        onclick={() => {
+                                        on:click={() => {
                                             previewCourses = [];
                                             imageFile = null;
                                         }}
@@ -459,7 +461,7 @@
                                                 placeholder="担当教員 (任意)"
                                             />
                                             <button
-                                                onclick={() =>
+                                                on:click={() =>
                                                     (previewCourses =
                                                         previewCourses.filter(
                                                             (_, idx) =>
@@ -487,7 +489,7 @@
                                 </div>
 
                                 <button
-                                    onclick={savePreviewCourses}
+                                    on:click={savePreviewCourses}
                                     disabled={isSaving}
                                     class="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
                                 >
@@ -523,7 +525,7 @@
                                     <input
                                         type="file"
                                         accept="image/*"
-                                        onchange={handleImageChange}
+                                        on:change={handleImageChange}
                                         disabled={imageUploading}
                                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
                                         id="file-upload"
@@ -645,7 +647,7 @@
                                             </div>
                                         </div>
                                         <button
-                                            onclick={processImage}
+                                            on:click={processImage}
                                             class="px-5 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-lg hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap"
                                         >
                                             AIで解析

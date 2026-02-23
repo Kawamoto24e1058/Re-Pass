@@ -1,0 +1,7 @@
+2233:                  {@render LectureItem(lecture)}
+2536:                    {@render FileInputCard(
+2544:                    {@render FileInputCard(
+2553:                    {@render FileInputCard(
+2561:                    {@render FileInputCard(
+2663:                    {@render FileInputCard(
+2932:            {@render LectureItem(lecture)}

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onMount, onDestroy } from "svelte";
     import { db, auth } from "$lib/firebase";
     import {
         collection,
@@ -15,92 +15,90 @@
     import { page } from "$app/stores";
     import { fade, fly } from "svelte/transition";
 
-    let lectures = $state<any[]>([]);
-    let loading = $state(true);
-    let user = $state<any>(null);
-    let pageTitle = $state("未分類の履歴");
-    let pageDesc = $state("科目バインダーに整理されていない講義の一覧です。");
+    let lectures: any[] = [];
+    let loading = true;
+    let user: any = null;
+    let pageTitle = "未分類の履歴";
+    let pageDesc = "科目バインダーに整理されていない講義の一覧です。";
 
     let unsubscribeSnapshot: (() => void) | null = null;
 
     // Reactive URL parameters
-    let courseIdParam = $derived($page.url.searchParams.get("courseId"));
-    let courseNameParam = $derived($page.url.searchParams.get("courseName"));
+    $: courseIdParam = $page.url.searchParams.get("courseId");
+    $: courseNameParam = $page.url.searchParams.get("courseName");
 
     // Subscribe to user store
-    $effect(() => {
-        user = $userStore;
-    });
+    $: user = $userStore;
 
     // Reactive data fetch based on URL parameters and user
-    $effect(() => {
+    $: {
         if (!user) {
             loading = false;
-            return;
-        }
-
-        loading = true; // start loading when URL changes
-        if (unsubscribeSnapshot) {
-            unsubscribeSnapshot();
-        }
-
-        let q;
-
-        if (courseIdParam === "null") {
-            // Uncategorized mode
-            pageTitle = "未分類の履歴";
-            pageDesc =
-                "どの講義（バインダー）にも属していないノートの履歴です。";
-            q = query(
-                collection(db, `users/${user.uid}/lectures`),
-                where("courseName", "==", "未分類"),
-                orderBy("createdAt", "desc"),
-            );
-        } else if (courseIdParam) {
-            // Filter by specific course ID
-            pageTitle = courseNameParam
-                ? `${courseNameParam} のノート`
-                : "講義の履歴";
-            pageDesc = "この講義バインダーに保存されたノートの一覧です。";
-            q = query(
-                collection(db, `users/${user.uid}/lectures`),
-                where("courseId", "==", courseIdParam),
-                orderBy("createdAt", "desc"),
-            );
-        } else if (courseNameParam) {
-            // Fallback to name match for backward compatibility
-            pageTitle = `${courseNameParam} のノート`;
-            pageDesc = "この講義に紐づくノートの一覧です。";
-            q = query(
-                collection(db, `users/${user.uid}/lectures`),
-                where("courseName", "==", courseNameParam),
-                orderBy("createdAt", "desc"),
-            );
         } else {
-            // All histories
-            pageTitle = "すべての履歴";
-            pageDesc = "これまでに作成したすべてのノート履歴一覧です。";
-            q = query(
-                collection(db, `users/${user.uid}/lectures`),
-                orderBy("createdAt", "desc"),
-            );
-        }
-
-        unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-            lectures = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                path: doc.ref.path,
-                ...doc.data(),
-            }));
-            loading = false;
-        });
-
-        return () => {
+            loading = true; // start loading when URL changes
             if (unsubscribeSnapshot) {
                 unsubscribeSnapshot();
                 unsubscribeSnapshot = null;
             }
-        };
+
+            let q;
+
+            if (courseIdParam === "null") {
+                // Uncategorized mode
+                pageTitle = "未分類の履歴";
+                pageDesc =
+                    "どの講義（バインダー）にも属していないノートの履歴です。";
+                q = query(
+                    collection(db, `users/${user.uid}/lectures`),
+                    where("courseName", "==", "未分類"),
+                    orderBy("createdAt", "desc"),
+                );
+            } else if (courseIdParam) {
+                // Filter by specific course ID
+                pageTitle = courseNameParam
+                    ? `${courseNameParam} のノート`
+                    : "講義の履歴";
+                pageDesc = "この講義バインダーに保存されたノートの一覧です。";
+                q = query(
+                    collection(db, `users/${user.uid}/lectures`),
+                    where("courseId", "==", courseIdParam),
+                    orderBy("createdAt", "desc"),
+                );
+            } else if (courseNameParam) {
+                // Fallback to name match for backward compatibility
+                pageTitle = `${courseNameParam} のノート`;
+                pageDesc = "この講義に紐づくノートの一覧です。";
+                q = query(
+                    collection(db, `users/${user.uid}/lectures`),
+                    where("courseName", "==", courseNameParam),
+                    orderBy("createdAt", "desc"),
+                );
+            } else {
+                // All histories
+                pageTitle = "すべての履歴";
+                pageDesc = "これまでに作成したすべてのノート履歴一覧です。";
+                q = query(
+                    collection(db, `users/${user.uid}/lectures`),
+                    orderBy("createdAt", "desc"),
+                );
+            }
+
+            unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+                lectures = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    path: doc.ref.path,
+                    ...doc.data(),
+                }));
+                loading = false;
+            });
+        }
+    }
+
+    onDestroy(() => {
+        if (unsubscribeSnapshot) {
+            unsubscribeSnapshot();
+            unsubscribeSnapshot = null;
+        }
     });
 
     onMount(() => {

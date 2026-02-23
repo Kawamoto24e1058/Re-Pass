@@ -7,7 +7,7 @@
 >
     <main class="max-w-[800px] mx-auto py-12 px-6" in:fade={{ duration: 400 }}>
         <button
-            onclick={() => history.back()}
+            on:click={() => history.back()}
             class="group mb-8 flex items-center gap-3 text-slate-500 hover:text-indigo-600 font-bold transition-all"
         >
             <div

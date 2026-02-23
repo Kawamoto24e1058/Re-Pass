@@ -14,8 +14,8 @@
 
     // Local placeholders removed, using env vars
 
-    let isLoading = $state(""); // "Premium_Monthly", "Ultimate_Season", etc. or empty
-    let billingCycle = $state("season"); // "monthly" | "season" (Default to Season for upsell)
+    let isLoading = ""; // "Premium_Monthly", "Ultimate_Season", etc. or empty
+    let billingCycle = "season"; // "monthly" | "season" (Default to Season for upsell)
 
     onMount(() => {
         if (
@@ -29,7 +29,7 @@
     import { Browser } from "@capacitor/browser";
     import { Capacitor } from "@capacitor/core";
 
-    let currentPlan = $derived($userProfile?.plan || "free");
+    $: currentPlan = $userProfile?.plan || "free";
 
     async function handlePurchase(
         priceId: string,
@@ -110,11 +110,11 @@
         }
     }
 
-    let promoCode = $state("");
-    let isRedeeming = $state(false);
-    let redeemError = $state<string | null>(null);
-    let redeemSuccess = $state(false);
-    let redeemedPlanName = $state("");
+    let promoCode = "";
+    let isRedeeming = false;
+    let redeemError: string | null = null;
+    let redeemSuccess = false;
+    let redeemedPlanName = "";
 
     async function redeemCode() {
         if (!promoCode.trim()) return;
@@ -167,7 +167,7 @@
     <!-- Back Button -->
     <div class="absolute top-8 left-8">
         <button
-            onclick={() => history.back()}
+            on:click={() => history.back()}
             class="group flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors text-sm font-bold"
         >
             <div
@@ -219,7 +219,7 @@
         class="flex items-center justify-center gap-4 mb-12 animate-in fade-in zoom-in duration-500 delay-100"
     >
         <button
-            onclick={() => (billingCycle = "monthly")}
+            on:click={() => (billingCycle = "monthly")}
             class="text-sm font-bold px-4 py-2 rounded-full transition-all {billingCycle ===
             'monthly'
                 ? 'bg-slate-900 text-white shadow-lg'
@@ -228,7 +228,7 @@
             月額払い
         </button>
         <button
-            onclick={() => (billingCycle = "season")}
+            on:click={() => (billingCycle = "season")}
             class="text-sm font-bold px-4 py-2 rounded-full transition-all flex items-center gap-2 {billingCycle ===
             'season'
                 ? 'bg-gradient-to-r from-indigo-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30'
@@ -294,7 +294,7 @@
             </ul>
 
             <button
-                onclick={selectFreePlan}
+                on:click={selectFreePlan}
                 disabled={currentPlan !== "free"}
                 class="w-full py-3 rounded-xl transition-all font-bold text-sm {currentPlan ===
                 'free'
@@ -388,7 +388,7 @@
             </ul>
 
             <button
-                onclick={() =>
+                on:click={() =>
                     handlePurchase(
                         billingCycle === "monthly"
                             ? PUBLIC_STRIPE_PRICE_PREMIUM
@@ -614,7 +614,7 @@
             </div>
 
             <button
-                onclick={() =>
+                on:click={() =>
                     handlePurchase(
                         billingCycle === "monthly"
                             ? PUBLIC_STRIPE_PRICE_ULTIMATE_MONTHLY
@@ -699,7 +699,7 @@
                     disabled={isRedeeming}
                 />
                 <button
-                    onclick={redeemCode}
+                    on:click={redeemCode}
                     disabled={isRedeeming || !promoCode.trim()}
                     class="px-5 py-3 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[6rem] shadow-sm"
                 >

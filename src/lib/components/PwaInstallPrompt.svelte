@@ -70,7 +70,7 @@
                 class="pointer-events-auto bg-white/90 backdrop-blur-md border border-slate-200 shadow-2xl rounded-2xl p-4 max-w-sm w-full mx-4 mb-6 relative"
             >
                 <button
-                    onclick={dismissPrompt}
+                    on:click={dismissPrompt}
                     class="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-1"
                 >
                     <svg
@@ -127,7 +127,7 @@
                 class="pointer-events-auto"
             >
                 <button
-                    onclick={installPWA}
+                    on:click={installPWA}
                     class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-full shadow-lg flex items-center gap-3 transition-transform active:scale-95"
                 >
                     <img
@@ -137,7 +137,7 @@
                     />
                     <span>Re-Passをインストール</span>
                     <div
-                        onclick={(e) => {
+                        on:click={(e) => {
                             e.stopPropagation();
                             dismissPrompt();
                         }}

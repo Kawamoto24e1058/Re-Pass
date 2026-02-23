@@ -2,37 +2,36 @@
     import { goto } from "$app/navigation";
     import { fade, fly } from "svelte/transition";
 
-    let {
-        isOpen = false,
-        onClose,
-        title = "機能をアンロック",
-        message = "この機能を利用するにはプランのアップグレードが必要です。",
-        features = [
-            {
-                title: "アプリ内の全機能が使い放題",
-                desc: "ノート生成や課題アシストが無制限になります",
-            },
-            {
-                title: "動画・音声ファイルの完全解析",
-                desc: "音声・動画等の録画講義の無制限解析が可能に",
-            },
-            {
-                title: "講義ノート検索・試験対策",
-                desc: "みんなのノートが見放題、バインダーでまとめ機能が解禁",
-            },
-        ],
-        billingCycle = "monthly",
-    } = $props();
+    export let isOpen = false;
+    export let onClose: () => void;
+    export let title = "機能をアンロック";
+    export let message =
+        "この機能を利用するにはプランのアップグレードが必要です。";
+    export let features = [
+        {
+            title: "アプリ内の全機能が使い放題",
+            desc: "ノート生成や課題アシストが無制限になります",
+        },
+        {
+            title: "動画・音声ファイルの完全解析",
+            desc: "音声・動画等の録画講義の無制限解析が可能に",
+        },
+        {
+            title: "講義ノート検索・試験対策",
+            desc: "みんなのノートが見放題、バインダーでまとめ機能が解禁",
+        },
+    ];
+    export let billingCycle = "monthly";
     import { auth } from "$lib/firebase";
-    import { userProfile } from "$lib/stores";
+    import { userProfile } from "$lib/userStore";
 
-    let isPremiumUser = $derived($userProfile?.plan === "premium");
+    $: isPremiumUser = $userProfile?.plan === "premium";
 
-    let promoCode = $state("");
-    let isRedeeming = $state(false);
-    let redeemError = $state<string | null>(null);
-    let redeemSuccess = $state(false);
-    let redeemedPlanName = $state("");
+    let promoCode = "";
+    let isRedeeming = false;
+    let redeemError: string | null = null;
+    let redeemSuccess = false;
+    let redeemedPlanName = "";
 
     function handleUpgrade() {
         goto("/pricing");
@@ -83,16 +82,15 @@
         }
     }
 
-    $effect(() => {
-        if (isOpen) {
+    $: if (isOpen) {
+        if (typeof document !== "undefined") {
             document.body.style.overflow = "hidden";
-        } else {
+        }
+    } else {
+        if (typeof document !== "undefined") {
             document.body.style.overflow = "";
         }
-        return () => {
-            document.body.style.overflow = "";
-        };
-    });
+    }
 </script>
 
 {#if isOpen}
@@ -105,10 +103,10 @@
         <div
             transition:fade={{ duration: 200 }}
             class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            onclick={onClose}
+            on:click={onClose}
             role="button"
             tabindex="0"
-            onkeydown={(e) => e.key === "Escape" && onClose()}
+            on:keydown={(e) => e.key === "Escape" && onClose()}
         ></div>
 
         <!-- Modal Content -->
@@ -211,7 +209,7 @@
 
                 <div class="flex flex-col gap-3">
                     <button
-                        onclick={handleUpgrade}
+                        on:click={handleUpgrade}
                         class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 text-white font-bold text-base shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                     >
                         <span
@@ -234,7 +232,7 @@
                         </svg>
                     </button>
                     <button
-                        onclick={onClose}
+                        on:click={onClose}
                         class="w-full py-3 rounded-xl text-slate-400 font-bold text-sm hover:bg-slate-50 transition-colors"
                     >
                         閉じる
@@ -273,7 +271,7 @@
                                     disabled={isRedeeming}
                                 />
                                 <button
-                                    onclick={redeemCode}
+                                    on:click={redeemCode}
                                     disabled={isRedeeming || !promoCode.trim()}
                                     class="px-4 py-2 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[5rem]"
                                 >

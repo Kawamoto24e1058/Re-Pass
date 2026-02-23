@@ -23,32 +23,30 @@
     import { marked } from "marked";
     import { normalizeCourseName } from "$lib/utils/textUtils";
 
-    let user = $state<any>(null);
-    let userData = $state<any>(null);
-    let loading = $state(true);
+    let user: any = null;
+    let userData: any = null;
+    let loading = true;
 
     // Search State
-    let searchQuery = $state("");
-    let searchResults = $state<any[]>([]);
-    let searching = $state(false);
-    let showUltimateModal = $state(false);
-    let searchError = $state<string | null>(null);
-    let selectedLecture = $state<any>(null);
-    let upgradeModalTitle = $state("アルティメットプラン限定機能");
-    let upgradeModalMessage = $state("");
+    let searchQuery = "";
+    let searchResults: any[] = [];
+    let searching = false;
+    let showUltimateModal = false;
+    let searchError: string | null = null;
+    let selectedLecture: any = null;
+    let upgradeModalTitle = "アルティメットプラン限定機能";
+    let upgradeModalMessage = "";
 
     // Derived
-    let isUltimate = $derived(
+    $: isUltimate =
         String(userData?.plan || "")
             .trim()
-            .toLowerCase() === "ultimate",
-    );
-    let isPremium = $derived(
+            .toLowerCase() === "ultimate";
+    $: isPremium =
         isUltimate ||
-            String(userData?.plan || "")
-                .trim()
-                .toLowerCase() === "premium",
-    );
+        String(userData?.plan || "")
+            .trim()
+            .toLowerCase() === "premium";
 
     // Calculate Academic Year threshold (April 1st)
     const today = new Date();
@@ -58,10 +56,11 @@
     const academicYearStart = new Date(currentYear, 3, 1); // April 1st of current academic year
 
     import { user as userStore, userProfile } from "$lib/userStore";
-    let autoSearchedQuery = $state("");
-    let enrolledCoursesList = $state<any[]>([]);
+    let autoSearchedQuery = "";
+    let enrolledCoursesList: any[] = [];
     let unsubscribeEnrolledCourses: any = null;
-    $effect(() => {
+
+    $: {
         user = $userStore;
         userData = $userProfile;
 
@@ -78,7 +77,7 @@
                 }));
             });
         }
-    });
+    }
 
     // Cleanup listener on destroy
     import { onDestroy } from "svelte";
@@ -86,7 +85,7 @@
         if (unsubscribeEnrolledCourses) unsubscribeEnrolledCourses();
     });
 
-    $effect(() => {
+    $: {
         // Auto search handling
         if (user && !loading) {
             const q =
@@ -104,7 +103,7 @@
                 setTimeout(() => handleSearch(), 0);
             }
         }
-    });
+    }
 
     onMount(() => {
         const unsub = auth.onAuthStateChanged(async (currentUser) => {
@@ -311,7 +310,7 @@
                 「みんなのノートを検索」機能はアルティメットプラン以上の限定機能です。アップグレードして世界中の最高のノートにアクセスしましょう。
             </p>
             <button
-                onclick={() => window.history.back()}
+                on:click={() => window.history.back()}
                 class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-500/30 active:scale-95 mx-auto"
             >
                 前のページに戻る
@@ -335,7 +334,7 @@
                             bind:value={searchQuery}
                             placeholder="キーワード、講義名で検索... (例: 経済学入門)"
                             class="w-full bg-white border border-slate-200 rounded-xl px-5 py-4 pl-12 text-lg focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition-all text-slate-700 font-medium"
-                            onkeydown={(e) =>
+                            on:keydown={(e) =>
                                 e.key === "Enter" && handleSearch()}
                         />
                         <svg
@@ -352,7 +351,7 @@
                             />
                         </svg>
                         <button
-                            onclick={handleSearch}
+                            on:click={handleSearch}
                             class="absolute right-2 top-1/2 -translate-y-1/2 bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg active:scale-95"
                         >
                             検索
@@ -368,7 +367,7 @@
                         >
                         {#each enrolledCoursesList as course}
                             <button
-                                onclick={() => {
+                                on:click={() => {
                                     searchQuery = course.courseName;
                                     handleSearch();
                                 }}
@@ -450,7 +449,7 @@
                                             />PROプランへのアップグレードが必要です。
                                         </p>
                                         <button
-                                            onclick={() => goto("/pricing")}
+                                            on:click={() => goto("/pricing")}
                                             class="bg-gradient-to-r from-indigo-500 to-pink-500 text-white px-8 py-3 rounded-full text-base font-bold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 transition-all"
                                             >Season Passでアンロック</button
                                         >
@@ -481,7 +480,7 @@
                                             />「{lecture.courseName}」の履修登録が必要です。
                                         </p>
                                         <button
-                                            onclick={() =>
+                                            on:click={() =>
                                                 enrollAndOpen(
                                                     lecture.courseName,
                                                 )}
@@ -598,7 +597,7 @@
 
                                 {#if lecture.accessStatus === "granted"}
                                     <button
-                                        onclick={() => {
+                                        on:click={() => {
                                             if (!isUltimate) {
                                                 upgradeModalTitle =
                                                     "講義攻略ノートをアンロック";
@@ -700,8 +699,8 @@
             role="button"
             tabindex="0"
             aria-label="Close modal"
-            onclick={() => (selectedLecture = null)}
-            onkeydown={(e) => {
+            on:click={() => (selectedLecture = null)}
+            on:keydown={(e) => {
                 if (e.key === "Escape" || e.key === "Enter" || e.key === " ")
                     selectedLecture = null;
             }}
@@ -728,7 +727,7 @@
                     type="button"
                     title="Close"
                     aria-label="Close"
-                    onclick={() => (selectedLecture = null)}
+                    on:click={() => (selectedLecture = null)}
                     class="p-2 hover:bg-slate-100 rounded-full transition-colors"
                 >
                     <svg
@@ -895,7 +894,7 @@
                                         Passへのアップグレードが必要です。
                                     </p>
                                     <button
-                                        onclick={() => goto("/settings")}
+                                        on:click={() => goto("/settings")}
                                         class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-slate-800 transition-all hover:scale-[1.02]"
                                     >
                                         Season Passでアンロック

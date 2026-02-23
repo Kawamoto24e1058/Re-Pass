@@ -1,0 +1,464 @@
+Loading svelte-check in workspace: c:\Users\kharu\Project\Re-Pass
+Getting Svelte diagnostics...
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:68:21
+[31mError[39m: `$userProfile` is an illegal variable name. To reference a global variable called `$userProfile`, use `globalThis.$userProfile`
+https://svelte.dev/e/global_reference_invalid (svelte)
+[36m
+    $: isUltimate = [35m$userProfile[36m?.plan === "ultimate";
+    $: isPremium =[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:68:21
+[31mError[39m: Cannot find name '$userProfile'. (ts)
+[36m
+    $: isUltimate = [35m$userProfile[36m?.plan === "ultimate";
+    $: isPremium =[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:71:9
+[31mError[39m: Cannot find name '$userProfile'. (ts)
+[36m        isUltimate ||
+        [35m$userProfile[36m?.plan === "premium" ||
+        $userProfile?.plan === "season";[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:72:9
+[31mError[39m: Cannot find name '$userProfile'. (ts)
+[36m        $userProfile?.plan === "premium" ||
+        [35m$userProfile[36m?.plan === "season";[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:273:28
+[31mError[39m: Cannot find name '$userProfile'. (ts)
+[36m        // Quota Checks (simplified for brevity, assume similar logic to +page.svelte)
+        const usageCount = [35m$userProfile[36m?.usageCount || 0;
+        if (!isPremium && usageCount >= 5) {[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\GlobalRecordingOverlay.svelte[39m:316:37
+[31mError[39m: Cannot find name '$userProfile'. (ts)
+[36m            formData.append("mode", $analysisMode);
+            formData.append("plan", [35m$userProfile[36m?.plan || "free");
+            // formData.append("targetLength", ...); // Default or store?[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:72:17
+[33mWarn[39m: Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+[36m            >
+                [35m<button
+                    on:click={dismissPrompt}
+                    class="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-1"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>[36m
+                <div class="flex items-start gap-4 pr-6">[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:139:21
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m                    <span>Re-Passをインストール</span>
+                    [35m<div
+                        on:click={(e) => {
+                            e.stopPropagation();
+                            dismissPrompt();
+                        }}
+                        class="ml-2 pl-2 border-l border-slate-700 text-slate-400 hover:text-white"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>[36m
+                </button>[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:139:21
+[33mWarn[39m: `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m                    <span>Re-Passをインストール</span>
+                    [35m<div
+                        on:click={(e) => {
+                            e.stopPropagation();
+                            dismissPrompt();
+                        }}
+                        class="ml-2 pl-2 border-l border-slate-700 text-slate-400 hover:text-white"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>[36m
+                </button>[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:33:16
+[33mWarn[39m: Component has unused export property 'subjects'. If it is for external reference only, please consider using `export const subjects`
+https://svelte.dev/e/export_let_unused (svelte)
+[36m    export let lectures: any[] = [];
+    export let [35msubjects: any[][36m = [];
+    export let currentLectureId: string | null = null;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:34:16
+[33mWarn[39m: Component has unused export property 'currentLectureId'. If it is for external reference only, please consider using `export const currentLectureId`
+https://svelte.dev/e/export_let_unused (svelte)
+[36m    export let subjects: any[] = [];
+    export let [35mcurrentLectureId: string | null[36m = null;
+    export let selectedSubjectId: string | null = null;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:36:16
+[33mWarn[39m: Component has unused export property 'onLoadLecture'. If it is for external reference only, please consider using `export const onLoadLecture`
+https://svelte.dev/e/export_let_unused (svelte)
+[36m    export let selectedSubjectId: string | null = null;
+    export let [35monLoadLecture: (lecture: any) => void[36m;
+    export let onSelectSubject: (subjectId: string | null) => void;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:41:16
+[33mWarn[39m: Component has unused export property 'draggingLectureId'. If it is for external reference only, please consider using `export const draggingLectureId`
+https://svelte.dev/e/export_let_unused (svelte)
+[36m    export let onDragEnd: () => void = () => {};
+    export let [35mdraggingLectureId: string | null[36m = null;
+    export let onClose: () => void = () => {};[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:42:16
+[33mWarn[39m: Component has unused export property 'onClose'. If it is for external reference only, please consider using `export const onClose`
+https://svelte.dev/e/export_let_unused (svelte)
+[36m    export let draggingLectureId: string | null = null;
+    export let [35monClose: () => void[36m = () => {};
+    export let onLogoClick: () => void = () => {};[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:52:9
+[31mError[39m: Variable 'unsubscribeUser' implicitly has type 'any' in some locations where its type cannot be determined. (ts)
+[36m    let editNicknameValue = "";
+    let [35munsubscribeUser[36m = null;
+    let dragTargetId = null;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:171:17
+[31mError[39m: Variable 'unsubscribeUser' implicitly has an 'any' type. (ts)
+[36m        return () => {
+            if ([35munsubscribeUser[36m) unsubscribeUser();
+            // if (unsubscribeSubjects) unsubscribeSubjects();[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:213:9
+[31mError[39m: Variable 'editingSubjectId' implicitly has type 'any' in some locations where its type cannot be determined. (ts)
+[36m
+    let [35meditingSubjectId[36m = null; // Track if we are editing
+    let sharedCounts = {};[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:216:9
+[31mError[39m: Variable 'enrolledCoursesList' implicitly has type 'any[]' in some locations where its type cannot be determined. (ts)
+[36m
+    let [35menrolledCoursesList[36m = [];
+    let unsubscribeEnrolledCourses = null;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:217:9
+[31mError[39m: Variable 'unsubscribeEnrolledCourses' implicitly has type 'any' in some locations where its type cannot be determined. (ts)
+[36m    let enrolledCoursesList = [];
+    let [35munsubscribeEnrolledCourses[36m = null;[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:222:32
+[31mError[39m: Parameter 'normalizedName' implicitly has an 'any' type. (ts)
+[36m        const courses = userData.normalizedEnrolledCourses;
+        courses.forEach(async ([35mnormalizedName[36m) => {
+            // Optimization: Could batch this or use a separate aggregation collection[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:233:17
+[31mError[39m: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'. (ts)
+[36m                const snapshot = await getDocs(q);
+                [35msharedCounts[normalizedName][36m = snapshot.size;
+            } catch (e) {[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:258:17
+[31mError[39m: Variable 'unsubscribeEnrolledCourses' implicitly has an 'any' type. (ts)
+[36m        return () => {
+            if ([35munsubscribeEnrolledCourses[36m) unsubscribeEnrolledCourses();
+        };[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:266:17
+[31mError[39m: Variable 'editingSubjectId' implicitly has an 'any' type. (ts)
+[36m        try {
+            if ([35meditingSubjectId[36m) {
+                // Update Existing[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:577:36
+[31mError[39m: Variable 'enrolledCoursesList' implicitly has an 'any[]' type. (ts)
+[36m                        {#if enrolledCoursesList.length > 0}
+                            {#each [35menrolledCoursesList[36m as course}
+                                <a[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:715:44
+[31mError[39m: Variable 'enrolledCoursesList' implicitly has an 'any[]' type. (ts)
+[36m                                <div class="space-y-0.5">
+                                    {#each [35menrolledCoursesList[36m as course}
+                                        {@const normalizedName =[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:721:45
+[31mError[39m: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'. (ts)
+[36m                                        {@const count =
+                                            [35msharedCounts[normalizedName][36m || 0}
+                                        <a[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:971:18
+[31mError[39m: Variable 'editingSubjectId' implicitly has an 'any' type. (ts)
+[36m            <h3 class="text-lg font-bold text-slate-800 mb-4">
+                {[35meditingSubjectId[36m ? "科目を編集" : "新しい科目を作成"}
+            </h3>[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\Sidebar.svelte[39m:1022:22
+[31mError[39m: Variable 'editingSubjectId' implicitly has an 'any' type. (ts)
+[36m                >
+                    {[35meditingSubjectId[36m ? "更新" : "作成"}
+                </button>[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\dashboard\ResultView.svelte[39m:4:14
+[31mError[39m: Module '"$lib/stores"' has no exported member 'analysisMode'. (ts)
+[36m    import { marked } from "marked";
+    import { [35manalysisMode[36m, lectures } from "$lib/stores";[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\+layout.svelte[39m:42:13
+[33mWarn[39m: Component has unused export property 'data'. If it is for external reference only, please consider using `export const data`
+https://svelte.dev/e/export_let_unused (svelte)
+[36m	// Props
+	export let [35mdata: any[36m = {};
+	// In Svelte 4/legacy, children are passed via <slot />, not as a prop.[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\+layout.svelte[39m:46:6
+[31mError[39m: Variable 'user' implicitly has type 'any' in some locations where its type cannot be determined. (ts)
+[36m	let loading = true; // App state
+	let [35muser[36m = null;
+	let lectureUnsubscribes: (() => void)[] = [];[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\+layout.svelte[39m:67:8
+[31mError[39m: Variable 'user' implicitly has an 'any' type. (ts)
+[36m	$: {
+		if (![35muser[36m) {
+			cleanupLectureListeners();[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\+layout.svelte[39m:97:17
+[31mError[39m: Variable 'user' implicitly has an 'any' type. (ts)
+[36m							db,
+							`users/${[35muser[36m.uid}/subjects/${subject.id}/lectures`,
+						),[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\+layout.svelte[39m:270:10
+[31mError[39m: Variable 'user' implicitly has an 'any' type. (ts)
+[36m			>
+				{#if [35muser[36m?.photoURL}
+					<img[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\+layout.svelte[39m:277:14
+[31mError[39m: Variable 'user' implicitly has an 'any' type. (ts)
+[36m				{:else}
+					<span>{([35muser[36m?.displayName || "U")[0].toUpperCase()}</span>
+				{/if}[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\+layout.svelte[39m:296:8
+[31mError[39m: Variable 'user' implicitly has an 'any' type. (ts)
+[36m
+		{#if [35muser[36m}
+			<Sidebar[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:307:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={() => handleSocialLogin(googleProvider)}[36m
+                        class="w-full py-4 px-6 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:335:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={() => handleSocialLogin(microsoftProvider)}[36m
+                        class="w-full py-4 px-6 bg-white border border-slate-200 rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:382:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={() => (mode = "email")}[36m
+                            class="py-4 rounded-2xl bg-slate-900 text-white font-bold text-[13px] shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all active:scale-[0.98]"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:388:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={() => (mode = "phone")}[36m
+                            class="py-4 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold text-[13px] hover:bg-slate-50 transition-all active:scale-[0.98]"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:427:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={handleEmailAuth}[36m
+                        disabled={loading || (isRegistering && !isAgreed)}[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:440:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={() => {
+                                isRegistering = !isRegistering;
+                                error = "";
+                            }}[36m
+                            class="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:451:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={() => (mode = "choice")}[36m
+                            class="text-xs font-bold text-slate-300 hover:text-slate-400"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:479:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={handlePhoneSubmit}[36m
+                        disabled={loading || !isAgreed}[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:486:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={() => (mode = "choice")}[36m
+                        class="w-full text-xs font-bold text-slate-300 hover:text-slate-400 py-2"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:509:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={handleVerifyCode}[36m
+                        disabled={loading}[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\login\+page.svelte[39m:516:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={() => (mode = "phone")}[36m
+                        class="w-full text-xs font-bold text-slate-300 hover:text-slate-400 py-2"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\+page.svelte[39m:242:33
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                            <button
+                                [35mon:click={handleUpdateProfile}[36m
+                                class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-sm hover:shadow-md hover:bg-indigo-700 transition-all"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\+page.svelte[39m:262:33
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                class="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group"
+                                [35mon:click={() => goto("/settings/subscription")}[36m
+                            >[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\+page.svelte[39m:328:33
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                                class="w-full text-left p-4 flex items-center justify-between hover:bg-red-50 transition-colors group"
+                                [35mon:click={handleDeleteAccount}[36m
+                            >[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\+page.svelte[39m:361:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={handleLogout}[36m
+                            class="text-slate-400 font-bold hover:text-slate-600 transition-colors flex items-center gap-2"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\subscription\+page.svelte[39m:346:17
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            <button
+                [35mon:click={() => goto("/settings")}[36m
+                class="hover:text-slate-800 transition-colors">設定</button[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\subscription\+page.svelte[39m:418:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={() => goto("/")}[36m
+                            class="w-full max-w-xs py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg animate-in slide-in-from-bottom-2"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\subscription\+page.svelte[39m:426:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={() => window.location.reload()}[36m
+                        class="text-xs text-slate-400 font-medium underline hover:text-indigo-500 transition-colors"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\subscription\+page.svelte[39m:434:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={forceRefresh}[36m
+                            class="mt-4 px-6 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100 animate-in fade-in slide-in-from-top-2"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\subscription\+page.svelte[39m:496:33
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                            <button
+                                [35mon:click={() => goto("/pricing")}[36m
+                                class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:translate-y-0"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\subscription\+page.svelte[39m:658:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                        <button
+                            [35mon:click={handlePortal}[36m
+                            disabled={portalLoading}[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\subscription\+page.svelte[39m:715:25
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                    <button
+                        [35mon:click={() => goto("/pricing")}[36m
+                        class="flex items-center justify-between p-6 bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all group"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\settings\subscription\+page.svelte[39m:794:33
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                            <button
+                                [35mon:click={redeemCode}[36m
+                                disabled={isRedeeming || !promoCode.trim()}[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\setup\+page.svelte[39m:164:33
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                            <button
+                                [35mon:click={() => selectUni(uni)}[36m
+                                class="w-full text-left px-6 py-3 hover:bg-indigo-50 text-sm font-bold text-slate-700 transition-colors border-b border-slate-50 last:border-0"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\setup\+page.svelte[39m:197:17
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            <button
+                [35mon:click={handleSave}[36m
+                disabled={loading || !university.trim()}[39m
+
+====================================
+[31msvelte-check found 27 errors and 34 warnings in 9 files
+[39m

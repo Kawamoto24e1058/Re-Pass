@@ -343,7 +343,7 @@
             class="flex items-center gap-2 text-sm font-medium text-slate-500 mb-6"
         >
             <button
-                onclick={() => goto("/settings")}
+                on:click={() => goto("/settings")}
                 class="hover:text-slate-800 transition-colors">設定</button
             >
             <svg
@@ -415,7 +415,7 @@
 
                     {#if showHomeButton}
                         <button
-                            onclick={() => goto("/")}
+                            on:click={() => goto("/")}
                             class="w-full max-w-xs py-3 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-all shadow-lg animate-in slide-in-from-bottom-2"
                         >
                             ホームへ戻る
@@ -423,7 +423,7 @@
                     {/if}
 
                     <button
-                        onclick={() => window.location.reload()}
+                        on:click={() => window.location.reload()}
                         class="text-xs text-slate-400 font-medium underline hover:text-indigo-500 transition-colors"
                     >
                         画面が切り替わらない場合はこちら
@@ -431,7 +431,7 @@
 
                     {#if isSlowSync}
                         <button
-                            onclick={forceRefresh}
+                            on:click={forceRefresh}
                             class="mt-4 px-6 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-all border border-indigo-100 animate-in fade-in slide-in-from-top-2"
                         >
                             🔄 同期が遅れています（手動で更新を確認）
@@ -493,7 +493,7 @@
 
                         {#if planLevel === "FREE"}
                             <button
-                                onclick={() => goto("/pricing")}
+                                on:click={() => goto("/pricing")}
                                 class="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:translate-y-0"
                             >
                                 プレミアムにアップグレード
@@ -655,7 +655,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {#if planLevel !== "FREE"}
                         <button
-                            onclick={handlePortal}
+                            on:click={handlePortal}
                             disabled={portalLoading}
                             class="flex items-center justify-between p-6 bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all group disabled:opacity-50"
                         >
@@ -712,7 +712,7 @@
                     {/if}
 
                     <button
-                        onclick={() => goto("/pricing")}
+                        on:click={() => goto("/pricing")}
                         class="flex items-center justify-between p-6 bg-white rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all group"
                     >
                         <div class="flex items-center gap-4">
@@ -791,7 +791,7 @@
                                 disabled={isRedeeming}
                             />
                             <button
-                                onclick={redeemCode}
+                                on:click={redeemCode}
                                 disabled={isRedeeming || !promoCode.trim()}
                                 class="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto w-full flex items-center justify-center min-w-[8rem]"
                             >

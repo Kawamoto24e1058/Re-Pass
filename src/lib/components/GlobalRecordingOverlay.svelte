@@ -17,7 +17,7 @@
         selectedSyllabus,
     } from "$lib/stores/recordingStore";
     import { recognitionService } from "$lib/services/recognitionService";
-    import { user as userStore } from "$lib/userStore";
+    import { user as userStore, userProfile } from "$lib/userStore";
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
     import { subjects, currentBinder } from "$lib/stores";
@@ -60,42 +60,32 @@
     let upgradeModalTitle = "ULTIMATE限定機能";
     let upgradeModalMessage = "";
     let showCourseNameError = false;
-    let isSharedNote = $state(true);
+    let isSharedNote = true;
 
     // Plan helpers
-    let userData = $derived($userStore ? $userStore : null); // Need to fetch fresh user data if possible, but store is okay
-    // We need to fetch basic user profile data to check plans accurately if not in store.
-    // Assuming userStore has { uid, ... } and we might need to look up claims or profile doc.
-    // For now, let's blindly trust userStore or fetch if needed.
-    // Ideally userStore should be populated.
-    // We'll use a reactive statement to read profile from DB if strictly needed,
-    // but let's assume passed in props or global store 'userProfile'.
+    $: userData = $userStore ? $userStore : null;
 
-    import { userProfile } from "$lib/userStore"; // Assuming this exists as seen in +page.svelte
-    let isUltimate = $derived($userProfile?.plan === "ultimate");
-    let isPremium = $derived(
+    $: isUltimate = $userProfile?.plan === "ultimate";
+    $: isPremium =
         isUltimate ||
-            $userProfile?.plan === "premium" ||
-            $userProfile?.plan === "season",
-    );
+        $userProfile?.plan === "premium" ||
+        $userProfile?.plan === "season";
 
     // Duration Timer
-    let duration = $state(0);
+    let duration = 0;
     let timerInterval: ReturnType<typeof setInterval> | null = null;
 
-    $effect(() => {
-        if ($isRecording) {
-            if (!timerInterval) {
-                timerInterval = setInterval(() => duration++, 1000);
-            }
-        } else {
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-                duration = 0;
-            }
+    $: if ($isRecording) {
+        if (!timerInterval) {
+            timerInterval = setInterval(() => duration++, 1000);
         }
-    });
+    } else {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            duration = 0;
+        }
+    }
 
     function formatTime(seconds: number) {
         const m = Math.floor(seconds / 60)
@@ -106,12 +96,10 @@
     }
 
     // Auto-show overlay when recording starts
-    $effect(() => {
-        if ($isRecording && !$isOverlayVisible) {
-            isOverlayVisible.set(true);
-            isOverlayExpanded.set(true); // Also expand? Yes, probably.
-        }
-    });
+    $: if ($isRecording && !$isOverlayVisible) {
+        isOverlayVisible.set(true);
+        isOverlayExpanded.set(true); // Also expand? Yes, probably.
+    }
 
     function toggleExpand() {
         isOverlayExpanded.update((v) => !v);
@@ -396,15 +384,13 @@
         }
     }
     // Auto-minimize when navigating (if expanded)
-    let lastPath = $state("");
-    $effect(() => {
-        if ($page.url.pathname !== lastPath) {
-            lastPath = $page.url.pathname;
-            if ($isOverlayVisible && $isOverlayExpanded) {
-                minimize();
-            }
+    let lastPath = "";
+    $: if ($page.url.pathname !== lastPath) {
+        lastPath = $page.url.pathname;
+        if ($isOverlayVisible && $isOverlayExpanded) {
+            minimize();
         }
-    });
+    }
 </script>
 
 {#if $isOverlayVisible}
