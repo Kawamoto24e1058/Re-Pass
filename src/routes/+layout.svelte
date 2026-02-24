@@ -39,11 +39,11 @@
 	} from "$lib/stores/sessionStore";
 
 	// Props
-	export let data: any = {};
+	// export let data: any = {};
 	// In Svelte 4/legacy, children are passed via <slot />, not as a prop.
 	// Since +layout.svelte is a layout, we just use <slot /> in the markup.
 	let loading = true; // App state
-	let user = null;
+	let user: any = null;
 	let lectureUnsubscribes: (() => void)[] = [];
 	let lecturesMap: Record<string, any[]> = {};
 
@@ -236,7 +236,7 @@
 		class="lg:hidden fixed top-0 left-0 right-0 min-h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white/80 backdrop-blur-md border-b border-slate-200/50 z-40 flex items-center justify-between px-4 pb-2"
 	>
 		<button
-			on:click={toggleSidebar}
+			onclick={toggleSidebar}
 			class="p-2 text-slate-600 hover:text-indigo-600 transition-colors"
 			aria-label="メニューを開く"
 		>
@@ -289,7 +289,7 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="lg:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
-				on:click={() => isSidebarOpen.set(false)}
+				onclick={() => isSidebarOpen.set(false)}
 			></div>
 		{/if}
 
@@ -297,12 +297,6 @@
 			<Sidebar
 				{user}
 				lectures={$lectures}
-				subjects={$subjects}
-				onClose={() => isSidebarOpen.set(false)}
-				onLoadLecture={(lecture: any) => {
-					// Handle lecture load - might need to dispatch or rely on store
-					isSidebarOpen.set(false);
-				}}
 				onSelectSubject={(subjectId: string | null) => {
 					isSidebarOpen.set(false);
 				}}
@@ -362,7 +356,7 @@
 <!-- Return to Work Button -->
 {#if $page.url.pathname !== "/" && ($isRecording || $lectureTitle || $pdfFile || $audioFile || $videoFile || $transcript)}
 	<button
-		on:click={() => goto("/")}
+		onclick={() => goto("/")}
 		class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-6 py-4 rounded-full shadow-2xl font-bold flex items-center gap-3 animate-in slide-in-from-bottom-10 hover:scale-105 transition-transform border border-slate-700"
 	>
 		<span class="relative flex h-3 w-3">

@@ -24,22 +24,20 @@
         currentBinder,
         expandedSubjects,
         isSidebarOpen,
+        sidebarScrollY,
+        isOpenBinderStore,
+        isOpenLecturesStore,
     } from "$lib/stores";
     import UpgradeModal from "$lib/components/UpgradeModal.svelte";
 
     // Props
     export let user: any;
     export let lectures: any[] = [];
-    export let subjects: any[] = [];
-    export let currentLectureId: string | null = null;
     export let selectedSubjectId: string | null = null;
-    export let onLoadLecture: (lecture: any) => void;
-    export let onSelectSubject: (subjectId: string | null) => void;
-    export let onSignOut: () => void;
+    export let onSelectSubject: (subjectId: string | null) => void = () => {};
     export let onDragStart: (lectureId: string) => void = () => {};
     export let onDragEnd: () => void = () => {};
-    export let draggingLectureId: string | null = null;
-    export let onClose: () => void = () => {};
+    export let onSignOut: () => void = () => {};
     export let onLogoClick: () => void = () => {};
     export let onOpenEnrollModal: () => void = () => {};
 
@@ -49,15 +47,14 @@
     let isMenuOpen = false;
     let isEditModalOpen = false;
     let editNicknameValue = "";
-    let unsubscribeUser = null;
-    let dragTargetId = null;
+    let unsubscribeUser: (() => void) | null = null;
+    let dragTargetId: string | null = null;
     // Subject State
     let isSubjectModalOpen = false;
     let newSubjectName = "";
     let newSubjectColor = "bg-indigo-500";
-    let flashTargetId = null;
-    let isOpenBinder = true;
-    let isOpenLectures = true;
+    let flashTargetId: string | null = null;
+    let scrollContainer: HTMLElement;
 
     // Upgrade Modal State
     let showUpgradeModal = false;
@@ -169,10 +166,20 @@
 
         return () => {
             if (unsubscribeUser) unsubscribeUser();
-            // if (unsubscribeSubjects) unsubscribeSubjects();
             window.removeEventListener("click", handleOutsideClick);
         };
     });
+
+    function maintainScrollPosition(node: HTMLElement) {
+        node.scrollTop = $sidebarScrollY;
+        const handleScroll = () => sidebarScrollY.set(node.scrollTop);
+        node.addEventListener("scroll", handleScroll);
+        return {
+            destroy() {
+                node.removeEventListener("scroll", handleScroll);
+            },
+        };
+    }
 
     function handleOutsideClick(e: MouseEvent) {
         const target = e.target as HTMLElement;
@@ -210,16 +217,16 @@
 
     // --- Subject Management ---
 
-    let editingSubjectId = null; // Track if we are editing
-    let sharedCounts = {};
+    let editingSubjectId: string | null = null; // Track if we are editing
+    let sharedCounts: Record<string, number> = {};
 
-    let enrolledCoursesList = [];
-    let unsubscribeEnrolledCourses = null;
+    let enrolledCoursesList: any[] = [];
+    let unsubscribeEnrolledCourses: (() => void) | null = null;
 
     // Fetch shared counts when enrolled courses change
     $: if (userData?.normalizedEnrolledCourses?.length > 0) {
         const courses = userData.normalizedEnrolledCourses;
-        courses.forEach(async (normalizedName) => {
+        courses.forEach(async (normalizedName: string) => {
             // Optimization: Could batch this or use a separate aggregation collection
             try {
                 // Use collectionGroup to query all 'lectures' collections
@@ -441,7 +448,7 @@
 
 <!-- Sidebar -->
 <aside
-    class="fixed inset-y-0 left-0 w-[260px] bg-white/70 backdrop-blur-md border-r border-slate-200/50 flex flex-col h-full z-[100] transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-20 {$isSidebarOpen
+    class="fixed inset-y-0 left-0 w-[260px] bg-white/70 backdrop-blur-md border-r border-slate-200/50 flex flex-col h-full z-[100] transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:shrink-0 {$isSidebarOpen
         ? 'translate-x-0 shadow-2xl'
         : '-translate-x-full lg:translate-x-0'} font-sans"
 >
@@ -480,16 +487,19 @@
     </div>
 
     <!-- Navigation Sections (Unified Scroll Container) -->
-    <div class="flex-1 overflow-y-auto flex flex-col gap-6 pb-4 px-3">
+    <div
+        class="flex-1 overflow-y-auto flex flex-col gap-6 pb-4 px-3"
+        use:maintainScrollPosition
+    >
         <!-- Folders / Subjects -->
         <div class="shrink-0">
             <button
-                on:click={() => (isOpenBinder = !isOpenBinder)}
+                on:click={() => ($isOpenBinderStore = !$isOpenBinderStore)}
                 class="w-full px-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex justify-between items-center hover:text-slate-600 transition-colors"
             >
                 <span>科目 (個人バインダー)</span>
                 <svg
-                    class="w-3.5 h-3.5 transform transition-transform duration-200 {isOpenBinder
+                    class="w-3.5 h-3.5 transform transition-transform duration-200 {$isOpenBinderStore
                         ? 'rotate-180'
                         : ''}"
                     fill="none"
@@ -505,7 +515,7 @@
                 </svg>
             </button>
 
-            {#if isOpenBinder}
+            {#if $isOpenBinderStore}
                 <div
                     class="space-y-1 animate-in fade-in slide-in-from-top-1 duration-200"
                 >
@@ -667,10 +677,11 @@
                     <div
                         role="button"
                         tabindex="0"
-                        on:click={() => (isOpenLectures = !isOpenLectures)}
+                        on:click={() =>
+                            ($isOpenLecturesStore = !$isOpenLecturesStore)}
                         on:keydown={(e) =>
                             e.key === "Enter" &&
-                            (isOpenLectures = !isOpenLectures)}
+                            ($isOpenLecturesStore = !$isOpenLecturesStore)}
                         class="w-full mb-2 px-2 flex justify-between items-center hover:text-slate-600 transition-colors cursor-pointer"
                     >
                         <span
@@ -689,7 +700,7 @@
                                 ⚙️ 登録
                             </button>
                             <svg
-                                class="w-3 h-3 text-slate-400 transform transition-transform duration-200 {isOpenLectures
+                                class="w-3 h-3 text-slate-400 transform transition-transform duration-200 {$isOpenLecturesStore
                                     ? 'rotate-180'
                                     : ''}"
                                 fill="none"
@@ -706,7 +717,7 @@
                         </div>
                     </div>
 
-                    {#if isOpenLectures}
+                    {#if $isOpenLecturesStore}
                         <div
                             class="animate-in fade-in slide-in-from-top-1 duration-200"
                         >

@@ -239,7 +239,7 @@
                         </div>
                         <div class="mt-4 flex justify-end">
                             <button
-                                on:click={handleUpdateProfile}
+                                onclick={handleUpdateProfile}
                                 class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-sm hover:shadow-md hover:bg-indigo-700 transition-all"
                             >
                                 変更を保存
@@ -259,7 +259,7 @@
                         >
                             <button
                                 class="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-colors group"
-                                on:click={() => goto("/settings/subscription")}
+                                onclick={() => goto("/settings/subscription")}
                             >
                                 <div class="flex items-center gap-4">
                                     <div
@@ -325,7 +325,7 @@
                         >
                             <button
                                 class="w-full text-left p-4 flex items-center justify-between hover:bg-red-50 transition-colors group"
-                                on:click={handleDeleteAccount}
+                                onclick={handleDeleteAccount}
                             >
                                 <div class="flex items-center gap-4">
                                     <div
@@ -358,7 +358,7 @@
                     <!-- Logout -->
                     <div class="flex justify-center mt-12 pb-12">
                         <button
-                            on:click={handleLogout}
+                            onclick={handleLogout}
                             class="text-slate-400 font-bold hover:text-slate-600 transition-colors flex items-center gap-2"
                         >
                             <svg
