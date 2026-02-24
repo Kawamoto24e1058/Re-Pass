@@ -23,6 +23,7 @@
     onSnapshot,
     doc,
     setDoc,
+    updateDoc,
     getDoc,
     getDocs,
     limit,
@@ -1004,8 +1005,38 @@
     result = "";
     // Removed file inputs state clearing as they are gone
 
-    // targetUrl was removed in declaration, so remove usage
     localStorage.removeItem("transcript");
+  }
+
+  async function handleTranscriptReset() {
+    if (!$transcript) return;
+    const confirmed = confirm(
+      "文字起こしデータを削除しますか？\n解析結果がスライド中心にリセットされます。",
+    );
+    if (!confirmed) return;
+
+    // Reset UI state
+    transcript.set("");
+
+    // Reset database if we are viewing a saved lecture
+    if (currentLectureId && user) {
+      try {
+        const ref = doc(db, `users/${user.uid}/lectures/${currentLectureId}`);
+        await updateDoc(ref, {
+          content: "",
+          updatedAt: serverTimestamp(),
+        });
+        toastMessage = "文字起こしをリセットしました";
+      } catch (e) {
+        console.error("Error resetting transcript:", e);
+        toastMessage = "リセットに失敗しました";
+      } finally {
+        setTimeout(() => (toastMessage = null), 3000);
+      }
+    } else {
+      toastMessage = "文字起こしをクリアしました";
+      setTimeout(() => (toastMessage = null), 3000);
+    }
   }
 
   // --- Simplified Dashboard Logic ---
@@ -2182,23 +2213,47 @@
 
               <!-- 4. Transcript Area (Realtime Edit) -->
               <div class="mb-10">
-                <h3
-                  class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    ><path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                    /></svg
+                <div class="flex items-center justify-between mb-4">
+                  <h3
+                    class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest"
                   >
-                  文字起こし (リアルタイム編集)
-                </h3>
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      ><path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                      /></svg
+                    >
+                    文字起こし (リアルタイム編集)
+                  </h3>
+
+                  {#if $transcript || $interimTranscript}
+                    <button
+                      on:click={handleTranscriptReset}
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100"
+                    >
+                      <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                      リセット
+                    </button>
+                  {/if}
+                </div>
                 <textarea
                   value={$transcript + $interimTranscript}
                   on:input={(e) => transcript.set(e.currentTarget.value)}
