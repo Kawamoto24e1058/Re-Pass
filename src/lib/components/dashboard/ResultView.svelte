@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
+    import { createEventDispatcher, onDestroy } from "svelte";
     import { marked } from "marked";
     import { analysisMode } from "$lib/stores/recordingStore";
     import { lectures } from "$lib/stores";
@@ -59,6 +59,53 @@
             "video" ||
         $lectures.find((l) => l.id === currentLectureId)?.sourceType ===
             "audio";
+
+    // --- Dynamic UI State ---
+    let oralSupplements: string[] = [];
+    let cleanedSummaryForMain: string = "";
+
+    $: {
+        oralSupplements = [];
+        cleanedSummaryForMain = displaySummary || "";
+        if (cleanedSummaryForMain) {
+            const tokenRegex = /(?:^|\n)(>.*?【口頭補足】.*?(?:\n>.*)*)/g;
+            let match;
+            let tempSummary = cleanedSummaryForMain;
+            while ((match = tokenRegex.exec(tempSummary)) !== null) {
+                // Remove the "> " markdown prefix for cleaner rendering in our custom card
+                oralSupplements.push(match[1].trim());
+            }
+            cleanedSummaryForMain = tempSummary.replace(tokenRegex, "").trim();
+        }
+    }
+
+    // --- Loading State Animation ---
+    const loadingMessages = [
+        "AIが講義内容を分析中...",
+        "先生の補足発言を抽出中...",
+        "重要なポイントを整理中...",
+        "フォーマットを構築中...",
+    ];
+    let currentMessageIndex = 0;
+    let messageInterval: ReturnType<typeof setInterval> | null = null;
+
+    $: if (derivativeAnalyzing || !currentAnalysis) {
+        if (!messageInterval && typeof window !== "undefined") {
+            messageInterval = setInterval(() => {
+                currentMessageIndex =
+                    (currentMessageIndex + 1) % loadingMessages.length;
+            }, 3000);
+        }
+    } else {
+        if (messageInterval) {
+            clearInterval(messageInterval);
+            messageInterval = null;
+        }
+    }
+
+    onDestroy(() => {
+        if (messageInterval) clearInterval(messageInterval);
+    });
 </script>
 
 {#if currentAnalysis}
@@ -95,11 +142,73 @@
         </div>
 
         {#if derivativeAnalyzing}
-            <div class="py-20 text-center animate-in fade-in">
+            <div class="py-12 animate-in fade-in max-w-3xl mx-auto">
+                <div class="flex items-center gap-4 mb-8">
+                    <div
+                        class="w-8 h-8 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin"
+                    ></div>
+                    <p
+                        class="text-lg font-bold text-indigo-900 transition-all duration-500"
+                    >
+                        {loadingMessages[currentMessageIndex]}
+                    </p>
+                </div>
+
+                <div class="space-y-8 opacity-60">
+                    <div
+                        class="w-3/4 h-8 bg-slate-200 rounded-lg animate-pulse"
+                    ></div>
+                    <div class="space-y-4">
+                        <div
+                            class="w-full h-4 bg-slate-100 rounded animate-pulse"
+                        ></div>
+                        <div
+                            class="w-full h-4 bg-slate-100 rounded animate-pulse"
+                        ></div>
+                        <div
+                            class="w-5/6 h-4 bg-slate-100 rounded animate-pulse"
+                        ></div>
+                    </div>
+
+                    <div
+                        class="w-1/2 h-6 bg-slate-100 rounded-lg animate-pulse mt-8"
+                    ></div>
+                    <div class="space-y-4">
+                        <div
+                            class="w-full h-4 bg-slate-100 rounded animate-pulse"
+                        ></div>
+                        <div
+                            class="w-4/5 h-4 bg-slate-100 rounded animate-pulse"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+        {:else if !displaySummary}
+            <!-- Empty Output Fallback -->
+            <div class="py-16 text-center animate-in fade-in">
                 <div
-                    class="inline-block w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"
-                ></div>
-                <p class="text-slate-400">生成中...</p>
+                    class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4"
+                >
+                    <svg
+                        class="w-8 h-8"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">
+                    解析結果の取得に失敗しました
+                </h3>
+                <p class="text-slate-500">
+                    もう一度お試しいただくか、別の講義データを選択してください。
+                </p>
             </div>
         {:else}
             <!-- Video Player (Sticky) -->
@@ -180,6 +289,31 @@
                     </h1>
                 </header>
 
+                <!-- Dynamic Oral Supplements Area -->
+                {#if oralSupplements.length > 0}
+                    <div
+                        class="mb-8 bg-blue-50 border-l-4 border-blue-500 rounded-r-2xl p-6 shadow-sm border-r border-t border-b border-blue-100/50"
+                    >
+                        <h3
+                            class="flex items-center gap-2 text-blue-900 font-bold text-lg mb-4"
+                        >
+                            <span>🔊</span>
+                            講師による重要補足（スライド外の情報）
+                        </h3>
+                        <div class="space-y-4">
+                            {#each oralSupplements as supplement}
+                                <div
+                                    class="prose prose-sm max-w-none prose-p:text-blue-800 prose-p:leading-relaxed prose-strong:text-blue-900"
+                                >
+                                    {@html marked.parse(
+                                        supplement.replace(/^>[ \t]*/gm, ""),
+                                    )}
+                                </div>
+                            {/each}
+                        </div>
+                    </div>
+                {/if}
+
                 <!-- Main Content (Summary) -->
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -202,8 +336,8 @@
                     {@html (
                         marked.parse(
                             isVideoSource
-                                ? displaySummary
-                                : displaySummary.replace(
+                                ? cleanedSummaryForMain
+                                : cleanedSummaryForMain.replace(
                                       /\[(\d{1,2}:\d{2}(?::\d{2})?)\]/g,
                                       "",
                                   ),

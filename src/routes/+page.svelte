@@ -198,7 +198,8 @@
 
   // Copy result to clipboard (AnalysisResult aware)
   $: strategyContent = (() => {
-    const ca = lectureAnalyses[$analysisMode];
+    const activeMode = selectedDerivativeMode || $analysisMode || "note";
+    const ca = lectureAnalyses[activeMode] || result;
     if (!ca || typeof ca !== "object" || !ca.summary) return null;
     const match = ca.summary.match(
       /\[A_STRATEGY_START\]([\s\S]*?)\[A_STRATEGY_END\]/,
@@ -207,7 +208,8 @@
   })();
 
   $: displaySummary = (() => {
-    const ca = lectureAnalyses[$analysisMode];
+    const activeMode = selectedDerivativeMode || $analysisMode || "note";
+    const ca = lectureAnalyses[activeMode] || result;
     if (!ca) return "";
     if (typeof ca === "string") return ca;
     if (!ca.summary) return "";
@@ -239,7 +241,8 @@
     let cleanText = "";
 
     // If we have structured data, construct a nice report
-    const currentData = lectureAnalyses[$analysisMode] || result;
+    const activeMode = selectedDerivativeMode || $analysisMode || "note";
+    const currentData = lectureAnalyses[activeMode] || result;
 
     if (typeof currentData === "object" && currentData !== null) {
       const { title, category, summary, glossary } = currentData;
@@ -334,6 +337,11 @@
       );
 
       toastMessage = "生成が完了しました";
+
+      await tick();
+      if (resultContainer) {
+        resultContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } catch (e) {
       console.error(e);
       toastMessage = "エラーが発生しました";
@@ -551,20 +559,20 @@
 
   function startProgress() {
     progressValue = 0;
-    progressStatus = "音声データを解析中...";
+    progressStatus = "講義データの準備中...";
     progressInterval = setInterval(() => {
-      if (progressValue < 30) {
+      if (progressValue < 20) {
         progressValue += Math.random() * 2;
-        progressStatus = "音声データを解析中...";
-      } else if (progressValue < 60) {
+        progressStatus = "講義データの準備中...";
+      } else if (progressValue < 50) {
         progressValue += Math.random() * 1.5;
-        progressStatus = "講義の構造を分析中...";
-      } else if (progressValue < 85) {
+        progressStatus = "AIが講義内容を分析中...";
+      } else if (progressValue < 80) {
         progressValue += Math.random() * 0.5;
-        progressStatus = "ノートをまとめています...";
+        progressStatus = "先生の補足発言を抽出中...";
       } else if (progressValue < 95) {
         progressValue += 0.1;
-        progressStatus = "仕上げ中...";
+        progressStatus = "学習ノートを構成中...";
       }
     }, 200);
   }
@@ -755,6 +763,11 @@
       // Navigate to the new lecture
       // We are already on the page, just load it
       loadLecture({ id: docRef.id, ...lectureData });
+
+      await tick();
+      if (resultContainer) {
+        resultContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } catch (e: any) {
       console.error(e);
       toastMessage = "エラー: " + e.message;
@@ -2195,32 +2208,64 @@
                 ></textarea>
               </div>
 
-              <!-- Action Button -->
               <div
                 class="mt-8 flex flex-col md:flex-row justify-end items-center gap-6"
               >
                 {#if analyzing}
-                  <!-- Progress Bar -->
-                  <div class="w-full max-w-md ml-auto">
-                    <div
-                      class="flex justify-between text-xs font-bold text-slate-500 mb-2"
-                    >
-                      <span>{progressStatus}</span>
-                      <span>{progressValue}%</span>
+                  <!-- Main Analysis Progress & Skeleton -->
+                  <div
+                    class="w-full bg-white/50 backdrop-blur-sm p-6 rounded-2xl border border-indigo-50 shadow-sm animate-in fade-in slide-in-from-bottom-2"
+                  >
+                    <div class="flex items-center gap-4 mb-6">
+                      <div
+                        class="w-6 h-6 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin"
+                      ></div>
+                      <p
+                        class="text-sm font-bold text-indigo-900 transition-all duration-300 flex-1"
+                      >
+                        {progressStatus}
+                      </p>
+                      <span class="text-sm font-bold text-slate-400"
+                        >{Math.floor(progressValue)}%</span
+                      >
                     </div>
+
                     <div
-                      class="h-2 w-full bg-slate-100 rounded-full overflow-hidden"
+                      class="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-8 shadow-inner"
                     >
                       <div
-                        class="h-full bg-indigo-600 transition-all duration-300"
+                        class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-300"
                         style="width: {progressValue}%"
                       ></div>
                     </div>
-                    <button
-                      on:click={handleCancelAnalysis}
-                      class="mt-2 text-xs text-slate-400 hover:text-red-500 underline"
-                      >キャンセル</button
+
+                    <!-- Ambient Skeleton Layout -->
+                    <div
+                      class="space-y-6 opacity-40 mix-blend-multiply flex flex-col items-center"
                     >
+                      <div
+                        class="w-3/4 max-w-md h-6 bg-slate-200/80 rounded-lg animate-pulse"
+                      ></div>
+                      <div class="space-y-3 w-full max-w-lg">
+                        <div
+                          class="w-full h-3 bg-slate-200/60 rounded animate-pulse"
+                        ></div>
+                        <div
+                          class="w-full h-3 bg-slate-200/60 rounded animate-pulse"
+                        ></div>
+                        <div
+                          class="w-4/5 h-3 bg-slate-200/60 rounded animate-pulse"
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div class="mt-6 text-center md:text-right">
+                      <button
+                        on:click={handleCancelAnalysis}
+                        class="text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-red-500 transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm"
+                        >キャンセル</button
+                      >
+                    </div>
                   </div>
                 {:else}
                   <div class="flex flex-col items-center gap-4">
