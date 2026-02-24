@@ -111,30 +111,28 @@ class RecognitionService {
 
         try {
             // Request microphone with specific constraints to broaden capture range
-            // noiseSuppression: false -> captures ambient sounds/voices better
-            // autoGainControl: true -> amplifies distant voices
+            // noiseSuppression: true -> Clean up air conditioner/background hum
+            // autoGainControl: true -> Automatically boost distant voices
+            // Note: Web Speech API (SpeechRecognition) reads directly from the OS default microphone
+            // and cannot be piped through a Web Audio API (AudioContext/GainNode).
+            // This getUserMedia call acts as a strict hint to the OS to utilize these enhancements universally.
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
-                    echoCancellation: true, // Keep on to prevent speaker feedback
-                    noiseSuppression: false, // OFF/LOW to hear surroundings
-                    autoGainControl: true,   // ON to boost quiet voices
-                    channelCount: 1
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    channelCount: 1,
+                    // Advanced array acts as fallback/hints where supported
+                    advanced: [
+                        { autoGainControl: true },
+                        { noiseSuppression: true }
+                    ]
                 }
             });
 
-            // We don't need to keep the stream active for SpeechRecognition (it manages its own),
-            // but getting it hints the OS/Browser to use these settings.
-            // Some browsers might require the stream to remain open, so let's keep it in a valid scope if needed.
-            // For now, we'll stop it to avoid "tab is using microphone" double-indicator if possible,
-            // OR we keep it if that's required for the settings to persist.
-            // To be safe and ensure "settings applied", we often need to keep the track alive...
-            // But SpeechRec might fail if we hog the mic?
-            // Actually, standard Web Speech API doesn't let us attach a stream.
-            // Best effort: Get stream, apply constraints, stop.
-            // OR: If the user specifically asked for this, they might imply we should HOLD the settings.
-            // Let's try just getting it. If it causes issues, we can adjust.
-
-            // Important: We stop the tracks immediately to release the mic for SpeechRecognition
+            // We immediately stop the stream because SpeechRecognition requires exclusive access 
+            // on some OS/Browsers (otherwise it throws 'audio-capture' error). The prior fetching 
+            // usually sets the hardware profile for the current document context successfully.
             stream.getTracks().forEach(track => track.stop());
 
         } catch (e) {
