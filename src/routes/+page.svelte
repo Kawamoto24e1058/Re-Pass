@@ -31,6 +31,8 @@
     serverTimestamp,
     startAt,
     endAt,
+    collectionGroup,
+    Timestamp,
   } from "firebase/firestore";
   import { goto } from "$app/navigation";
   import { browser } from "$app/environment";
@@ -62,11 +64,17 @@
   import EnrollModal from "$lib/components/EnrollModal.svelte";
   import { isEnrollModalOpen } from "$lib/stores";
   import TranscriptResetModal from "$lib/components/dashboard/TranscriptResetModal.svelte";
+  import { normalizeCourseName } from "$lib/utils/textUtils";
 
   // Dashboard Components
   import LectureCard from "$lib/components/dashboard/LectureCard.svelte";
   import FileInputCard from "$lib/components/dashboard/FileInputCard.svelte";
   import ResultView from "$lib/components/dashboard/ResultView.svelte";
+
+  // --- Contextual Search State ---
+  let contextualSharedNotes: any[] = [];
+  let isSearchingNotes = false;
+  let hasSearchedNotes = false;
 
   // --- Simplified State Variables ---
   let isEditing = false;
@@ -495,7 +503,24 @@
       window.history.replaceState({}, "", newUrl);
     }
 
-    // ... (rest of onMount)
+    // Handle Course Context for Search
+    const courseContextParam = $page.url.searchParams.get("courseContext");
+    if (courseContextParam) {
+      const decodedCourse = decodeURIComponent(courseContextParam);
+      // Set the title for the new note
+      $lectureTitle = decodedCourse;
+      // Ensure we are in dashboard/creation mode
+      currentLectureId = null;
+      isEditing = false;
+
+      // Fetch related shared notes
+      fetchContextualNotes(decodedCourse);
+
+      // Clean up the URL quietly so it doesn't trigger repeatedly on reloads during editing
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("courseContext");
+      window.history.replaceState({}, "", newUrl);
+    }
 
     // Handle Shared Lecture Path
     const path = $page.url.searchParams.get("path");
@@ -517,6 +542,12 @@
       }
     }
 
+    // Handle URL Lecture ID
+    const urlId = $page.url.searchParams.get("lectureId");
+    if (urlId && urlId !== currentLectureId) {
+      loadLectureById(urlId);
+    }
+
     // Global click listener to close move menus
     const handleGlobalClick = (e: MouseEvent) => {
       if (movingLectureId) {
@@ -531,6 +562,73 @@
       window.removeEventListener("click", handleGlobalClick);
     };
   });
+
+  async function fetchContextualNotes(courseName: string) {
+    if (!courseName || !user) return;
+
+    isSearchingNotes = true;
+    hasSearchedNotes = true;
+    contextualSharedNotes = [];
+
+    try {
+      const q = normalizeCourseName(courseName);
+
+      // Target shared lectures globally
+      const lecturesQuery = query(
+        collectionGroup(db, "lectures"),
+        where("isShared", "==", true),
+        limit(50), // Fetch a bit more to allow for client-side filtering
+      );
+
+      const snapshot = await getDocs(lecturesQuery);
+      let results = snapshot.docs.map(
+        (docSnap) =>
+          ({
+            id: docSnap.id,
+            path: docSnap.ref.path,
+            ...docSnap.data(),
+          }) as any,
+      );
+
+      // Client-side Filter
+      results = results.filter((l) => {
+        const normCourse =
+          l.normalizedCourseName || normalizeCourseName(l.courseName || "");
+        return normCourse.includes(q);
+      });
+
+      // We only want others' notes, typically, but showing own shared notes is okay too
+      // Take top 10 recent
+      results.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
+      results = results.slice(0, 10);
+
+      // Calculate access status (same rules applied in old search)
+      const currentYear = new Date().getFullYear();
+      const academicYearStart = new Date(
+        currentYear - (new Date().getMonth() < 3 ? 1 : 0),
+        3,
+        1,
+      );
+
+      contextualSharedNotes = results.map((l) => {
+        const createdAt =
+          l.createdAt instanceof Timestamp
+            ? l.createdAt.toDate()
+            : new Date(l.createdAt);
+        const isPastYear = createdAt < academicYearStart;
+        let accessStatus = "granted";
+        if (isPastYear && !isPremium) {
+          accessStatus = "premium_locked";
+        }
+        // We assume if they clicked it from their enrolled list, they are enrolled.
+        return { ...l, accessStatus, isPastYear };
+      });
+    } catch (e) {
+      console.error("Error fetching contextual notes", e);
+    } finally {
+      isSearchingNotes = false;
+    }
+  }
 
   // ... (Keep existing onMount logic) ...
 
@@ -1043,13 +1141,6 @@
 
   // --- Simplified Dashboard Logic ---
 
-  onMount(() => {
-    const urlId = $page.url.searchParams.get("lectureId");
-    if (urlId && urlId !== currentLectureId) {
-      loadLectureById(urlId);
-    }
-  });
-
   async function loadLectureById(id: string) {
     if (!user) return;
     const ref = doc(db, `users/${user.uid}/lectures/${id}`);
@@ -1065,6 +1156,8 @@
     isEditing = false;
     currentLectureId = null;
     currentBinder.set(null);
+    contextualSharedNotes = [];
+    hasSearchedNotes = false;
   }
 
   /**

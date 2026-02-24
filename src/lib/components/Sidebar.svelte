@@ -636,42 +636,6 @@
                     >
                 </h3>
 
-                <!-- Search Link -->
-                <a
-                    href="/search"
-                    on:click={(e) => {
-                        if (!isUltimate) {
-                            e.preventDefault();
-                            showUpgradeModal = true;
-                            upgradeModalTitle = "アルティメットプラン限定";
-                            upgradeModalMessage =
-                                "「みんなのノートを検索」機能はアルティメットプラン以上の限定機能です。アップグレードして世界中の最高のノートにアクセスしましょう。";
-                            return;
-                        }
-                        isSidebarOpen.set(false);
-                    }}
-                    class="block w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-3 text-slate-600 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
-                >
-                    <div
-                        class="w-6 h-6 flex items-center justify-center text-slate-400 group-hover:text-indigo-500"
-                    >
-                        <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                        </svg>
-                    </div>
-                    <span>講義ノートを探す</span>
-                </a>
-
                 <!-- Enrolled Courses -->
                 <div class="mt-2 pt-2 border-t border-slate-100">
                     <div
@@ -731,12 +695,19 @@
                                         {@const count =
                                             sharedCounts[normalizedName] || 0}
                                         <a
-                                            href="/search?courseId={course.id}&courseName={encodeURIComponent(
+                                            href="/?courseContext={encodeURIComponent(
                                                 course.courseName,
                                             )}"
                                             on:click={() =>
                                                 isSidebarOpen.set(false)}
-                                            class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between text-slate-500 hover:bg-black/5 hover:text-indigo-600 transition-colors group"
+                                            class="block w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors group {String(
+                                                $page.url.pathname,
+                                            ) === '/' &&
+                                            $page.url.searchParams.get(
+                                                'courseContext',
+                                            ) === course.courseName
+                                                ? 'bg-indigo-50 text-indigo-900 font-semibold'
+                                                : 'text-slate-500 hover:bg-black/5 hover:text-indigo-600'}"
                                         >
                                             <div
                                                 class="flex items-center gap-2 truncate"
