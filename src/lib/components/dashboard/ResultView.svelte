@@ -20,10 +20,6 @@
     export let selectedDerivativeMode: string | null = null;
     export let derivativeTargetLength: number = 400;
 
-    // --- Interactive QA Props ---
-    export let qaInput: string = "";
-    export let isAskingQuestion: boolean = false;
-
     let resultContainer: HTMLElement;
     let resultTextContainer: HTMLElement;
     let videoPlayer: HTMLVideoElement;
@@ -376,47 +372,6 @@
                             </button>
                         </div>
                     {/if}
-
-                    <!-- Bottom Row: Slim QA Input -->
-                    <div class="relative flex items-center gap-2">
-                        <div
-                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-                        >
-                            <span class="text-lg">💬</span>
-                        </div>
-                        <input
-                            type="text"
-                            bind:value={qaInput}
-                            disabled={isAskingQuestion}
-                            placeholder="TAに質問・課題を投げる..."
-                            on:keydown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    dispatch("ask_question");
-                                }
-                            }}
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all disabled:opacity-50"
-                        />
-                        <button
-                            on:click={() => dispatch("ask_question")}
-                            disabled={!qaInput.trim() || isAskingQuestion}
-                            class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                        >
-                            <svg
-                                class="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                />
-                            </svg>
-                        </button>
-                    </div>
                 </div>
             </div>
 

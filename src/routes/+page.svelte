@@ -436,6 +436,11 @@
     qaInput = "";
     isAskingQuestion = true;
 
+    // Auto-scroll immediately after user asks
+    await tick();
+    const qaContainer = document.getElementById("qa-container");
+    if (qaContainer) qaContainer.scrollTop = qaContainer.scrollHeight;
+
     try {
       const activeMode = selectedDerivativeMode || $analysisMode || "note";
       const currentData = lectureAnalyses[activeMode] || result;
@@ -490,9 +495,14 @@
     } finally {
       isAskingQuestion = false;
       await tick();
-      // Auto-scroll to bottom of QA
+      // Auto-scroll to bottom of QA after AI replies
       const qaContainer = document.getElementById("qa-container");
-      if (qaContainer) qaContainer.scrollTop = qaContainer.scrollHeight;
+      if (qaContainer) {
+        qaContainer.scrollTo({
+          top: qaContainer.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }
   }
 
@@ -1624,8 +1634,6 @@
             {isUltimate}
             {selectedDerivativeMode}
             {derivativeTargetLength}
-            bind:qaInput
-            {isAskingQuestion}
             on:copy={copyResultToClipboard}
             on:edit={() => (isEditing = true)}
             on:select_derivative={(
@@ -1636,7 +1644,6 @@
             on:generate={(e: CustomEvent<"note" | "thoughts" | "report">) =>
               handleDerivativeGenerate(e.detail)}
             on:upgrade_request={() => (showUpgradeModal = true)}
-            on:ask_question={askQuestion}
           />
 
           <!-- Interactive QA History Section (Input is now in sticky toolbar) -->
@@ -1702,6 +1709,49 @@
                   </div>
                 </div>
               {/if}
+            </div>
+
+            <!-- Bottom Row: Slim QA Input (Moved from ResultView) -->
+            <div
+              class="relative flex items-center gap-2 mt-6 pt-6 border-t border-slate-100"
+            >
+              <div
+                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none mt-6"
+              >
+                <span class="text-lg">💬</span>
+              </div>
+              <input
+                type="text"
+                bind:value={qaInput}
+                disabled={isAskingQuestion}
+                placeholder="TAに質問・課題を投げる..."
+                on:keydown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    askQuestion();
+                  }
+                }}
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all disabled:opacity-50"
+              />
+              <button
+                on:click={askQuestion}
+                disabled={!qaInput.trim() || isAskingQuestion}
+                class="absolute right-1.5 top-[calc(50%+12px)] -translate-y-1/2 w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
