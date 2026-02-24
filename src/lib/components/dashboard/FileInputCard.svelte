@@ -57,12 +57,35 @@
     <!-- Label & Filename -->
     <div class="flex-1 text-left overflow-hidden">
         <div
-            class="text-xs font-bold text-slate-500 opacity-70 tracking-wider mb-0.5"
+            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5"
         >
             {label}
         </div>
-        <div class="text-sm font-bold text-slate-700 truncate max-w-full">
-            {fileStore ? fileStore.name : "選択"}
+        <div
+            class="text-sm font-bold {fileStore
+                ? 'text-indigo-600'
+                : 'text-slate-600'} truncate max-w-full"
+        >
+            {#if fileStore}
+                <span class="flex items-center gap-1">
+                    <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="3"
+                            d="M5 13l4 4L19 7"
+                        />
+                    </svg>
+                    選択済み
+                </span>
+            {:else}
+                選択
+            {/if}
         </div>
     </div>
 

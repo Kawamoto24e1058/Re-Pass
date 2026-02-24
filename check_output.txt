@@ -1,0 +1,125 @@
+
+> re-pass@0.0.1 check
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: c:\Users\kharu\Project\Re-Pass
+Getting Svelte diagnostics...
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:72:17
+[33mWarn[39m: Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
+https://svelte.dev/e/a11y_consider_explicit_label (svelte)
+[36m            >
+                [35m<button
+                    on:click={dismissPrompt}
+                    class="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-1"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>[36m
+                <div class="flex items-start gap-4 pr-6">[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:139:21
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m                    <span>Re-Passをインストール</span>
+                    [35m<div
+                        on:click={(e) => {
+                            e.stopPropagation();
+                            dismissPrompt();
+                        }}
+                        class="ml-2 pl-2 border-l border-slate-700 text-slate-400 hover:text-white"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>[36m
+                </button>[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\lib\components\PwaInstallPrompt.svelte[39m:139:21
+[33mWarn[39m: `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m                    <span>Re-Passをインストール</span>
+                    [35m<div
+                        on:click={(e) => {
+                            e.stopPropagation();
+                            dismissPrompt();
+                        }}
+                        class="ml-2 pl-2 border-l border-slate-700 text-slate-400 hover:text-white"
+                    >
+                        <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>[36m
+                </button>[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\+page.svelte[39m:97:3
+[31mError[39m: Cyclical dependency detected: user → isUltimate → userData → isUltimate
+https://svelte.dev/e/reactive_declaration_cycle (svelte)
+[36m  // Sync state with store
+  [35m$: {
+    user = $userStore;
+    userData = $userProfile; // Restore this for global data access
+    if (selectedSubjectId !== $currentBinder) {
+      selectedSubjectId = $currentBinder;
+      // When subject changes, clear contextual search state
+      contextualSharedNotes = [];
+      hasSearchedNotes = false;
+
+      // Auto-search for Ultimate users
+      if (selectedSubjectId && isUltimate) {
+        const subject = $subjects.find((s) => s.id === selectedSubjectId);
+        if (subject) {
+          fetchContextualNotes(subject.name);
+        }
+      }
+    }
+  }[36m[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\setup\+page.svelte[39m:164:33
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                            <button
+                                [35mon:click={() => selectUni(uni)}[36m
+                                class="w-full text-left px-6 py-3 hover:bg-indigo-50 text-sm font-bold text-slate-700 transition-colors border-b border-slate-50 last:border-0"[39m
+
+c:\Users\kharu\Project\Re-Pass\[32msrc\routes\setup\+page.svelte[39m:197:17
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            <button
+                [35mon:click={handleSave}[36m
+                disabled={loading || !university.trim()}[39m
+
+====================================
+[31msvelte-check found 1 error and 5 warnings in 3 files
+[39m
