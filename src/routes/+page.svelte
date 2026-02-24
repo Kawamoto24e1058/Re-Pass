@@ -162,7 +162,26 @@
     | string;
 
   let result: AnalysisResult = "";
-  let analyzedTitle = "";
+  // --- Derived State for UI ---
+  $: analyzedTitle = (() => {
+    const activeMode = selectedDerivativeMode || $analysisMode || "note";
+    const ca = lectureAnalyses[activeMode] || result;
+
+    // Safely extract title from current analysis or fallback to lectureTitle
+    let extractedTitle = "";
+    if (ca && typeof ca === "object" && ca.title) {
+      extractedTitle = ca.title;
+    }
+
+    if (!extractedTitle) {
+      extractedTitle =
+        typeof $lectureTitle === "object"
+          ? ($lectureTitle as any).title || "講義ノート"
+          : $lectureTitle || "講義ノート";
+    }
+    return extractedTitle;
+  })();
+
   let analyzedCategory = "";
 
   // --- Derivative Generation State ---
@@ -1123,7 +1142,14 @@
 
     currentLectureId = lecture.id;
     // Don't auto-deselect subject, keep context
-    $lectureTitle = lecture.title;
+
+    // Safely unbox lecture.title if it happened to be pushed as an object
+    const rawTitle = lecture.title;
+    $lectureTitle =
+      typeof rawTitle === "string"
+        ? rawTitle
+        : rawTitle?.title || "無題のノート";
+
     // Update global transcript store when loading a lecture
     resetSession();
     transcript.set(lecture.content || "");
@@ -1577,7 +1603,7 @@
 
           <div class="mb-10">
             <h1 class="text-4xl font-bold text-slate-900 tracking-tight mb-2">
-              {lectureTitle}
+              {$lectureTitle}
             </h1>
             <div
               class="h-1.5 w-24 bg-gradient-to-r from-indigo-600 to-pink-400 mt-4 rounded-full opacity-90"
@@ -1591,6 +1617,9 @@
             {isResultCopied}
             {previewVideoUrl}
             {currentLectureId}
+            {analyzedTitle}
+            {strategyContent}
+            {displaySummary}
             {isPremium}
             {isUltimate}
             {selectedDerivativeMode}

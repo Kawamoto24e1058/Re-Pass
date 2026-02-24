@@ -28,7 +28,9 @@
     let resultTextContainer: HTMLElement;
     let videoPlayer: HTMLVideoElement;
 
-    $: currentAnalysis = lectureAnalyses[$analysisMode || "note"] || result;
+    $: currentAnalysis =
+        lectureAnalyses[selectedDerivativeMode || $analysisMode || "note"] ||
+        result;
 
     $: manuscriptPages = Math.ceil(derivativeTargetLength / 400);
 
