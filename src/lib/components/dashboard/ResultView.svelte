@@ -20,6 +20,10 @@
     export let selectedDerivativeMode: string | null = null;
     export let derivativeTargetLength: number = 400;
 
+    // --- Interactive QA Props ---
+    export let qaInput: string = "";
+    export let isAskingQuestion: boolean = false;
+
     let resultContainer: HTMLElement;
     let resultTextContainer: HTMLElement;
     let videoPlayer: HTMLVideoElement;
@@ -211,10 +215,10 @@
                 </p>
             </div>
         {:else}
-            <!-- Video Player (Sticky) -->
+            <!-- Video Player (Sticky Optional, now regular to not conflict with new sticky toolbar) -->
             {#if previewVideoUrl && $analysisMode === "note"}
                 <div
-                    class="mb-8 sticky top-4 z-30 bg-white/95 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-indigo-50 transition-all max-w-2xl mx-auto ring-1 ring-slate-900/50"
+                    class="mb-8 bg-white/50 backdrop-blur-md p-2 rounded-2xl border border-indigo-50 transition-all max-w-2xl mx-auto"
                 >
                     <video
                         bind:this={videoPlayer}
@@ -234,6 +238,185 @@
                     </p>
                 </div>
             {/if}
+
+            <!-- Sticky Toolbar: Format Options & Slim QA -->
+            <div
+                class="sticky top-0 z-30 mb-8 bg-white/95 backdrop-blur-md border-b border-slate-200/60 pb-4 pt-2 -mx-4 px-4 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.05)] rounded-b-2xl transition-all"
+            >
+                <div class="flex flex-col gap-4 max-w-4xl mx-auto">
+                    <!-- Top Row: Formats and Edit/Copy -->
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-4"
+                    >
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="text-xs font-bold text-slate-400 uppercase tracking-widest mr-2 hidden sm:inline-block"
+                                >変換</span
+                            >
+                            <div class="flex bg-slate-100/50 p-1 rounded-xl">
+                                <button
+                                    on:click={() =>
+                                        dispatch("select_derivative", "note")}
+                                    class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5
+                                    {selectedDerivativeMode === 'note'
+                                        ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200'
+                                        : lectureAnalyses['note']
+                                          ? 'text-indigo-600 hover:bg-white/50'
+                                          : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}"
+                                >
+                                    {lectureAnalyses["note"] ? "✅ " : ""}ノート
+                                </button>
+                                <button
+                                    on:click={() =>
+                                        dispatch(
+                                            "select_derivative",
+                                            "thoughts",
+                                        )}
+                                    class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5
+                                    {selectedDerivativeMode === 'thoughts'
+                                        ? 'bg-amber-500 text-white shadow-sm hover:bg-amber-600'
+                                        : lectureAnalyses['thoughts']
+                                          ? 'text-amber-600 hover:bg-white/50'
+                                          : 'text-slate-500 hover:text-amber-600 hover:bg-white/50'}"
+                                >
+                                    {lectureAnalyses["thoughts"]
+                                        ? "✅ "
+                                        : ""}感想文
+                                </button>
+                                <button
+                                    on:click={() =>
+                                        dispatch("select_derivative", "report")}
+                                    class="px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-1.5
+                                    {selectedDerivativeMode === 'report'
+                                        ? 'bg-slate-800 text-white shadow-sm hover:bg-slate-900'
+                                        : lectureAnalyses['report']
+                                          ? 'text-slate-800 hover:bg-white/50'
+                                          : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}"
+                                >
+                                    {lectureAnalyses["report"]
+                                        ? "✅ "
+                                        : ""}レポート
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button
+                                on:click={() => dispatch("edit")}
+                                class="text-xs font-bold text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-slate-100 transition-colors flex items-center gap-1 shadow-sm h-8"
+                            >
+                                <svg
+                                    class="w-3.5 h-3.5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    ><path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    /></svg
+                                >
+                                編集
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Middle Row (Conditional): Derivative controls -->
+                    {#if selectedDerivativeMode === "thoughts" || selectedDerivativeMode === "report"}
+                        <div
+                            class="bg-slate-50/80 rounded-xl p-4 border border-slate-200/60 flex flex-col sm:flex-row gap-4 sm:items-center animate-in slide-in-from-top-2"
+                        >
+                            <div class="flex-grow">
+                                <div
+                                    class="flex justify-between items-end mb-1 pl-1"
+                                >
+                                    <span
+                                        class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+                                        >目標文字数</span
+                                    >
+                                    <span
+                                        class="text-xs font-bold text-slate-500"
+                                        >{manuscriptPages}枚分 ({derivativeTargetLength}文字)</span
+                                    >
+                                </div>
+                                <input
+                                    type="range"
+                                    min="100"
+                                    max="4000"
+                                    step="50"
+                                    bind:value={derivativeTargetLength}
+                                    on:input={(e) =>
+                                        dispatch(
+                                            "length_change",
+                                            e.currentTarget.value,
+                                        )}
+                                    class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                                />
+                            </div>
+                            <button
+                                on:click={() =>
+                                    dispatch(
+                                        "generate",
+                                        selectedDerivativeMode,
+                                    )}
+                                disabled={derivativeAnalyzing}
+                                class="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {#if derivativeAnalyzing}
+                                    <div
+                                        class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"
+                                    ></div>
+                                    生成中
+                                {:else}
+                                    <span>作成する</span>
+                                {/if}
+                            </button>
+                        </div>
+                    {/if}
+
+                    <!-- Bottom Row: Slim QA Input -->
+                    <div class="relative flex items-center gap-2">
+                        <div
+                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                        >
+                            <span class="text-lg">💬</span>
+                        </div>
+                        <input
+                            type="text"
+                            bind:value={qaInput}
+                            disabled={isAskingQuestion}
+                            placeholder="TAに質問・課題を投げる..."
+                            on:keydown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    dispatch("ask_question");
+                                }
+                            }}
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-12 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all disabled:opacity-50"
+                        />
+                        <button
+                            on:click={() => dispatch("ask_question")}
+                            disabled={!qaInput.trim() || isAskingQuestion}
+                            class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Rich Structured Display -->
             {#if typeof currentAnalysis === "object"}
@@ -260,24 +443,7 @@
                             </span>
                         </div>
 
-                        <button
-                            on:click={() => dispatch("edit")}
-                            class="text-xs font-bold text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                        >
-                            <svg
-                                class="w-3.5 h-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                ><path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                /></svg
-                            >
-                            編集に戻る
-                        </button>
+                        <!-- Edit button moved to sticky toolbar. -->
                     </div>
 
                     <h1
@@ -466,137 +632,7 @@
                 </article>
             {/if}
 
-            <div class="mt-12 pt-8 border-t border-slate-100">
-                <p
-                    class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 text-center"
-                >
-                    他の形式も作成する
-                </p>
-                <div class="flex flex-wrap justify-center gap-4">
-                    <button
-                        on:click={() => dispatch("select_derivative", "note")}
-                        class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-            {selectedDerivativeMode === 'note'
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
-                            : lectureAnalyses['note']
-                              ? 'bg-white border border-indigo-200 text-indigo-600'
-                              : 'bg-white border border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600'}"
-                    >
-                        {lectureAnalyses["note"] ? "✅ " : ""}ノート形式
-                    </button>
-                    <button
-                        on:click={() =>
-                            dispatch("select_derivative", "thoughts")}
-                        class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-            {selectedDerivativeMode === 'thoughts'
-                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-100'
-                            : lectureAnalyses['thoughts']
-                              ? 'bg-white border border-amber-200 text-amber-600'
-                              : 'bg-white border border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600'}"
-                    >
-                        {lectureAnalyses["thoughts"] ? "✅ " : ""}感想文形式
-                    </button>
-                    <button
-                        on:click={() => dispatch("select_derivative", "report")}
-                        class="px-6 py-3 rounded-2xl font-bold transition-all flex items-center gap-2
-            {selectedDerivativeMode === 'report'
-                            ? 'bg-slate-800 text-white shadow-lg shadow-slate-200'
-                            : lectureAnalyses['report']
-                              ? 'bg-white border border-slate-400 text-slate-800'
-                              : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-800 hover:text-slate-800'}"
-                    >
-                        {lectureAnalyses["report"] ? "✅ " : ""}レポート形式
-                    </button>
-                </div>
-
-                <!-- Derivative Length Slider -->
-                {#if selectedDerivativeMode === "thoughts" || selectedDerivativeMode === "report"}
-                    <div
-                        class="mt-8 max-w-lg mx-auto bg-slate-50 p-6 rounded-2xl border border-slate-200 transition-all"
-                    >
-                        <div class="flex justify-between items-end mb-4">
-                            <span
-                                class="block text-xs font-bold text-slate-400 uppercase tracking-widest"
-                                >目標文字数</span
-                            >
-                            <span
-                                class="text-xs font-bold text-slate-400 bg-white px-2 py-1 rounded-lg shadow-sm border border-slate-100"
-                            >
-                                {manuscriptPages}枚分
-                            </span>
-                        </div>
-
-                        <div class="relative w-full pt-6 pb-2">
-                            <span
-                                class="absolute -top-3 px-3 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg transform -translate-x-1/2 transition-all"
-                                style="left: {((derivativeTargetLength - 100) /
-                                    3900) *
-                                    100}%"
-                            >
-                                {derivativeTargetLength}文字
-                            </span>
-                            <input
-                                type="range"
-                                min="100"
-                                max="4000"
-                                step="50"
-                                bind:value={derivativeTargetLength}
-                                on:input={(e) =>
-                                    dispatch(
-                                        "length_change",
-                                        e.currentTarget.value,
-                                    )}
-                                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-500 relative z-10 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                            />
-
-                            <div
-                                class="relative w-full mt-2 text-xs text-slate-400 font-bold"
-                            >
-                                <span
-                                    class="absolute"
-                                    style="left: 0%; transform: translateX(0);"
-                                    >100</span
-                                >
-                                <span
-                                    class="absolute"
-                                    style="left: 10.25%; transform: translateX(-50%);"
-                                    >500</span
-                                >
-                                <span
-                                    class="absolute"
-                                    style="left: 48.71%; transform: translateX(-50%);"
-                                    >2000</span
-                                >
-                                <span
-                                    class="absolute"
-                                    style="right: 0%; transform: translateX(0);"
-                                    >4000</span
-                                >
-                            </div>
-                        </div>
-                    </div>
-                {/if}
-
-                {#if selectedDerivativeMode}
-                    <div class="mt-8 flex justify-center">
-                        <button
-                            on:click={() =>
-                                dispatch("generate", selectedDerivativeMode)}
-                            disabled={derivativeAnalyzing}
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all hover:-translate-y-0.5 disabled:opacity-50 flex items-center gap-2"
-                        >
-                            {#if derivativeAnalyzing}
-                                <div
-                                    class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-                                ></div>
-                                生成中...
-                            {:else}
-                                <span>🚀 選択した形式で生成する</span>
-                            {/if}
-                        </button>
-                    </div>
-                {/if}
-            </div>
+            <!-- Old bottom format controls removed as they are now in the sticky toolbar -->
         {/if}
     </div>
 {/if}

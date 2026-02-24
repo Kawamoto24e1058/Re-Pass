@@ -89,7 +89,6 @@
   let selectedDerivativeMode: "note" | "thoughts" | "report" | null = null;
   let derivativeTargetLength = 400;
 
-  let showTaskInput = false;
   // User & Data State
   let user: any = null;
   let userData: any = null;
@@ -170,6 +169,11 @@
   let lectureAnalyses: Record<string, AnalysisResult> = {};
   let initialGenerationDone = false;
   let derivativeAnalyzing = false;
+
+  // --- Interactive QA State ---
+  let isAskingQuestion = false;
+  let qaInput = "";
+  let qaHistory: { role: "user" | "assistant"; content: string }[] = [];
 
   let resultTextContainer: HTMLElement | null = null; // For individual copy
   let resultContainer: HTMLElement | null = null; // For auto-scroll
@@ -401,6 +405,75 @@
       toastMessage = "生成に失敗しました";
     } finally {
       analyzingFinal = false;
+    }
+  }
+
+  // --- Interactive QA Logic ---
+  async function askQuestion() {
+    if (!qaInput.trim() || isAskingQuestion || !currentLectureId) return;
+
+    qaHistory = [...qaHistory, { role: "user", content: qaInput }];
+    const currentQuestion = qaInput;
+    qaInput = "";
+    isAskingQuestion = true;
+
+    try {
+      const activeMode = selectedDerivativeMode || $analysisMode || "note";
+      const currentData = lectureAnalyses[activeMode] || result;
+      let contextText = "";
+
+      if (
+        typeof currentData === "object" &&
+        currentData !== null &&
+        currentData.summary
+      ) {
+        contextText = currentData.summary;
+      } else if (typeof currentData === "string") {
+        contextText = currentData;
+      }
+
+      const idToken = await user.getIdToken();
+      const formData = new FormData();
+      formData.append("documentText", contextText); // Context is the generated note
+      formData.append("taskText", currentQuestion); // The specific question
+      formData.append("isTaskAssist", "true"); // Trigger TA mode in API
+
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Failed to get answer");
+      const data = await response.json();
+
+      const answer =
+        typeof data.result === "string"
+          ? data.result
+          : data.result.summary || "回答を生成できませんでした。";
+
+      qaHistory = [...qaHistory, { role: "assistant", content: answer }];
+
+      // Save QA history to Firestore seamlessly
+      const ref = doc(db, `users/${user.uid}/lectures/${currentLectureId}`);
+      await setDoc(
+        ref,
+        { qaHistory, updatedAt: serverTimestamp() },
+        { merge: true },
+      );
+    } catch (e) {
+      console.error(e);
+      toastMessage = "エラーが発生しました";
+      qaHistory = [
+        ...qaHistory,
+        { role: "assistant", content: "エラーが発生しました。" },
+      ];
+    } finally {
+      isAskingQuestion = false;
+      await tick();
+      // Auto-scroll to bottom of QA
+      const qaContainer = document.getElementById("qa-container");
+      if (qaContainer) qaContainer.scrollTop = qaContainer.scrollHeight;
     }
   }
 
@@ -786,12 +859,6 @@
         formData.append("imageUrl", url);
       });
 
-      // Task Text
-      if ($taskText.trim()) {
-        formData.append("taskText", $taskText.trim());
-        formData.append("isTaskAssist", "true");
-      }
-
       // Explicitly separate text inputs for the prompt
       let documentText = "";
       if ($txtFile) {
@@ -1076,6 +1143,12 @@
     lectureAnalyses =
       lecture.analyses || (result ? { [$analysisMode]: result } : {});
     initialGenerationDone = !!result;
+
+    // Restore Interactive QA state
+    qaHistory = lecture.qaHistory || [];
+    qaInput = "";
+    isAskingQuestion = false;
+
     isEditing = false; // Switch to View Mode
 
     // Set preview video if available
@@ -1158,6 +1231,9 @@
     currentBinder.set(null);
     contextualSharedNotes = [];
     hasSearchedNotes = false;
+    qaHistory = [];
+    qaInput = "";
+    isAskingQuestion = false;
   }
 
   /**
@@ -1515,24 +1591,90 @@
             {isResultCopied}
             {previewVideoUrl}
             {currentLectureId}
-            {analyzedTitle}
-            {strategyContent}
-            {displaySummary}
             {isPremium}
             {isUltimate}
             {selectedDerivativeMode}
             {derivativeTargetLength}
+            bind:qaInput
+            {isAskingQuestion}
             on:copy={copyResultToClipboard}
-            on:edit={() => {
-              isEditing = true;
-              finalExamView = false;
-            }}
-            on:select_derivative={(e) => (selectedDerivativeMode = e.detail)}
-            on:length_change={(e) =>
+            on:edit={() => (isEditing = true)}
+            on:select_derivative={(
+              e: CustomEvent<"note" | "thoughts" | "report">,
+            ) => (selectedDerivativeMode = e.detail)}
+            on:length_change={(e: CustomEvent<string | number>) =>
               (derivativeTargetLength = Number(e.detail))}
-            on:generate={(e) => handleDerivativeGenerate(e.detail)}
+            on:generate={(e: CustomEvent<"note" | "thoughts" | "report">) =>
+              handleDerivativeGenerate(e.detail)}
             on:upgrade_request={() => (showUpgradeModal = true)}
+            on:ask_question={askQuestion}
           />
+
+          <!-- Interactive QA History Section (Input is now in sticky toolbar) -->
+          <div
+            class="mt-12 bg-white rounded-3xl p-6 lg:p-8 shadow-sm border border-slate-200"
+          >
+            <h3
+              class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"
+            >
+              <span class="text-2xl">💬</span> AIアシスタントとの対話履歴
+            </h3>
+
+            <div
+              id="qa-container"
+              class="space-y-6 max-h-[500px] overflow-y-auto custom-scrollbar pr-2"
+            >
+              {#if qaHistory.length === 0}
+                <div class="text-center py-8 text-slate-400">
+                  <p class="text-sm">
+                    上部のツールバーから質問や課題を入力すると、ここに回答が表示されます。
+                  </p>
+                </div>
+              {:else}
+                {#each qaHistory as msg}
+                  <div
+                    class="flex flex-col {msg.role === 'user'
+                      ? 'items-end'
+                      : 'items-start'}"
+                  >
+                    <div
+                      class="max-w-[85%] rounded-2xl p-4 {msg.role === 'user'
+                        ? 'bg-indigo-600 text-white rounded-br-none'
+                        : 'bg-slate-50 border border-slate-100 text-slate-700 rounded-bl-none'}"
+                    >
+                      <div
+                        class="prose prose-sm {msg.role === 'user'
+                          ? 'prose-invert'
+                          : 'prose-slate'} max-w-none"
+                      >
+                        {@html marked.parse(msg.content)}
+                      </div>
+                    </div>
+                  </div>
+                {/each}
+              {/if}
+
+              {#if isAskingQuestion}
+                <div class="flex flex-col items-start">
+                  <div
+                    class="max-w-[85%] rounded-2xl p-4 bg-slate-50 border border-slate-100 text-slate-700 rounded-bl-none flex items-center gap-3"
+                  >
+                    <div
+                      class="w-2 h-2 rounded-full bg-slate-400 animate-bounce"
+                    ></div>
+                    <div
+                      class="w-2 h-2 rounded-full bg-slate-400 animate-bounce"
+                      style="animation-delay: 0.1s"
+                    ></div>
+                    <div
+                      class="w-2 h-2 rounded-full bg-slate-400 animate-bounce"
+                      style="animation-delay: 0.2s"
+                    ></div>
+                  </div>
+                </div>
+              {/if}
+            </div>
+          </div>
         </div>
       {:else if selectedSubjectId && !isEditing}
         {@const subject = $subjects.find((s) => s.id === selectedSubjectId)}
@@ -2201,72 +2343,7 @@
                         handleFileChange(e.detail.event, e.detail.id)}
                       on:upgrade={(e) => handleUpgradeRequest(e.detail.label)}
                     />
-                    <button
-                      on:click={() => (showTaskInput = !showTaskInput)}
-                      class="h-16 rounded-xl border-2 border-dashed {showTaskInput
-                        ? 'bg-pink-50 border-pink-300 text-pink-600'
-                        : 'border-slate-200 text-slate-400'} hover:border-pink-300 hover:bg-pink-50 transition-all flex items-center px-4 gap-3 relative group {!isPremium
-                        ? 'opacity-50'
-                        : ''}"
-                    >
-                      <div
-                        class="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center text-pink-400 group-hover:scale-110 transition-transform"
-                      >
-                        <svg
-                          class="w-5 h-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                      </div>
-                      <div class="text-left">
-                        <span class="block text-sm font-bold"
-                          >📝 課題・問題入力</span
-                        >
-                        <span class="block text-[10px] opacity-60"
-                          >{showTaskInput
-                            ? "入力を閉じる"
-                            : "テキストで入力"}</span
-                        >
-                      </div>
-                      {#if !isPremium}
-                        <div class="absolute top-2 right-2">
-                          <svg
-                            class="w-3 h-3 text-slate-400"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            ><path
-                              fill-rule="evenodd"
-                              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                              clip-rule="evenodd"
-                            /></svg
-                          >
-                        </div>
-                      {/if}
-                    </button>
                   </div>
-
-                  {#if showTaskInput}
-                    <div
-                      class="mt-4 p-4 bg-pink-50/30 border border-pink-100 rounded-2xl animate-in slide-in-from-top-2 duration-300"
-                    >
-                      <textarea
-                        bind:value={$taskText}
-                        placeholder="解きたい課題・問題、またはわからない箇所を具体的に入力してください..."
-                        class="w-full h-32 bg-white border border-pink-100 rounded-xl p-4 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all resize-none shadow-inner"
-                      ></textarea>
-                      <p class="mt-2 text-[10px] text-pink-500/70 font-medium">
-                        ※TA（ティーチングアシスタント）モードで解析し、ヒントや解き方を提案します。
-                      </p>
-                    </div>
-                  {/if}
                 </div>
 
                 <!-- URL Analysis -->
@@ -2436,7 +2513,6 @@
                           !$audioFile &&
                           !$targetUrl &&
                           !$transcript.trim() &&
-                          !$taskText.trim() &&
                           $stagedImages.length === 0)}
                       class="bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-slate-800 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
                     >
