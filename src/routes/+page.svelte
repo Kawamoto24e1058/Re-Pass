@@ -79,6 +79,9 @@
   // --- Simplified State Variables ---
   let isEditing = false;
   let isCourseDropdownOpen = false;
+  let isMobileCourseViewOpen = false; // For mobile bottom sheet
+  let viewMode: "create" | "gallery" = "create"; // 'create' (4-step editor) or 'gallery' (shared notes)
+  let galleryCourseName = ""; // Selected course for gallery
   // lectureTitle is managed by sessionStore
   let currentLectureId: string | null = null;
   let selectedSubjectId: string | null = null;
@@ -116,11 +119,47 @@
         fetchContextualNotes(subject.name);
       }
     }
+
+    // Pre-select course based on selected subject in sidebar
+    if (selectedSubjectId && enrolledCoursesList.length > 0) {
+      const subject = $subjects.find((s) => s.id === selectedSubjectId);
+      if (subject) {
+        const matchingCourse = enrolledCoursesList.find(
+          (c) =>
+            normalizeCourseName(c.courseName) ===
+            normalizeCourseName(subject.name),
+        );
+        if (matchingCourse && !$lectureTitle) {
+          $lectureTitle = matchingCourse.courseName;
+        }
+      }
+    }
   }
 
   // Derived courses for display (with retry/fallback)
   let enrolledCoursesList: any[] = [];
   let unsubscribeEnrolledCourses: any = null;
+
+  // React to courseContext clicks from Sidebar
+  $: if (browser && $page.url.searchParams.has("courseContext")) {
+    const courseContextParam = $page.url.searchParams.get("courseContext");
+    if (courseContextParam) {
+      const decodedCourse = decodeURIComponent(courseContextParam);
+      viewMode = "gallery";
+      galleryCourseName = decodedCourse;
+      $lectureTitle = "";
+
+      currentLectureId = null;
+      isEditing = false;
+
+      fetchContextualNotes(decodedCourse);
+
+      // Clean up the URL silently
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("courseContext");
+      window.history.replaceState({}, "", newUrl);
+    }
+  }
 
   $: if (user) {
     if (unsubscribeEnrolledCourses) unsubscribeEnrolledCourses();
@@ -635,25 +674,6 @@
       window.history.replaceState({}, "", newUrl);
     }
 
-    // Handle Course Context for Search
-    const courseContextParam = $page.url.searchParams.get("courseContext");
-    if (courseContextParam) {
-      const decodedCourse = decodeURIComponent(courseContextParam);
-      // Set the title for the new note
-      $lectureTitle = decodedCourse;
-      // Ensure we are in dashboard/creation mode
-      currentLectureId = null;
-      isEditing = false;
-
-      // Fetch related shared notes
-      fetchContextualNotes(decodedCourse);
-
-      // Clean up the URL quietly so it doesn't trigger repeatedly on reloads during editing
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete("courseContext");
-      window.history.replaceState({}, "", newUrl);
-    }
-
     // Handle Shared Lecture Path
     const path = $page.url.searchParams.get("path");
     if (path) {
@@ -1162,6 +1182,17 @@
       toastMessage = "解析を中断しました";
       setTimeout(() => (toastMessage = null), 3000);
     }
+  }
+
+  // --- Shared Note Gallery Logic ---
+  function startNewNoteFromGallery() {
+    $lectureTitle = galleryCourseName;
+    viewMode = "create";
+  }
+
+  function closeGallery() {
+    viewMode = "create";
+    galleryCourseName = "";
   }
 
   // --- Simplified Dashboard Logic ---
@@ -2162,683 +2193,976 @@
         {/if}
       {:else}
         <!-- Input Section Only (History moved to /history) -->
-        <div class="mb-10">
-          <!-- 4-Step Navigation Header -->
-          <div
-            class="flex items-center justify-center gap-4 md:gap-8 px-4 py-8 bg-white/50 backdrop-blur-sm rounded-3xl shadow-sm border border-white/20 mb-12 overflow-x-auto whitespace-nowrap scrollbar-hide sticky top-0 z-[60]"
-          >
-            <div class="flex items-center gap-2">
-              <span
-                class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-lg shadow-indigo-200"
-                >1</span
-              >
-              <span class="text-sm font-black text-slate-800">講義選択</span>
-            </div>
-            <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
+        {#if viewMode === "create"}
+          <div class="mb-10">
+            <!-- 4-Step Navigation Header -->
             <div
-              class="flex items-center gap-2 {isStep2Locked
-                ? 'opacity-30 grayscale'
-                : ''} transition-all"
+              class="flex items-center justify-center gap-4 md:gap-8 px-4 py-8 bg-white/50 backdrop-blur-sm rounded-3xl shadow-sm border border-white/20 mb-12 overflow-x-auto whitespace-nowrap scrollbar-hide sticky top-0 z-[60]"
             >
-              <span
-                class="w-8 h-8 rounded-full {isStep2Locked
-                  ? 'bg-slate-100 text-slate-400'
-                  : 'bg-amber-500 text-white shadow-lg shadow-amber-100'} flex items-center justify-center text-sm font-black transition-all"
-                >2</span
+              <div class="flex items-center gap-2">
+                <span
+                  class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-lg shadow-indigo-200"
+                  >1</span
+                >
+                <span class="text-sm font-black text-slate-800">講義選択</span>
+              </div>
+              <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
+              <div
+                class="flex items-center gap-2 {isStep2Locked
+                  ? 'opacity-30 grayscale'
+                  : ''} transition-all"
               >
-              <span
-                class="text-sm font-black {isStep2Locked
-                  ? 'text-slate-400'
-                  : 'text-slate-800'}">モード選択</span
+                <span
+                  class="w-8 h-8 rounded-full {isStep2Locked
+                    ? 'bg-slate-100 text-slate-400'
+                    : 'bg-amber-500 text-white shadow-lg shadow-amber-100'} flex items-center justify-center text-sm font-black transition-all"
+                  >2</span
+                >
+                <span
+                  class="text-sm font-black {isStep2Locked
+                    ? 'text-slate-400'
+                    : 'text-slate-800'}">モード選択</span
+                >
+              </div>
+              <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
+              <div
+                class="flex items-center gap-2 {isStep3Locked
+                  ? 'opacity-30 grayscale'
+                  : ''} transition-all"
               >
+                <span
+                  class="w-8 h-8 rounded-full {isStep3Locked
+                    ? 'bg-slate-100 text-slate-400'
+                    : 'bg-purple-600 text-white shadow-lg shadow-purple-100'} flex items-center justify-center text-sm font-black transition-all"
+                  >3</span
+                >
+                <span
+                  class="text-sm font-black {isStep3Locked
+                    ? 'text-slate-400'
+                    : 'text-slate-800'}">資料選択</span
+                >
+              </div>
+              <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
+              <div
+                class="flex items-center gap-2 {isStep4Locked
+                  ? 'opacity-30 grayscale'
+                  : ''} transition-all"
+              >
+                <span
+                  class="w-8 h-8 rounded-full {isStep4Locked
+                    ? 'bg-slate-100 text-slate-400'
+                    : 'bg-slate-900 text-white shadow-lg shadow-slate-200'} flex items-center justify-center text-sm font-black transition-all"
+                  >4</span
+                >
+                <span
+                  class="text-sm font-black {isStep4Locked
+                    ? 'text-slate-400'
+                    : 'text-slate-800'}">解析開始</span
+                >
+              </div>
             </div>
-            <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
-            <div
-              class="flex items-center gap-2 {isStep3Locked
-                ? 'opacity-30 grayscale'
-                : ''} transition-all"
-            >
-              <span
-                class="w-8 h-8 rounded-full {isStep3Locked
-                  ? 'bg-slate-100 text-slate-400'
-                  : 'bg-purple-600 text-white shadow-lg shadow-purple-100'} flex items-center justify-center text-sm font-black transition-all"
-                >3</span
-              >
-              <span
-                class="text-sm font-black {isStep3Locked
-                  ? 'text-slate-400'
-                  : 'text-slate-800'}">資料選択</span
-              >
-            </div>
-            <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
-            <div
-              class="flex items-center gap-2 {isStep4Locked
-                ? 'opacity-30 grayscale'
-                : ''} transition-all"
-            >
-              <span
-                class="w-8 h-8 rounded-full {isStep4Locked
-                  ? 'bg-slate-100 text-slate-400'
-                  : 'bg-slate-900 text-white shadow-lg shadow-slate-200'} flex items-center justify-center text-sm font-black transition-all"
-                >4</span
-              >
-              <span
-                class="text-sm font-black {isStep4Locked
-                  ? 'text-slate-400'
-                  : 'text-slate-800'}">解析開始</span
-              >
-            </div>
-          </div>
 
-          <div class="space-y-8">
-            <!-- STEP 1: Choose Course -->
-            <div
-              class="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden relative group transition-all hover:shadow-lg hover:shadow-indigo-50/50"
-            >
-              <div class="p-8 md:p-12">
-                <div class="flex items-center gap-5 mb-8">
-                  <div
-                    class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner"
-                  >
-                    <span class="text-2xl font-black">01</span>
-                  </div>
-                  <div>
-                    <h2 class="text-2xl font-black text-slate-900 leading-none">
-                      履修中の講義を選択
-                    </h2>
-                    <p
-                      class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
+            <div class="space-y-8">
+              <!-- STEP 1: Choose Course -->
+              <div
+                class="bg-white rounded-[40px] shadow-sm border border-slate-100 {isCourseDropdownOpen
+                  ? 'overflow-visible'
+                  : 'overflow-hidden'} relative group transition-all hover:shadow-lg hover:shadow-indigo-50/50"
+              >
+                <div class="p-8 md:p-12">
+                  <div class="flex items-center gap-5 mb-8">
+                    <div
+                      class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner"
                     >
-                      STEP 1: SELECT YOUR COURSE
-                    </p>
+                      <span class="text-2xl font-black">01</span>
+                    </div>
+                    <div>
+                      <h2
+                        class="text-2xl font-black text-slate-900 leading-none"
+                      >
+                        履修中の講義を選択
+                      </h2>
+                      <p
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
+                      >
+                        STEP 1: SELECT YOUR COURSE
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="relative w-full z-50">
+                    <button
+                      type="button"
+                      on:click={(e) => {
+                        e.stopPropagation();
+                        // On mobile (less than 768px), open bottom sheet. On desktop, open dropdown.
+                        if (window.innerWidth < 768) {
+                          isMobileCourseViewOpen = true;
+                        } else {
+                          isCourseDropdownOpen = !isCourseDropdownOpen;
+                        }
+                      }}
+                      class="w-full flex items-center justify-between p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl shadow-sm hover:bg-white hover:border-indigo-200 text-left transition-all group"
+                    >
+                      <span
+                        class="text-gray-700 font-black text-xl {$lectureTitle
+                          ? 'text-slate-900'
+                          : 'text-slate-400'}"
+                      >
+                        {$lectureTitle || "こちらをタップして講義を選択"}
+                      </span>
+                      <svg
+                        class="w-6 h-6 text-gray-400 transition-transform {isCourseDropdownOpen
+                          ? 'rotate-180'
+                          : ''}"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="3"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+
+                    <!-- Desktop Dropdown -->
+                    {#if isCourseDropdownOpen}
+                      <div
+                        class="fixed inset-0 z-40 hidden md:block"
+                        on:click={() => (isCourseDropdownOpen = false)}
+                        role="button"
+                        tabindex="0"
+                      ></div>
+                      <div
+                        class="absolute top-full left-0 w-full mt-3 bg-white border border-slate-100 rounded-[32px] shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 hidden md:block"
+                      >
+                        <div
+                          class="max-h-80 overflow-y-auto custom-scrollbar p-2"
+                        >
+                          {#if enrolledCoursesList && enrolledCoursesList.length > 0}
+                            {#each enrolledCoursesList as course}
+                              <button
+                                type="button"
+                                on:click={() => {
+                                  $lectureTitle = course.courseName;
+                                  isCourseDropdownOpen = false;
+                                }}
+                                class="w-full text-left px-6 py-5 hover:bg-indigo-50 hover:text-indigo-600 rounded-2xl transition-all flex items-center justify-between group {$lectureTitle ===
+                                course.courseName
+                                  ? 'bg-indigo-50 text-indigo-700 font-bold'
+                                  : 'text-slate-700'}"
+                              >
+                                <span class="text-xl font-bold">
+                                  {course.courseName}
+                                  {#if course.instructor}<span
+                                      class="text-xs text-slate-400 ml-3 font-medium"
+                                      >({course.instructor})</span
+                                    >{/if}
+                                </span>
+                                {#if $lectureTitle === course.courseName}
+                                  <svg
+                                    class="w-6 h-6 text-indigo-600"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    ><path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="3"
+                                      d="M5 13l4 4L19 7"
+                                    /></svg
+                                  >
+                                {/if}
+                              </button>
+                            {/each}
+                          {:else}
+                            <div class="p-8 text-center">
+                              <p class="font-bold text-slate-600 mb-4">
+                                履修中の講義がありません
+                              </p>
+                              <button
+                                on:click={() => {
+                                  isCourseDropdownOpen = false;
+                                  $isEnrollModalOpen = true;
+                                }}
+                                class="bg-indigo-600 text-white font-black py-3 px-6 rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+                                >⚙️ 講義を登録する</button
+                              >
+                            </div>
+                          {/if}
+                        </div>
+                      </div>
+                    {/if}
+
+                    <!-- Mobile Bottom Sheet -->
+                    {#if isMobileCourseViewOpen}
+                      <div
+                        class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] md:hidden"
+                        on:click={() => (isMobileCourseViewOpen = false)}
+                        role="button"
+                        tabindex="0"
+                      >
+                        <div
+                          class="absolute bottom-0 left-0 w-full bg-white rounded-t-[40px] shadow-2xl p-6 pb-12 animate-in slide-in-from-bottom duration-300 pointer-events-auto"
+                          on:click|stopPropagation
+                        >
+                          <div
+                            class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"
+                          ></div>
+                          <h3
+                            class="text-xl font-black text-slate-900 mb-6 px-2"
+                          >
+                            講義を選択
+                          </h3>
+
+                          <div
+                            class="max-h-[60vh] overflow-y-auto space-y-3 custom-scrollbar"
+                          >
+                            {#if enrolledCoursesList && enrolledCoursesList.length > 0}
+                              {#each enrolledCoursesList as course}
+                                <button
+                                  type="button"
+                                  on:click={() => {
+                                    $lectureTitle = course.courseName;
+                                    isMobileCourseViewOpen = false;
+                                  }}
+                                  class="w-full text-left p-6 rounded-[24px] transition-all flex items-center justify-between border-2 {$lectureTitle ===
+                                  course.courseName
+                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                                    : 'bg-slate-50 border-transparent text-slate-700 active:bg-slate-100'}"
+                                >
+                                  <div>
+                                    <p class="text-lg font-black">
+                                      {course.courseName}
+                                    </p>
+                                    {#if course.instructor}<p
+                                        class="text-sm font-bold opacity-40 mt-1"
+                                      >
+                                        {course.instructor}
+                                      </p>{/if}
+                                  </div>
+                                  {#if $lectureTitle === course.courseName}
+                                    <div
+                                      class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200"
+                                    >
+                                      <svg
+                                        class="w-5 h-5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        ><path
+                                          stroke-linecap="round"
+                                          stroke-linejoin="round"
+                                          stroke-width="3"
+                                          d="M5 13l4 4L19 7"
+                                        /></svg
+                                      >
+                                    </div>
+                                  {/if}
+                                </button>
+                              {/each}
+                            {:else}
+                              <div class="p-12 text-center">
+                                <p class="font-bold text-slate-600 mb-6">
+                                  履修中の講義がありません
+                                </p>
+                                <button
+                                  on:click={() => {
+                                    isMobileCourseViewOpen = false;
+                                    $isEnrollModalOpen = true;
+                                  }}
+                                  class="w-full bg-indigo-600 text-white font-black py-5 rounded-3xl shadow-xl shadow-indigo-100"
+                                  >⚙️ 講義を登録する</button
+                                >
+                              </div>
+                            {/if}
+                          </div>
+
+                          <button
+                            on:click={() => (isMobileCourseViewOpen = false)}
+                            class="w-full mt-8 py-5 text-slate-400 font-bold text-sm"
+                            >キャンセル</button
+                          >
+                        </div>
+                      </div>
+                    {/if}
                   </div>
                 </div>
+              </div>
 
-                <div class="relative w-full z-50">
-                  <button
-                    type="button"
-                    on:click={(e) => {
-                      e.stopPropagation();
-                      isCourseDropdownOpen = !isCourseDropdownOpen;
-                    }}
-                    class="w-full flex items-center justify-between p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl shadow-sm hover:bg-white hover:border-indigo-200 text-left transition-all group"
-                  >
-                    <span
-                      class="text-gray-700 font-black text-xl {$lectureTitle
-                        ? 'text-slate-900'
-                        : 'text-slate-400'}"
-                    >
-                      {$lectureTitle || "こちらをタップして講義を選択"}
-                    </span>
-                    <svg
-                      class="w-6 h-6 text-gray-400 transition-transform {isCourseDropdownOpen
-                        ? 'rotate-180'
-                        : ''}"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="3"
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-
-                  {#if isCourseDropdownOpen}
+              <!-- STEP 2: Choose Mode -->
+              <div
+                class="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden relative group transition-all {isStep2Locked
+                  ? 'opacity-40 grayscale pointer-events-none'
+                  : 'hover:shadow-lg hover:shadow-amber-50/50'}"
+              >
+                <div class="p-8 md:p-12">
+                  <div class="flex items-center gap-5 mb-10">
                     <div
-                      class="fixed inset-0 z-40"
-                      on:click={() => (isCourseDropdownOpen = false)}
-                      role="button"
-                      tabindex="0"
-                    ></div>
-                    <div
-                      class="absolute top-full left-0 w-full mt-3 bg-white border border-slate-100 rounded-[32px] shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                      class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-inner"
                     >
-                      <div
-                        class="max-h-80 overflow-y-auto custom-scrollbar p-2"
+                      <span class="text-2xl font-black">02</span>
+                    </div>
+                    <div>
+                      <h2
+                        class="text-2xl font-black text-slate-900 leading-none"
                       >
-                        {#if enrolledCoursesList && enrolledCoursesList.length > 0}
-                          {#each enrolledCoursesList as course}
-                            <button
-                              type="button"
-                              on:click={() => {
-                                $lectureTitle = course.courseName;
-                                isCourseDropdownOpen = false;
-                              }}
-                              class="w-full text-left px-6 py-4 hover:bg-indigo-50 hover:text-indigo-600 rounded-2xl transition-all flex items-center justify-between group {$lectureTitle ===
-                              course.courseName
-                                ? 'bg-indigo-50 text-indigo-700 font-bold'
-                                : 'text-slate-700'}"
+                        生成モードを選択
+                      </h2>
+                      <p
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
+                      >
+                        STEP 2: CHOOSE GENERATION MODE
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div>
+                      <span
+                        class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5"
+                        >生成タイプ</span
+                      >
+                      <div class="flex flex-col gap-4">
+                        <div class="flex bg-slate-100/80 p-2 rounded-2xl">
+                          <button
+                            on:click={() => setAnalysisMode("note")}
+                            class="flex-1 py-4 rounded-xl text-sm font-black transition-all {$analysisMode ===
+                            'note'
+                              ? 'bg-white text-indigo-600 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'}"
+                            >ノート</button
+                          >
+                          <button
+                            on:click={() => setAnalysisMode("thoughts")}
+                            class="flex-1 py-4 rounded-xl text-sm font-black transition-all {$analysisMode ===
+                            'thoughts'
+                              ? 'bg-white text-amber-600 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'}"
+                            >感想</button
+                          >
+                          <button
+                            on:click={() => setAnalysisMode("report")}
+                            class="flex-1 py-4 rounded-xl text-sm font-black transition-all {$analysisMode ===
+                            'report'
+                              ? 'bg-white text-slate-800 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700'}"
+                            >レポート</button
+                          >
+                        </div>
+                        <div
+                          class="bg-slate-50 p-4 rounded-2xl border border-slate-100"
+                        >
+                          <p
+                            class="text-xs font-bold text-slate-500 leading-relaxed italic"
+                          >
+                            {#if $analysisMode === "note"}「講義の要点を網羅した自分専用のノートを作成します。」
+                            {:else if $analysisMode === "thoughts"}「講義のポイントを整理し、提出用の感想文に仕上げます。」
+                            {:else if $analysisMode === "report"}「スライドと音声を統合し、論理的なレポートを作成します。」{/if}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      {#if $analysisMode !== "note"}
+                        <div class="flex justify-between items-center mb-5">
+                          <label
+                            for="target-length-slider"
+                            class="block text-[10px] font-black text-slate-400 uppercase tracking-widest"
+                            >目標文字数</label
+                          >
+                          <span
+                            class="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100"
+                            >{$targetLength}文字 ({manuscriptPages}枚分)</span
+                          >
+                        </div>
+                        <div class="relative w-full pt-4 pb-2">
+                          <input
+                            id="target-length-slider"
+                            type="range"
+                            min="100"
+                            max="4000"
+                            step="50"
+                            bind:value={$targetLength}
+                            on:input={handleLengthChange}
+                            class="w-full h-3 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600 transition-all focus:outline-none"
+                          />
+                          <div
+                            class="flex justify-between mt-3 text-[10px] text-slate-400 font-black"
+                          >
+                            <span>100</span><span>1000</span><span>2000</span
+                            ><span>4000</span>
+                          </div>
+                        </div>
+                      {:else}
+                        <div
+                          class="h-full flex items-center justify-center p-8 bg-slate-50 rounded-[32px] border border-dashed border-slate-200"
+                        >
+                          <p
+                            class="text-xs font-black text-slate-400 text-center leading-relaxed"
+                          >
+                            ノート作成モードでは文字数制限はありません。<br
+                            />AIが講義全体を網羅的に解析します。
+                          </p>
+                        </div>
+                      {/if}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- STEP 3: Upload Materials -->
+              <div
+                class="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden relative group transition-all {isStep3Locked
+                  ? 'opacity-40 grayscale pointer-events-none'
+                  : 'hover:shadow-lg hover:shadow-purple-50/50'}"
+              >
+                <div class="p-8 md:p-12">
+                  <div class="flex items-center gap-5 mb-10">
+                    <div
+                      class="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-inner"
+                    >
+                      <span class="text-2xl font-black">03</span>
+                    </div>
+                    <div>
+                      <h2
+                        class="text-2xl font-black text-slate-900 leading-none"
+                      >
+                        資料をアップロード
+                      </h2>
+                      <p
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
+                      >
+                        STEP 3: UPLOAD LEARNING MATERIALS
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="space-y-12">
+                    <div>
+                      <h3
+                        class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5"
+                      >
+                        授業スライド・配布プリント
+                      </h3>
+                      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="md:col-span-1">
+                          <FileInputCard
+                            id="pdf"
+                            label="授業スライドを選択"
+                            iconColorClass="text-red-400"
+                            fileStore={$pdfFile}
+                            accept=".pdf"
+                            iconPath="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            on:change={(e) =>
+                              handleFileChange(e.detail.event, e.detail.id)}
+                            on:upgrade={(e) =>
+                              handleUpgradeRequest(e.detail.label)}
+                          />
+                        </div>
+                        <div class="md:col-span-1">
+                          <FileInputCard
+                            id="single_image"
+                            label="配布プリントを選択"
+                            iconColorClass="text-blue-400"
+                            fileStore={$imageFile}
+                            accept="image/*"
+                            iconPath="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            on:change={(e) =>
+                              handleFileChange(e.detail.event, e.detail.id)}
+                            on:upgrade={(e) =>
+                              handleUpgradeRequest(e.detail.label)}
+                          />
+                        </div>
+                        <div class="md:col-span-1">
+                          <FileInputCard
+                            id="staged_image"
+                            label="プリントを撮影"
+                            iconColorClass="text-orange-400"
+                            fileStore={null}
+                            accept="image/*"
+                            iconPath="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                            on:change={(e) =>
+                              handleFileChange(e.detail.event, e.detail.id)}
+                            on:upgrade={(e) =>
+                              handleUpgradeRequest(e.detail.label)}
+                          />
+                        </div>
+                      </div>
+
+                      {#if $stagedImages.length > 0}
+                        <div
+                          class="mt-6 p-5 bg-slate-50 border border-slate-100 rounded-3xl overflow-hidden shadow-inner"
+                        >
+                          <h4
+                            class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between"
+                          >
+                            <span class="flex items-center gap-2"
+                              >📸 撮影済み資料 ({$stagedImages.length}枚)</span
                             >
-                              <span class="text-lg font-bold">
-                                {course.courseName}
-                                {#if course.instructor}<span
-                                    class="text-xs text-slate-400 ml-2 font-medium"
-                                    >({course.instructor})</span
-                                  >{/if}
-                              </span>
-                              {#if $lectureTitle === course.courseName}
-                                <svg
-                                  class="w-6 h-6 text-indigo-600"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  ><path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="3"
-                                    d="M5 13l4 4L19 7"
-                                  /></svg
+                            <button
+                              on:click={() =>
+                                document
+                                  .getElementById(`file-input-staged_image`)
+                                  ?.click()}
+                              class="bg-white px-4 py-2 rounded-xl text-indigo-600 shadow-sm text-[10px] font-black hover:bg-indigo-50 transition-colors"
+                              >追加撮影</button
+                            >
+                          </h4>
+                          <div
+                            class="flex overflow-x-auto gap-3 pb-2 scrollbar-hide"
+                          >
+                            {#each $stagedImages as img, idx}
+                              <div
+                                class="relative w-24 h-24 flex-shrink-0 bg-white rounded-2xl border border-slate-200 p-1 group"
+                              >
+                                <img
+                                  src={URL.createObjectURL(img)}
+                                  alt={`Captured ${idx}`}
+                                  class="w-full h-full object-cover rounded-xl"
+                                />
+                                <button
+                                  on:click={() =>
+                                    stagedImages.update((current) =>
+                                      current.filter((_, i) => i !== idx),
+                                    )}
+                                  class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform"
+                                  ><svg
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    ><path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="3"
+                                      d="M6 18L18 6M6 6l12 12"
+                                    /></svg
+                                  ></button
                                 >
-                              {/if}
-                            </button>
-                          {/each}
-                        {:else}
-                          <div class="p-8 text-center">
-                            <p class="font-bold text-slate-600 mb-4">
-                              履修中の講義がありません
-                            </p>
-                            <button
-                              on:click={() => {
-                                isCourseDropdownOpen = false;
-                                $isEnrollModalOpen = true;
-                              }}
-                              class="bg-indigo-600 text-white font-black py-3 px-6 rounded-2xl shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
-                              >⚙️ 講義を登録する</button
-                            >
+                              </div>
+                            {/each}
+                          </div>
+                        </div>
+                      {/if}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div
+                        class="p-8 bg-slate-50 rounded-[32px] border border-slate-100 shadow-inner"
+                      >
+                        <h3
+                          class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6"
+                        >
+                          講義の音声・動画
+                        </h3>
+                        <FileInputCard
+                          id="video"
+                          label="講義音声をアップ・録音"
+                          iconColorClass="text-purple-400"
+                          fileStore={$videoFile || $audioFile}
+                          accept="video/*,audio/*"
+                          iconPath="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          isDisabled={!isPremium}
+                          on:change={(e) =>
+                            handleFileChange(e.detail.event, e.detail.id)}
+                          on:upgrade={(e) =>
+                            handleUpgradeRequest(e.detail.label)}
+                        />
+                      </div>
+
+                      <div
+                        class="p-8 bg-slate-50 rounded-[32px] border border-slate-100 shadow-inner"
+                      >
+                        <h3
+                          class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6"
+                        >
+                          ウェブサイトURL
+                        </h3>
+                        <div
+                          class="h-20 rounded-2xl bg-white border border-slate-100 flex items-center px-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100"
+                        >
+                          <input
+                            type="text"
+                            bind:value={$targetUrl}
+                            placeholder="URLを貼り付けてください"
+                            class="w-full bg-transparent border-none focus:outline-none text-sm font-black text-slate-700 placeholder:text-slate-300"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      class="p-8 bg-slate-50 rounded-[32px] border border-slate-100 shadow-inner"
+                    >
+                      <div class="flex items-center justify-between mb-6">
+                        <h3
+                          class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"
+                        >
+                          リアルタイム文字起こし
+                        </h3>
+                        {#if $transcript || $interimTranscript}
+                          <button
+                            on:click={handleTranscriptReset}
+                            class="bg-red-50 px-4 py-2 rounded-xl text-red-500 text-[10px] font-black hover:bg-red-100 transition-colors"
+                            >リセット</button
+                          >
+                        {/if}
+                      </div>
+                      <textarea
+                        value={$transcript + $interimTranscript}
+                        on:input={(e) => transcript.set(e.currentTarget.value)}
+                        use:actionTextAreaAutoscroll
+                        class="w-full h-40 p-5 bg-white rounded-3xl border border-slate-100 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none text-sm text-slate-700 font-medium leading-relaxed custom-scrollbar shadow-sm"
+                        placeholder="録音ボタンを押すと、自動的に文字起こしが始まります。"
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- STEP 4: Finalize -->
+              <div
+                class="bg-slate-900 rounded-[40px] shadow-2xl p-10 md:p-16 text-center relative overflow-hidden group transition-all {isStep4Locked &&
+                !analyzing
+                  ? 'opacity-40 grayscale pointer-events-none'
+                  : ''}"
+              >
+                <div
+                  class="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-900 opacity-50"
+                ></div>
+                <div
+                  class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-1000"
+                ></div>
+
+                <div class="relative z-10 flex flex-col items-center gap-8">
+                  <div class="flex items-center gap-5 mb-2">
+                    <div
+                      class="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center text-white border border-white/10 shadow-xl"
+                    >
+                      <span class="text-2xl font-black">04</span>
+                    </div>
+                    <div class="text-left">
+                      <h2 class="text-2xl font-black text-white leading-none">
+                        解析を開始
+                      </h2>
+                      <p
+                        class="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mt-2"
+                      >
+                        STEP 4: AUTO-GENERATE HIGH QUALITY NOTE
+                      </p>
+                    </div>
+                  </div>
+
+                  {#if analyzing}
+                    <div
+                      class="w-full max-w-md bg-white/5 backdrop-blur-2xl p-8 rounded-[32px] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-500"
+                    >
+                      <div class="flex items-center gap-5 mb-8">
+                        <div
+                          class="w-10 h-10 rounded-full border-4 border-white/10 border-t-white animate-spin"
+                        ></div>
+                        <div class="flex-1 text-left">
+                          <p
+                            class="text-xs font-black text-white/40 uppercase tracking-widest mb-1"
+                          >
+                            Processing...
+                          </p>
+                          <p class="text-base font-black text-white truncate">
+                            {progressStatus}
+                          </p>
+                        </div>
+                        <span class="text-2xl font-black text-white"
+                          >{Math.floor(progressValue)}%</span
+                        >
+                      </div>
+                      <div
+                        class="h-3 w-full bg-white/5 rounded-full overflow-hidden mb-6 shadow-inner border border-white/5"
+                      >
+                        <div
+                          class="h-full bg-white transition-all duration-500 ease-out"
+                          style="width: {progressValue}%"
+                        ></div>
+                      </div>
+                      <button
+                        on:click={handleCancelAnalysis}
+                        class="px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                        >キャンセル</button
+                      >
+                    </div>
+                  {:else}
+                    <div
+                      class="flex flex-col items-center gap-8 w-full max-w-md"
+                    >
+                      <div class="relative w-full group">
+                        <button
+                          on:click={handleAnalyze}
+                          disabled={isStep4Locked}
+                          class="w-full bg-white text-slate-900 h-20 rounded-[28px] font-black text-xl shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-4 group-hover:shadow-indigo-500/25"
+                        >
+                          <span>ノートを自動生成する</span>
+                          <svg
+                            class="w-6 h-6 transform group-hover:translate-x-1 transition-transform"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            ><path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="4"
+                              d="M13 7l5 5m0 0l-5 5m5-5H6"
+                            /></svg
+                          >
+                        </button>
+
+                        {#if isStep4Locked}
+                          <div
+                            class="absolute bottom-full mb-6 left-1/2 -translate-x-1/2 px-5 py-3 bg-slate-800 text-white text-xs font-black rounded-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 pointer-events-none shadow-2xl border border-white/10"
+                          >
+                            まずは講義資料を選択してください
+                            <div
+                              class="absolute top-full left-1/2 -translate-x-1/2 border-[10px] border-transparent border-t-slate-800"
+                            ></div>
                           </div>
                         {/if}
                       </div>
+
+                      <label
+                        class="flex items-center gap-4 cursor-pointer bg-white/5 backdrop-blur-xl px-8 py-4 rounded-[24px] border border-white/10 transition-all hover:bg-white/10"
+                      >
+                        <input
+                          type="checkbox"
+                          bind:checked={$isShared}
+                          class="sr-only peer"
+                        />
+                        <div
+                          class="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white relative transition-colors"
+                        ></div>
+                        <span class="text-sm font-black text-white/80"
+                          >共有ノートに公開する</span
+                        >
+                      </label>
                     </div>
                   {/if}
                 </div>
               </div>
             </div>
-
-            <!-- STEP 2: Choose Mode -->
-            <div
-              class="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden relative group transition-all {isStep2Locked
-                ? 'opacity-40 grayscale pointer-events-none'
-                : 'hover:shadow-lg hover:shadow-amber-50/50'}"
-            >
-              <div class="p-8 md:p-12">
-                <div class="flex items-center gap-5 mb-10">
-                  <div
-                    class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-inner"
-                  >
-                    <span class="text-2xl font-black">02</span>
-                  </div>
-                  <div>
-                    <h2 class="text-2xl font-black text-slate-900 leading-none">
-                      生成モードを選択
-                    </h2>
-                    <p
-                      class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
-                    >
-                      STEP 2: CHOOSE GENERATION MODE
-                    </p>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-                  <div>
-                    <span
-                      class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5"
-                      >生成タイプ</span
-                    >
-                    <div class="flex flex-col gap-4">
-                      <div class="flex bg-slate-100/80 p-2 rounded-2xl">
-                        <button
-                          on:click={() => setAnalysisMode("note")}
-                          class="flex-1 py-4 rounded-xl text-sm font-black transition-all {$analysisMode ===
-                          'note'
-                            ? 'bg-white text-indigo-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'}"
-                          >ノート</button
-                        >
-                        <button
-                          on:click={() => setAnalysisMode("thoughts")}
-                          class="flex-1 py-4 rounded-xl text-sm font-black transition-all {$analysisMode ===
-                          'thoughts'
-                            ? 'bg-white text-amber-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'}"
-                          >感想</button
-                        >
-                        <button
-                          on:click={() => setAnalysisMode("report")}
-                          class="flex-1 py-4 rounded-xl text-sm font-black transition-all {$analysisMode ===
-                          'report'
-                            ? 'bg-white text-slate-800 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'}"
-                          >レポート</button
-                        >
-                      </div>
-                      <div
-                        class="bg-slate-50 p-4 rounded-2xl border border-slate-100"
-                      >
-                        <p
-                          class="text-xs font-bold text-slate-500 leading-relaxed italic"
-                        >
-                          {#if $analysisMode === "note"}「講義の要点を網羅した自分専用のノートを作成します。」
-                          {:else if $analysisMode === "thoughts"}「講義のポイントを整理し、提出用の感想文に仕上げます。」
-                          {:else if $analysisMode === "report"}「スライドと音声を統合し、論理的なレポートを作成します。」{/if}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    {#if $analysisMode !== "note"}
-                      <div class="flex justify-between items-center mb-5">
-                        <label
-                          for="target-length-slider"
-                          class="block text-[10px] font-black text-slate-400 uppercase tracking-widest"
-                          >目標文字数</label
-                        >
-                        <span
-                          class="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100"
-                          >{$targetLength}文字 ({manuscriptPages}枚分)</span
-                        >
-                      </div>
-                      <div class="relative w-full pt-4 pb-2">
-                        <input
-                          id="target-length-slider"
-                          type="range"
-                          min="100"
-                          max="4000"
-                          step="50"
-                          bind:value={$targetLength}
-                          on:input={handleLengthChange}
-                          class="w-full h-3 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600 transition-all focus:outline-none"
-                        />
-                        <div
-                          class="flex justify-between mt-3 text-[10px] text-slate-400 font-black"
-                        >
-                          <span>100</span><span>1000</span><span>2000</span
-                          ><span>4000</span>
-                        </div>
-                      </div>
-                    {:else}
-                      <div
-                        class="h-full flex items-center justify-center p-8 bg-slate-50 rounded-[32px] border border-dashed border-slate-200"
-                      >
-                        <p
-                          class="text-xs font-black text-slate-400 text-center leading-relaxed"
-                        >
-                          ノート作成モードでは文字数制限はありません。<br
-                          />AIが講義全体を網羅的に解析します。
-                        </p>
-                      </div>
-                    {/if}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- STEP 3: Upload Materials -->
-            <div
-              class="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden relative group transition-all {isStep3Locked
-                ? 'opacity-40 grayscale pointer-events-none'
-                : 'hover:shadow-lg hover:shadow-purple-50/50'}"
-            >
-              <div class="p-8 md:p-12">
-                <div class="flex items-center gap-5 mb-10">
-                  <div
-                    class="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-inner"
-                  >
-                    <span class="text-2xl font-black">03</span>
-                  </div>
-                  <div>
-                    <h2 class="text-2xl font-black text-slate-900 leading-none">
-                      資料をアップロード
-                    </h2>
-                    <p
-                      class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
-                    >
-                      STEP 3: UPLOAD LEARNING MATERIALS
-                    </p>
-                  </div>
-                </div>
-
-                <div class="space-y-12">
-                  <div>
-                    <h3
-                      class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5"
-                    >
-                      授業スライド・配布プリント
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div class="md:col-span-1">
-                        <FileInputCard
-                          id="pdf"
-                          label="授業スライドを選択"
-                          iconColorClass="text-red-400"
-                          fileStore={$pdfFile}
-                          accept=".pdf"
-                          iconPath="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          on:change={(e) =>
-                            handleFileChange(e.detail.event, e.detail.id)}
-                          on:upgrade={(e) =>
-                            handleUpgradeRequest(e.detail.label)}
-                        />
-                      </div>
-                      <div class="md:col-span-1">
-                        <FileInputCard
-                          id="single_image"
-                          label="配布プリントを選択"
-                          iconColorClass="text-blue-400"
-                          fileStore={$imageFile}
-                          accept="image/*"
-                          iconPath="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          on:change={(e) =>
-                            handleFileChange(e.detail.event, e.detail.id)}
-                          on:upgrade={(e) =>
-                            handleUpgradeRequest(e.detail.label)}
-                        />
-                      </div>
-                      <div class="md:col-span-1">
-                        <FileInputCard
-                          id="staged_image"
-                          label="プリントを撮影"
-                          iconColorClass="text-orange-400"
-                          fileStore={null}
-                          accept="image/*"
-                          iconPath="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                          on:change={(e) =>
-                            handleFileChange(e.detail.event, e.detail.id)}
-                          on:upgrade={(e) =>
-                            handleUpgradeRequest(e.detail.label)}
-                        />
-                      </div>
-                    </div>
-
-                    {#if $stagedImages.length > 0}
-                      <div
-                        class="mt-6 p-5 bg-slate-50 border border-slate-100 rounded-3xl overflow-hidden shadow-inner"
-                      >
-                        <h4
-                          class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between"
-                        >
-                          <span class="flex items-center gap-2"
-                            >📸 撮影済み資料 ({$stagedImages.length}枚)</span
-                          >
-                          <button
-                            on:click={() =>
-                              document
-                                .getElementById(`file-input-staged_image`)
-                                ?.click()}
-                            class="bg-white px-4 py-2 rounded-xl text-indigo-600 shadow-sm text-[10px] font-black hover:bg-indigo-50 transition-colors"
-                            >追加撮影</button
-                          >
-                        </h4>
-                        <div
-                          class="flex overflow-x-auto gap-3 pb-2 scrollbar-hide"
-                        >
-                          {#each $stagedImages as img, idx}
-                            <div
-                              class="relative w-24 h-24 flex-shrink-0 bg-white rounded-2xl border border-slate-200 p-1 group"
-                            >
-                              <img
-                                src={URL.createObjectURL(img)}
-                                alt={`Captured ${idx}`}
-                                class="w-full h-full object-cover rounded-xl"
-                              />
-                              <button
-                                on:click={() =>
-                                  stagedImages.update((current) =>
-                                    current.filter((_, i) => i !== idx),
-                                  )}
-                                class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform"
-                                ><svg
-                                  class="w-4 h-4"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  ><path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="3"
-                                    d="M6 18L18 6M6 6l12 12"
-                                  /></svg
-                                ></button
-                              >
-                            </div>
-                          {/each}
-                        </div>
-                      </div>
-                    {/if}
-                  </div>
-
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div
-                      class="p-8 bg-slate-50 rounded-[32px] border border-slate-100 shadow-inner"
-                    >
-                      <h3
-                        class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6"
-                      >
-                        講義の音声・動画
-                      </h3>
-                      <FileInputCard
-                        id="video"
-                        label="講義音声をアップ・録音"
-                        iconColorClass="text-purple-400"
-                        fileStore={$videoFile || $audioFile}
-                        accept="video/*,audio/*"
-                        iconPath="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        isDisabled={!isPremium}
-                        on:change={(e) =>
-                          handleFileChange(e.detail.event, e.detail.id)}
-                        on:upgrade={(e) => handleUpgradeRequest(e.detail.label)}
-                      />
-                    </div>
-
-                    <div
-                      class="p-8 bg-slate-50 rounded-[32px] border border-slate-100 shadow-inner"
-                    >
-                      <h3
-                        class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6"
-                      >
-                        ウェブサイトURL
-                      </h3>
-                      <div
-                        class="h-20 rounded-2xl bg-white border border-slate-100 flex items-center px-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100"
-                      >
-                        <input
-                          type="text"
-                          bind:value={$targetUrl}
-                          placeholder="URLを貼り付けてください"
-                          class="w-full bg-transparent border-none focus:outline-none text-sm font-black text-slate-700 placeholder:text-slate-300"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    class="p-8 bg-slate-50 rounded-[32px] border border-slate-100 shadow-inner"
-                  >
-                    <div class="flex items-center justify-between mb-6">
-                      <h3
-                        class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"
-                      >
-                        リアルタイム文字起こし
-                      </h3>
-                      {#if $transcript || $interimTranscript}
-                        <button
-                          on:click={handleTranscriptReset}
-                          class="bg-red-50 px-4 py-2 rounded-xl text-red-500 text-[10px] font-black hover:bg-red-100 transition-colors"
-                          >リセット</button
-                        >
-                      {/if}
-                    </div>
-                    <textarea
-                      value={$transcript + $interimTranscript}
-                      on:input={(e) => transcript.set(e.currentTarget.value)}
-                      use:actionTextAreaAutoscroll
-                      class="w-full h-40 p-5 bg-white rounded-3xl border border-slate-100 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none text-sm text-slate-700 font-medium leading-relaxed custom-scrollbar shadow-sm"
-                      placeholder="録音ボタンを押すと、自動的に文字起こしが始まります。"
-                    ></textarea>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- STEP 4: Finalize -->
-            <div
-              class="bg-slate-900 rounded-[40px] shadow-2xl p-10 md:p-16 text-center relative overflow-hidden group transition-all {isStep4Locked &&
-              !analyzing
-                ? 'opacity-40 grayscale pointer-events-none'
-                : ''}"
-            >
-              <div
-                class="absolute inset-0 bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-900 opacity-50"
-              ></div>
-              <div
-                class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-1000"
-              ></div>
-
-              <div class="relative z-10 flex flex-col items-center gap-8">
-                <div class="flex items-center gap-5 mb-2">
-                  <div
-                    class="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center text-white border border-white/10 shadow-xl"
-                  >
-                    <span class="text-2xl font-black">04</span>
-                  </div>
-                  <div class="text-left">
-                    <h2 class="text-2xl font-black text-white leading-none">
-                      解析を開始
-                    </h2>
-                    <p
-                      class="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mt-2"
-                    >
-                      STEP 4: AUTO-GENERATE HIGH QUALITY NOTE
-                    </p>
-                  </div>
-                </div>
-
-                {#if analyzing}
-                  <div
-                    class="w-full max-w-md bg-white/5 backdrop-blur-2xl p-8 rounded-[32px] border border-white/10 shadow-2xl animate-in zoom-in-95 duration-500"
-                  >
-                    <div class="flex items-center gap-5 mb-8">
-                      <div
-                        class="w-10 h-10 rounded-full border-4 border-white/10 border-t-white animate-spin"
-                      ></div>
-                      <div class="flex-1 text-left">
-                        <p
-                          class="text-xs font-black text-white/40 uppercase tracking-widest mb-1"
-                        >
-                          Processing...
-                        </p>
-                        <p class="text-base font-black text-white truncate">
-                          {progressStatus}
-                        </p>
-                      </div>
-                      <span class="text-2xl font-black text-white"
-                        >{Math.floor(progressValue)}%</span
-                      >
-                    </div>
-                    <div
-                      class="h-3 w-full bg-white/5 rounded-full overflow-hidden mb-6 shadow-inner border border-white/5"
-                    >
-                      <div
-                        class="h-full bg-white transition-all duration-500 ease-out"
-                        style="width: {progressValue}%"
-                      ></div>
-                    </div>
-                    <button
-                      on:click={handleCancelAnalysis}
-                      class="px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all"
-                      >キャンセル</button
-                    >
-                  </div>
-                {:else}
-                  <div class="flex flex-col items-center gap-8 w-full max-w-md">
-                    <div class="relative w-full group">
-                      <button
-                        on:click={handleAnalyze}
-                        disabled={isStep4Locked}
-                        class="w-full bg-white text-slate-900 h-20 rounded-[28px] font-black text-xl shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-4 group-hover:shadow-indigo-500/25"
-                      >
-                        <span>ノートを自動生成する</span>
-                        <svg
-                          class="w-6 h-6 transform group-hover:translate-x-1 transition-transform"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          ><path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="4"
-                            d="M13 7l5 5m0 0l-5 5m5-5H6"
-                          /></svg
-                        >
-                      </button>
-
-                      {#if isStep4Locked}
-                        <div
-                          class="absolute bottom-full mb-6 left-1/2 -translate-x-1/2 px-5 py-3 bg-slate-800 text-white text-xs font-black rounded-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 pointer-events-none shadow-2xl border border-white/10"
-                        >
-                          まずは講義資料を選択してください
-                          <div
-                            class="absolute top-full left-1/2 -translate-x-1/2 border-[10px] border-transparent border-t-slate-800"
-                          ></div>
-                        </div>
-                      {/if}
-                    </div>
-
-                    <label
-                      class="flex items-center gap-4 cursor-pointer bg-white/5 backdrop-blur-xl px-8 py-4 rounded-[24px] border border-white/10 transition-all hover:bg-white/10"
-                    >
-                      <input
-                        type="checkbox"
-                        bind:checked={$isShared}
-                        class="sr-only peer"
-                      />
-                      <div
-                        class="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white relative transition-colors"
-                      ></div>
-                      <span class="text-sm font-black text-white/80"
-                        >共有ノートに公開する</span
-                      >
-                    </label>
-                  </div>
-                {/if}
-              </div>
-            </div>
           </div>
-        </div>
 
-        <!-- Mobile Sticky FAB (Step 3) -->
-        {#if user && !analyzing}
-          <div
-            class="fixed bottom-0 left-0 w-full p-6 z-50 md:hidden bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none"
-          >
-            <div class="pointer-events-auto">
+          <!-- Mobile Sticky FAB (Step 3) -->
+          {#if user && !analyzing}
+            <div
+              class="fixed bottom-0 left-0 w-full p-6 z-50 md:hidden bg-gradient-to-t from-white via-white/95 to-transparent pt-12 pointer-events-none"
+            >
+              <div class="pointer-events-auto">
+                <button
+                  on:click={handleAnalyze}
+                  disabled={isStep4Locked}
+                  class="w-full bg-indigo-600 text-white h-20 rounded-[28px] font-black text-lg shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:bg-slate-300 disabled:shadow-none"
+                >
+                  <span>ノートを自動生成する</span>
+                  <svg
+                    class="w-6 h-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    ><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="4"
+                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    /></svg
+                  >
+                </button>
+              </div>
+            </div>
+          {/if}
+        {/if}
+
+        {#if viewMode === "gallery"}
+          <div class="py-4 md:py-8 animate-in fade-in zoom-in-95 duration-500">
+            <div
+              class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10"
+            >
+              <div>
+                <div class="flex items-center gap-3 mb-2">
+                  <span
+                    class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-black tracking-widest uppercase rounded-full border border-indigo-100"
+                    >Gallery</span
+                  >
+                </div>
+                <h1
+                  class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight"
+                >
+                  {galleryCourseName}
+                </h1>
+                <p class="text-slate-500 mt-2 font-medium">
+                  他の学生の公開ノートを参照して学習に役立てましょう。
+                </p>
+              </div>
               <button
-                on:click={handleAnalyze}
-                disabled={isStep4Locked}
-                class="w-full bg-indigo-600 text-white h-20 rounded-[28px] font-black text-lg shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 active:scale-95 transition-all disabled:bg-slate-300 disabled:shadow-none"
+                on:click={startNewNoteFromGallery}
+                class="px-6 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl transition-all flex items-center justify-center gap-3 shrink-0"
               >
-                <span>ノートを自動生成する</span>
                 <svg
-                  class="w-6 h-6"
+                  class="w-5 h-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
                   ><path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    stroke-width="4"
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                    stroke-width="2.5"
+                    d="M12 4v16m8-8H4"
                   /></svg
                 >
+                新規作成に戻る
               </button>
             </div>
+
+            {#if !isUltimate}
+              <div
+                class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-[40px] p-8 md:p-12 border border-indigo-100 flex flex-col items-center justify-center text-center shadow-inner relative overflow-hidden"
+              >
+                <div
+                  class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-yellow-500"
+                ></div>
+                <div
+                  class="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-8 text-4xl transform -rotate-6"
+                >
+                  ✨
+                </div>
+                <h3 class="text-2xl md:text-3xl font-black text-slate-900 mb-4">
+                  アルティメットプラン限定機能
+                </h3>
+                <p
+                  class="text-slate-600 font-medium max-w-lg mb-10 leading-relaxed text-lg"
+                >
+                  他の学生の共有ノートを閲覧・検索するには「アルティメットプラン」へのアップグレードが必要です。
+                </p>
+                <button
+                  on:click={() => {
+                    upgradeModalTitle = "アルティメット限定";
+                    upgradeModalMessage =
+                      "共有ノートの閲覧・検索はアルティメットプラン限定の機能です。";
+                    showUltimateModal = true;
+                  }}
+                  class="px-10 py-5 bg-gradient-to-r from-amber-400 to-yellow-500 text-white font-black rounded-full shadow-xl shadow-amber-200 hover:scale-105 transition-all text-xl"
+                >
+                  プランを確認する
+                </button>
+              </div>
+            {:else if isSearchingNotes}
+              <div
+                class="py-32 flex flex-col items-center justify-center text-center"
+              >
+                <div
+                  class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"
+                ></div>
+                <p class="text-slate-400 font-bold tracking-wider">
+                  共有ノートを検索中...
+                </p>
+              </div>
+            {:else if contextualSharedNotes.length > 0}
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {#each contextualSharedNotes as note}
+                  <button
+                    on:click={() => loadSharedNote(note)}
+                    class="bg-white rounded-[32px] p-6 md:p-8 text-left border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col h-full relative overflow-hidden"
+                  >
+                    <div
+                      class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10 opacity-50 group-hover:bg-indigo-100 transition-colors"
+                    ></div>
+
+                    <div class="flex items-center justify-between gap-2 mb-6">
+                      <span
+                        class="px-3 py-1 bg-slate-50 text-slate-600 text-[10px] font-black tracking-widest uppercase rounded-full border border-slate-200 group-hover:border-indigo-200 group-hover:text-indigo-600 transition-colors"
+                      >
+                        {note.category || "Shared Note"}
+                      </span>
+                      <span class="text-xs font-bold text-slate-400">
+                        {note.createdAt
+                          ? new Date(
+                              note.createdAt.seconds * 1000,
+                            ).toLocaleDateString()
+                          : ""}
+                      </span>
+                    </div>
+
+                    <h3
+                      class="text-xl font-black text-slate-800 line-clamp-2 mb-4 group-hover:text-indigo-600 transition-colors leading-tight"
+                    >
+                      {note.title || "Untitled Note"}
+                    </h3>
+
+                    {#if note.summary}
+                      <p
+                        class="text-sm text-slate-500 line-clamp-3 mb-8 flex-grow leading-relaxed"
+                      >
+                        {note.summary}
+                      </p>
+                    {/if}
+
+                    <div
+                      class="flex items-center gap-3 mt-auto pt-5 border-t border-slate-50"
+                    >
+                      <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center border-2 border-white shadow-sm shrink-0"
+                      >
+                        <span class="text-sm font-black text-indigo-700"
+                          >{note.nickname?.[0]?.toUpperCase() || "U"}</span
+                        >
+                      </div>
+                      <span class="text-sm font-bold text-slate-600 truncate"
+                        >{note.nickname || "Anonymous"}</span
+                      >
+                    </div>
+                  </button>
+                {/each}
+              </div>
+            {:else}
+              <div
+                class="py-24 text-center bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center"
+              >
+                <div
+                  class="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-6"
+                >
+                  <svg
+                    class="w-10 h-10 text-slate-300"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    ><path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                    /></svg
+                  >
+                </div>
+                <p
+                  class="text-slate-500 text-xl font-black tracking-tight mb-2"
+                >
+                  共有ノートが見つかりません
+                </p>
+                <p class="text-slate-400 font-medium">
+                  この講義の最初のノートを作成して、コミュニティに共有しましょう！
+                </p>
+                <button
+                  on:click={startNewNoteFromGallery}
+                  class="mt-8 px-8 py-4 bg-indigo-50 text-indigo-600 font-bold rounded-2xl hover:bg-indigo-100 transition-colors"
+                >
+                  ノートを作成する
+                </button>
+              </div>
+            {/if}
           </div>
         {/if}
+
         <!-- Floating Mic Button -->
         {#if user && !analyzing}
           <button
