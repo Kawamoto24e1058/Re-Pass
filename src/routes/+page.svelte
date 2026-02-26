@@ -799,7 +799,6 @@
     if (timerInterval) {
       clearInterval(timerInterval);
       timerInterval = null;
-      duration = 0;
     }
   }
 
@@ -813,22 +812,22 @@
 
   function startProgress() {
     progressValue = 0;
-    progressStatus = "講義データの準備中...";
+    progressStatus = "AIが音声を文字に変換しています (残り約30秒)...";
     progressInterval = setInterval(() => {
       if (progressValue < 20) {
         progressValue += Math.random() * 2;
-        progressStatus = "講義データの準備中...";
+        progressStatus = "AIが音声を文字に変換しています (残り約30秒)...";
       } else if (progressValue < 50) {
         progressValue += Math.random() * 1.5;
-        progressStatus = "AIが講義内容を分析中...";
-      } else if (progressValue < 80) {
-        progressValue += Math.random() * 0.5;
-        progressStatus = "先生の補足発言を抽出中...";
+        progressStatus = "講義の構造を分析中...";
+      } else if (progressValue < 85) {
+        progressValue += Math.random() * 1;
+        progressStatus = "ノートをまとめています...";
       } else if (progressValue < 95) {
-        progressValue += 0.1;
-        progressStatus = "学習ノートを構成中...";
+        progressValue += 0.5;
+        progressStatus = "仕上げ中...";
       }
-    }, 200);
+    }, 300);
   }
 
   async function stopProgress() {
@@ -858,6 +857,12 @@
       !$taskText.trim()
     ) {
       toastMessage = "学習素材を入力してください";
+      return;
+    }
+
+    // Guard: Prevent empty recording (less than 1s)
+    if ($transcript.trim() && duration === 0) {
+      toastMessage = "録音時間が短すぎます";
       return;
     }
 
@@ -953,7 +958,7 @@
       formData.append(
         "recordingInstructions",
         recordingMode === "lecture"
-          ? "講義室の反響を考慮して解析してください"
+          ? "講義室の反響を考慮して解析してください。スピーカー越しの音声で一部聞き取りにくいですが、講義の文脈から最適に補完してください"
           : "近距離の対話を正確に書き起こしてください",
       );
 
@@ -2202,151 +2207,62 @@
         <!-- Input Section Only (History moved to /history) -->
         {#if viewMode === "create"}
           <div class="mb-10">
-            <!-- 4-Step Navigation Header -->
+            <!-- STEP UI: Descriptive Labels (Sticky) -->
             <div
-              class="relative md:sticky top-0 z-[60] bg-white/50 backdrop-blur-sm rounded-3xl shadow-sm border border-slate-100 mb-12"
+              class="sticky top-0 z-50 bg-[#F9FAFB]/90 backdrop-blur-md py-4 px-6 md:px-8 -mx-4 md:mx-0 md:rounded-[32px] border-b border-slate-100 md:border md:shadow-sm mb-10 flex items-center justify-between transition-all"
             >
-              <!-- Desktop View (Full labels) -->
-              <div
-                class="hidden md:flex items-center justify-center gap-8 px-4 py-6 overflow-x-auto whitespace-nowrap scrollbar-hide"
-              >
-                <div class="flex items-center gap-2">
-                  <span
-                    class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-lg shadow-indigo-200"
-                    >1</span
-                  >
-                  <span class="text-sm font-black text-slate-800">講義選択</span
-                  >
-                </div>
-                <div class="h-px w-6 bg-slate-200"></div>
+              <div class="flex items-center gap-4">
                 <div
-                  class="flex items-center gap-2 {isStep2Locked
-                    ? 'opacity-30 grayscale'
-                    : ''} transition-all"
+                  class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200"
                 >
-                  <span
-                    class="w-8 h-8 rounded-full {isStep2Locked
-                      ? 'bg-slate-100 text-slate-400'
-                      : 'bg-amber-500 text-white shadow-lg shadow-amber-100'} flex items-center justify-center text-sm font-black transition-all"
-                    >2</span
-                  >
-                  <span
-                    class="text-sm font-black {isStep2Locked
-                      ? 'text-slate-400'
-                      : 'text-slate-800'}">モード選択</span
-                  >
-                </div>
-                <div class="h-px w-6 bg-slate-200"></div>
-                <div
-                  class="flex items-center gap-2 {isStep3Locked
-                    ? 'opacity-30 grayscale'
-                    : ''} transition-all"
-                >
-                  <span
-                    class="w-8 h-8 rounded-full {isStep3Locked
-                      ? 'bg-slate-100 text-slate-400'
-                      : 'bg-purple-600 text-white shadow-lg shadow-purple-100'} flex items-center justify-center text-sm font-black transition-all"
-                    >3</span
-                  >
-                  <span
-                    class="text-sm font-black {isStep3Locked
-                      ? 'text-slate-400'
-                      : 'text-slate-800'}">資料選択</span
-                  >
-                </div>
-                <div class="h-px w-6 bg-slate-200"></div>
-                <div
-                  class="flex items-center gap-2 {isStep4Locked
-                    ? 'opacity-30 grayscale'
-                    : ''} transition-all"
-                >
-                  <span
-                    class="w-8 h-8 rounded-full {isStep4Locked
-                      ? 'bg-slate-100 text-slate-400'
-                      : 'bg-slate-900 text-white shadow-lg shadow-slate-200'} flex items-center justify-center text-sm font-black transition-all"
-                    >4</span
-                  >
-                  <span
-                    class="text-sm font-black {isStep4Locked
-                      ? 'text-slate-400'
-                      : 'text-slate-800'}">解析開始</span
-                  >
-                </div>
-              </div>
-
-              <!-- Mobile View (Slim Progress Bar) -->
-              <div
-                class="md:hidden flex items-center justify-between px-6 py-4"
-              >
-                <div class="flex items-center gap-2 flex-1">
-                  <!-- Step 1 Dot -->
-                  <div
-                    class="w-3 h-3 rounded-full bg-indigo-600 flex-shrink-0 shadow-sm shadow-indigo-200"
-                  ></div>
-                  <!-- Connector 1-2 -->
-                  <div
-                    class="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden relative"
-                  >
-                    <div
-                      class="absolute inset-y-0 left-0 bg-indigo-600 transition-all duration-500"
-                      style="width: {!isStep2Locked ? '100%' : '0%'}"
-                    ></div>
-                  </div>
-                  <!-- Step 2 Dot -->
-                  <div
-                    class="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-500 {isStep2Locked
-                      ? 'bg-slate-200'
-                      : 'bg-amber-500 shadow-sm shadow-amber-200'}"
-                  ></div>
-                  <!-- Connector 2-3 -->
-                  <div
-                    class="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden relative"
-                  >
-                    <div
-                      class="absolute inset-y-0 left-0 bg-amber-500 transition-all duration-500"
-                      style="width: {!isStep3Locked ? '100%' : '0%'}"
-                    ></div>
-                  </div>
-                  <!-- Step 3 Dot -->
-                  <div
-                    class="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-500 {isStep3Locked
-                      ? 'bg-slate-200'
-                      : 'bg-purple-600 shadow-sm shadow-purple-200'}"
-                  ></div>
-                  <!-- Connector 3-4 -->
-                  <div
-                    class="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden relative"
-                  >
-                    <div
-                      class="absolute inset-y-0 left-0 bg-purple-600 transition-all duration-500"
-                      style="width: {!isStep4Locked ? '100%' : '0%'}"
-                    ></div>
-                  </div>
-                  <!-- Step 4 Dot -->
-                  <div
-                    class="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-500 {isStep4Locked
-                      ? 'bg-slate-200'
-                      : 'bg-slate-900 shadow-sm shadow-slate-200'}"
-                  ></div>
-                </div>
-
-                <!-- Explicit Current Status Text for Mobile -->
-                <div class="ml-4 min-w-[5rem] text-right">
-                  <span
-                    class="text-[10px] font-black tracking-widest uppercase text-slate-400"
-                  >
-                    {#if !isStep4Locked && !analyzing}
-                      <span class="text-slate-900">Step 4</span>
+                  <span class="text-sm font-black">
+                    {#if analyzing}
+                      --
+                    {:else if !isStep4Locked}
+                      04
                     {:else if !isStep3Locked}
-                      <span class="text-purple-600">Step 3</span>
+                      03
                     {:else if !isStep2Locked}
-                      <span class="text-amber-500">Step 2</span>
+                      02
                     {:else}
-                      <span class="text-indigo-600">Step 1</span>
+                      01
                     {/if}
                   </span>
                 </div>
+                <div>
+                  <p
+                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5"
+                  >
+                    Current Task
+                  </p>
+                  <h2 class="text-sm font-black text-slate-900 leading-none">
+                    {#if analyzing}
+                      AIが音声を文字に変換しています (残り約30秒)...
+                    {:else if !isStep4Locked}
+                      STEP 4/4：解析を開始
+                    {:else if !isStep3Locked}
+                      STEP 3/4：授業スライド・音声を準備
+                    {:else if !isStep2Locked}
+                      STEP 2/4：出力形式を選択
+                    {:else}
+                      STEP 1/4：履修中の講義を選択
+                    {/if}
+                  </h2>
+                </div>
               </div>
+
+              {#if analyzing}
+                <div
+                  class="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full"
+                >
+                  <div
+                    class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"
+                  ></div>
+                  <span class="text-[11px] font-black text-indigo-700"
+                    >{Math.floor(progressValue)}%</span
+                  >
+                </div>
+              {/if}
             </div>
 
             <div class="space-y-8">

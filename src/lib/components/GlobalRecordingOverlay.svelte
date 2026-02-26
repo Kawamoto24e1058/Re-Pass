@@ -83,7 +83,6 @@
         if (timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
-            duration = 0;
         }
     }
 
@@ -138,7 +137,8 @@
         progressInterval = setInterval(() => {
             if (progressValue < 30) {
                 progressValue += Math.random() * 2;
-                progressStatus = "音声データを解析中...";
+                progressStatus =
+                    "AIが音声を文字に変換しています (残り約30秒)...";
             } else if (progressValue < 60) {
                 progressValue += Math.random() * 1.5;
                 progressStatus = "講義の構造を分析中...";
@@ -269,6 +269,12 @@
             return;
         }
 
+        // Guard: Prevent empty recording (less than 1s)
+        if ($transcript.trim() && duration === 0) {
+            toastMessage = "録音時間が短すぎます";
+            return;
+        }
+
         // Quota Checks (simplified for brevity, assume similar logic to +page.svelte)
         const usageCount = $userProfile?.usageCount || 0;
         if (!isPremium && usageCount >= 5) {
@@ -316,14 +322,20 @@
             formData.append("plan", $userProfile?.plan || "free");
             // formData.append("targetLength", ...); // Default or store?
 
-            const res = await fetch("/api/analyze", {
-                method: "POST",
-                body: formData,
-                headers: { Authorization: `Bearer ${idToken}` },
-                signal,
-            });
+            const res = await retryOperation(async () => {
+                const response = await fetch("/api/analyze", {
+                    method: "POST",
+                    body: formData,
+                    headers: { Authorization: `Bearer ${idToken}` },
+                    signal,
+                });
 
-            if (!res.ok) throw new Error("Analysis failed");
+                if (!response.ok) {
+                    const errorBody = await response.json().catch(() => ({}));
+                    throw new Error(errorBody.error || "Analysis failed");
+                }
+                return response;
+            }, 3);
             const data = await res.json();
 
             // Save Logic
