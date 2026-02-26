@@ -106,29 +106,27 @@ class RecognitionService {
         }
     }
 
-    private async configureMicrophone() {
+    private async configureMicrophone(recordingMode: 'lecture' | 'meeting') {
         if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return;
 
         try {
-            // Request microphone with specific constraints to broaden capture range
-            // noiseSuppression: true -> Clean up air conditioner/background hum
-            // autoGainControl: true -> Automatically boost distant voices
-            // Note: Web Speech API (SpeechRecognition) reads directly from the OS default microphone
-            // and cannot be piped through a Web Audio API (AudioContext/GainNode).
-            // This getUserMedia call acts as a strict hint to the OS to utilize these enhancements universally.
-            const stream = await navigator.mediaDevices.getUserMedia({
+            // Request microphone with specific constraints based on mode
+            const constraints = {
                 audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
+                    echoCancellation: recordingMode === 'lecture' ? false : true,
+                    noiseSuppression: recordingMode === 'lecture' ? false : true,
                     autoGainControl: true,
-                    channelCount: 1,
+                    sampleRate: 48000,
+                    channelCount: recordingMode === 'lecture' ? 2 : 1,
                     // Advanced array acts as fallback/hints where supported
                     advanced: [
                         { autoGainControl: true },
-                        { noiseSuppression: true }
+                        { noiseSuppression: recordingMode === 'lecture' ? false : true }
                     ]
                 }
-            });
+            };
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
             // We immediately stop the stream because SpeechRecognition requires exclusive access 
             // on some OS/Browsers (otherwise it throws 'audio-capture' error). The prior fetching 
@@ -140,7 +138,7 @@ class RecognitionService {
         }
     }
 
-    async start() {
+    async start(recordingMode: 'lecture' | 'meeting' = 'lecture') {
         if (!this.recognition) {
             alert('このブラウザは音声認識をサポートしていません。');
             return;
@@ -148,7 +146,7 @@ class RecognitionService {
         if (get(isRecording)) return;
 
         // Apply audio constraints (best effort)
-        await this.configureMicrophone();
+        await this.configureMicrophone(recordingMode);
 
         isRecording.set(true);
         this.initKeepAlive();
@@ -187,11 +185,11 @@ class RecognitionService {
         interimTranscript.set(''); // Clear interim result on stop
     }
 
-    toggle() {
+    toggle(recordingMode: 'lecture' | 'meeting' = 'lecture') {
         if (get(isRecording)) {
             this.stop();
         } else {
-            this.start();
+            this.start(recordingMode);
         }
     }
 }

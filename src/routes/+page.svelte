@@ -77,6 +77,7 @@
   let hasSearchedNotes = false;
 
   // --- Simplified State Variables ---
+  let recordingMode: "lecture" | "meeting" = "lecture"; // 'lecture' or 'meeting'
   let isEditing = false;
   let isCourseDropdownOpen = false;
   let isMobileCourseViewOpen = false; // For mobile bottom sheet
@@ -949,6 +950,12 @@
       formData.append("url", $targetUrl || "");
       formData.append("mode", $analysisMode);
       formData.append("plan", userData?.plan || "free");
+      formData.append(
+        "recordingInstructions",
+        recordingMode === "lecture"
+          ? "講義室の反響を考慮して解析してください"
+          : "近距離の対話を正確に書き起こしてください",
+      );
 
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -1170,7 +1177,7 @@
   }
 
   function toggleRecording() {
-    recognitionService.toggle();
+    recognitionService.toggle(recordingMode);
   }
 
   function handleCancelAnalysis() {
@@ -2197,68 +2204,148 @@
           <div class="mb-10">
             <!-- 4-Step Navigation Header -->
             <div
-              class="flex items-center justify-center gap-4 md:gap-8 px-4 py-8 bg-white/50 backdrop-blur-sm rounded-3xl shadow-sm border border-white/20 mb-12 overflow-x-auto whitespace-nowrap scrollbar-hide sticky top-0 z-[60]"
+              class="relative md:sticky top-0 z-[60] bg-white/50 backdrop-blur-sm rounded-3xl shadow-sm border border-slate-100 mb-12"
             >
-              <div class="flex items-center gap-2">
-                <span
-                  class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-lg shadow-indigo-200"
-                  >1</span
-                >
-                <span class="text-sm font-black text-slate-800">講義選択</span>
-              </div>
-              <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
+              <!-- Desktop View (Full labels) -->
               <div
-                class="flex items-center gap-2 {isStep2Locked
-                  ? 'opacity-30 grayscale'
-                  : ''} transition-all"
+                class="hidden md:flex items-center justify-center gap-8 px-4 py-6 overflow-x-auto whitespace-nowrap scrollbar-hide"
               >
-                <span
-                  class="w-8 h-8 rounded-full {isStep2Locked
-                    ? 'bg-slate-100 text-slate-400'
-                    : 'bg-amber-500 text-white shadow-lg shadow-amber-100'} flex items-center justify-center text-sm font-black transition-all"
-                  >2</span
+                <div class="flex items-center gap-2">
+                  <span
+                    class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-lg shadow-indigo-200"
+                    >1</span
+                  >
+                  <span class="text-sm font-black text-slate-800">講義選択</span
+                  >
+                </div>
+                <div class="h-px w-6 bg-slate-200"></div>
+                <div
+                  class="flex items-center gap-2 {isStep2Locked
+                    ? 'opacity-30 grayscale'
+                    : ''} transition-all"
                 >
-                <span
-                  class="text-sm font-black {isStep2Locked
-                    ? 'text-slate-400'
-                    : 'text-slate-800'}">モード選択</span
+                  <span
+                    class="w-8 h-8 rounded-full {isStep2Locked
+                      ? 'bg-slate-100 text-slate-400'
+                      : 'bg-amber-500 text-white shadow-lg shadow-amber-100'} flex items-center justify-center text-sm font-black transition-all"
+                    >2</span
+                  >
+                  <span
+                    class="text-sm font-black {isStep2Locked
+                      ? 'text-slate-400'
+                      : 'text-slate-800'}">モード選択</span
+                  >
+                </div>
+                <div class="h-px w-6 bg-slate-200"></div>
+                <div
+                  class="flex items-center gap-2 {isStep3Locked
+                    ? 'opacity-30 grayscale'
+                    : ''} transition-all"
                 >
+                  <span
+                    class="w-8 h-8 rounded-full {isStep3Locked
+                      ? 'bg-slate-100 text-slate-400'
+                      : 'bg-purple-600 text-white shadow-lg shadow-purple-100'} flex items-center justify-center text-sm font-black transition-all"
+                    >3</span
+                  >
+                  <span
+                    class="text-sm font-black {isStep3Locked
+                      ? 'text-slate-400'
+                      : 'text-slate-800'}">資料選択</span
+                  >
+                </div>
+                <div class="h-px w-6 bg-slate-200"></div>
+                <div
+                  class="flex items-center gap-2 {isStep4Locked
+                    ? 'opacity-30 grayscale'
+                    : ''} transition-all"
+                >
+                  <span
+                    class="w-8 h-8 rounded-full {isStep4Locked
+                      ? 'bg-slate-100 text-slate-400'
+                      : 'bg-slate-900 text-white shadow-lg shadow-slate-200'} flex items-center justify-center text-sm font-black transition-all"
+                    >4</span
+                  >
+                  <span
+                    class="text-sm font-black {isStep4Locked
+                      ? 'text-slate-400'
+                      : 'text-slate-800'}">解析開始</span
+                  >
+                </div>
               </div>
-              <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
+
+              <!-- Mobile View (Slim Progress Bar) -->
               <div
-                class="flex items-center gap-2 {isStep3Locked
-                  ? 'opacity-30 grayscale'
-                  : ''} transition-all"
+                class="md:hidden flex items-center justify-between px-6 py-4"
               >
-                <span
-                  class="w-8 h-8 rounded-full {isStep3Locked
-                    ? 'bg-slate-100 text-slate-400'
-                    : 'bg-purple-600 text-white shadow-lg shadow-purple-100'} flex items-center justify-center text-sm font-black transition-all"
-                  >3</span
-                >
-                <span
-                  class="text-sm font-black {isStep3Locked
-                    ? 'text-slate-400'
-                    : 'text-slate-800'}">資料選択</span
-                >
-              </div>
-              <div class="h-px w-6 bg-slate-200 hidden md:block"></div>
-              <div
-                class="flex items-center gap-2 {isStep4Locked
-                  ? 'opacity-30 grayscale'
-                  : ''} transition-all"
-              >
-                <span
-                  class="w-8 h-8 rounded-full {isStep4Locked
-                    ? 'bg-slate-100 text-slate-400'
-                    : 'bg-slate-900 text-white shadow-lg shadow-slate-200'} flex items-center justify-center text-sm font-black transition-all"
-                  >4</span
-                >
-                <span
-                  class="text-sm font-black {isStep4Locked
-                    ? 'text-slate-400'
-                    : 'text-slate-800'}">解析開始</span
-                >
+                <div class="flex items-center gap-2 flex-1">
+                  <!-- Step 1 Dot -->
+                  <div
+                    class="w-3 h-3 rounded-full bg-indigo-600 flex-shrink-0 shadow-sm shadow-indigo-200"
+                  ></div>
+                  <!-- Connector 1-2 -->
+                  <div
+                    class="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden relative"
+                  >
+                    <div
+                      class="absolute inset-y-0 left-0 bg-indigo-600 transition-all duration-500"
+                      style="width: {!isStep2Locked ? '100%' : '0%'}"
+                    ></div>
+                  </div>
+                  <!-- Step 2 Dot -->
+                  <div
+                    class="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-500 {isStep2Locked
+                      ? 'bg-slate-200'
+                      : 'bg-amber-500 shadow-sm shadow-amber-200'}"
+                  ></div>
+                  <!-- Connector 2-3 -->
+                  <div
+                    class="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden relative"
+                  >
+                    <div
+                      class="absolute inset-y-0 left-0 bg-amber-500 transition-all duration-500"
+                      style="width: {!isStep3Locked ? '100%' : '0%'}"
+                    ></div>
+                  </div>
+                  <!-- Step 3 Dot -->
+                  <div
+                    class="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-500 {isStep3Locked
+                      ? 'bg-slate-200'
+                      : 'bg-purple-600 shadow-sm shadow-purple-200'}"
+                  ></div>
+                  <!-- Connector 3-4 -->
+                  <div
+                    class="h-1 flex-1 rounded-full bg-slate-100 overflow-hidden relative"
+                  >
+                    <div
+                      class="absolute inset-y-0 left-0 bg-purple-600 transition-all duration-500"
+                      style="width: {!isStep4Locked ? '100%' : '0%'}"
+                    ></div>
+                  </div>
+                  <!-- Step 4 Dot -->
+                  <div
+                    class="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-500 {isStep4Locked
+                      ? 'bg-slate-200'
+                      : 'bg-slate-900 shadow-sm shadow-slate-200'}"
+                  ></div>
+                </div>
+
+                <!-- Explicit Current Status Text for Mobile -->
+                <div class="ml-4 min-w-[5rem] text-right">
+                  <span
+                    class="text-[10px] font-black tracking-widest uppercase text-slate-400"
+                  >
+                    {#if !isStep4Locked && !analyzing}
+                      <span class="text-slate-900">Step 4</span>
+                    {:else if !isStep3Locked}
+                      <span class="text-purple-600">Step 3</span>
+                    {:else if !isStep2Locked}
+                      <span class="text-amber-500">Step 2</span>
+                    {:else}
+                      <span class="text-indigo-600">Step 1</span>
+                    {/if}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -2799,19 +2886,51 @@
                     <div
                       class="p-8 bg-slate-50 rounded-[32px] border border-slate-100 shadow-inner"
                     >
-                      <div class="flex items-center justify-between mb-6">
-                        <h3
-                          class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"
-                        >
-                          リアルタイム文字起こし
-                        </h3>
-                        {#if $transcript || $interimTranscript}
-                          <button
-                            on:click={handleTranscriptReset}
-                            class="bg-red-50 px-4 py-2 rounded-xl text-red-500 text-[10px] font-black hover:bg-red-100 transition-colors"
-                            >リセット</button
+                      <div class="flex flex-col gap-6 mb-8">
+                        <div class="flex items-center justify-between">
+                          <h3
+                            class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest"
                           >
-                        {/if}
+                            リアルタイム文字起こし
+                          </h3>
+                          {#if $transcript || $interimTranscript}
+                            <button
+                              on:click={handleTranscriptReset}
+                              class="bg-red-50 px-4 py-2 rounded-xl text-red-500 text-[10px] font-black hover:bg-red-100 transition-colors"
+                              >リセット</button
+                            >
+                          {/if}
+                        </div>
+
+                        <!-- Recording Mode Toggle -->
+                        <div
+                          class="bg-slate-100/50 p-1.5 rounded-2xl flex gap-2"
+                        >
+                          <button
+                            on:click={() => (recordingMode = "lecture")}
+                            class="flex-1 flex flex-col items-center py-3 px-4 rounded-xl transition-all {recordingMode ===
+                            'lecture'
+                              ? 'bg-white text-indigo-600 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-600'}"
+                          >
+                            <span class="text-xs font-black">講義室モード</span>
+                            <span class="text-[9px] font-bold opacity-60"
+                              >全方位・マイク音優先</span
+                            >
+                          </button>
+                          <button
+                            on:click={() => (recordingMode = "meeting")}
+                            class="flex-1 flex flex-col items-center py-3 px-4 rounded-xl transition-all {recordingMode ===
+                            'meeting'
+                              ? 'bg-white text-indigo-600 shadow-sm'
+                              : 'text-slate-400 hover:text-slate-600'}"
+                          >
+                            <span class="text-xs font-black">対話モード</span>
+                            <span class="text-[9px] font-bold opacity-60"
+                              >近距離・雑音カット</span
+                            >
+                          </button>
+                        </div>
                       </div>
                       <textarea
                         value={$transcript + $interimTranscript}
@@ -3024,39 +3143,7 @@
               </button>
             </div>
 
-            {#if !isUltimate}
-              <div
-                class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-[40px] p-8 md:p-12 border border-indigo-100 flex flex-col items-center justify-center text-center shadow-inner relative overflow-hidden"
-              >
-                <div
-                  class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-yellow-500"
-                ></div>
-                <div
-                  class="w-20 h-20 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-8 text-4xl transform -rotate-6"
-                >
-                  ✨
-                </div>
-                <h3 class="text-2xl md:text-3xl font-black text-slate-900 mb-4">
-                  アルティメットプラン限定機能
-                </h3>
-                <p
-                  class="text-slate-600 font-medium max-w-lg mb-10 leading-relaxed text-lg"
-                >
-                  他の学生の共有ノートを閲覧・検索するには「アルティメットプラン」へのアップグレードが必要です。
-                </p>
-                <button
-                  on:click={() => {
-                    upgradeModalTitle = "アルティメット限定";
-                    upgradeModalMessage =
-                      "共有ノートの閲覧・検索はアルティメットプラン限定の機能です。";
-                    showUltimateModal = true;
-                  }}
-                  class="px-10 py-5 bg-gradient-to-r from-amber-400 to-yellow-500 text-white font-black rounded-full shadow-xl shadow-amber-200 hover:scale-105 transition-all text-xl"
-                >
-                  プランを確認する
-                </button>
-              </div>
-            {:else if isSearchingNotes}
+            {#if isSearchingNotes}
               <div
                 class="py-32 flex flex-col items-center justify-center text-center"
               >
@@ -3070,45 +3157,129 @@
             {:else if contextualSharedNotes.length > 0}
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {#each contextualSharedNotes as note}
-                  <button
-                    on:click={() => loadSharedNote(note)}
+                  <div
                     class="bg-white rounded-[32px] p-6 md:p-8 text-left border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group flex flex-col h-full relative overflow-hidden"
                   >
+                    <!-- Transparent click overlay for Ultimate Upgrade -->
+                    <!-- svelte-ignore a11y_click_events_have_key_events -->
+                    <div
+                      class="absolute inset-0 z-20 cursor-pointer"
+                      on:click={() => {
+                        if (isUltimate) {
+                          loadSharedNote(note);
+                        } else {
+                          upgradeModalTitle = "アルティメットプラン限定機能";
+                          upgradeModalMessage =
+                            "他の学生の共有ノートを閲覧・検索するにはアルティメットプランへのアップグレードが必要です。";
+                          showUltimateModal = true;
+                        }
+                      }}
+                      role="button"
+                      tabindex="0"
+                      aria-label="Note Details"
+                    ></div>
+
+                    <!-- Decorative Background -->
                     <div
                       class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10 opacity-50 group-hover:bg-indigo-100 transition-colors"
                     ></div>
 
-                    <div class="flex items-center justify-between gap-2 mb-6">
+                    <div
+                      class="flex items-start justify-between gap-2 mb-4 relative z-10"
+                    >
                       <span
                         class="px-3 py-1 bg-slate-50 text-slate-600 text-[10px] font-black tracking-widest uppercase rounded-full border border-slate-200 group-hover:border-indigo-200 group-hover:text-indigo-600 transition-colors"
                       >
                         {note.category || "Shared Note"}
                       </span>
-                      <span class="text-xs font-bold text-slate-400">
-                        {note.createdAt
-                          ? new Date(
-                              note.createdAt.seconds * 1000,
-                            ).toLocaleDateString()
-                          : ""}
-                      </span>
+                      <div class="flex flex-col items-end gap-2">
+                        <span class="text-xs font-bold text-slate-400">
+                          {note.createdAt
+                            ? new Date(
+                                note.createdAt.seconds * 1000,
+                              ).toLocaleDateString()
+                            : ""}
+                        </span>
+                        {#if !isUltimate}
+                          <span
+                            class="px-2 py-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-[9px] font-black tracking-widest uppercase rounded shadow-md shadow-amber-200/50 flex items-center gap-1"
+                          >
+                            <svg
+                              class="w-2.5 h-2.5"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                              ><path
+                                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                              ></path></svg
+                            >
+                            ULTIMATE ONLY
+                          </span>
+                        {/if}
+                      </div>
                     </div>
 
                     <h3
-                      class="text-xl font-black text-slate-800 line-clamp-2 mb-4 group-hover:text-indigo-600 transition-colors leading-tight"
+                      class="text-xl font-black text-slate-800 line-clamp-2 mb-3 group-hover:text-indigo-600 transition-colors leading-tight relative z-10"
                     >
                       {note.title || "Untitled Note"}
                     </h3>
 
-                    {#if note.summary}
-                      <p
-                        class="text-sm text-slate-500 line-clamp-3 mb-8 flex-grow leading-relaxed"
+                    <!-- Value Add Tags (Auto logic) -->
+                    <div class="flex flex-wrap gap-1.5 mb-4 relative z-10">
+                      <span
+                        class="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded shrink-0 line-clamp-1 border border-slate-100"
+                        >要約済み</span
                       >
-                        {note.summary}
-                      </p>
-                    {/if}
+                      {#if note.summary && note.summary.length > 200}
+                        <span
+                          class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] font-bold rounded shrink-0 line-clamp-1 border border-amber-100 flex items-center gap-1"
+                        >
+                          <svg
+                            class="w-3 h-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            ><path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M13 10V3L4 14h7v7l9-11h-7z"
+                            /></svg
+                          >
+                          重要度: 高
+                        </span>
+                      {/if}
+                      {#if note.category === "report" || note.category === "thoughts" || (note.summary && note.summary.includes("図"))}
+                        <span
+                          class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded shrink-0 line-clamp-1 border border-emerald-100"
+                          >詳細解説</span
+                        >
+                      {/if}
+                    </div>
 
+                    <!-- Content (Blurred for non-ultimate) -->
                     <div
-                      class="flex items-center gap-3 mt-auto pt-5 border-t border-slate-50"
+                      class="flex-grow relative mt-2 mb-6 pointer-events-none"
+                    >
+                      <p
+                        class="text-sm text-slate-500 line-clamp-5 leading-relaxed {isUltimate
+                          ? ''
+                          : 'select-none opacity-40 mix-blend-multiply'}"
+                        style={!isUltimate
+                          ? "filter: blur(8px); user-select: none;"
+                          : ""}
+                      >
+                        {note.summary ||
+                          "このノートは詳細な解説を提供しています。"}
+                        {#if !isUltimate && (!note.summary || note.summary.length < 100)}
+                          学習効率を劇的に高める重要キーワード、試験対策の要点、構造化された詳細な解説が含まれています。全体の文脈を把握するのに最適です。
+                        {/if}
+                      </p>
+                    </div>
+
+                    <!-- Author Footer -->
+                    <div
+                      class="flex items-center gap-3 mt-auto pt-5 border-t border-slate-50 relative z-10 pointer-events-none"
                     >
                       <div
                         class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center border-2 border-white shadow-sm shrink-0"
@@ -3121,7 +3292,7 @@
                         >{note.nickname || "Anonymous"}</span
                       >
                     </div>
-                  </button>
+                  </div>
                 {/each}
               </div>
             {:else}
@@ -3147,16 +3318,16 @@
                 <p
                   class="text-slate-500 text-xl font-black tracking-tight mb-2"
                 >
-                  共有ノートが見つかりません
+                  まだこの講義の共有ノートはありません。
                 </p>
                 <p class="text-slate-400 font-medium">
-                  この講義の最初のノートを作成して、コミュニティに共有しましょう！
+                  あなたが最初の投稿者になりませんか？
                 </p>
                 <button
                   on:click={startNewNoteFromGallery}
-                  class="mt-8 px-8 py-4 bg-indigo-50 text-indigo-600 font-bold rounded-2xl hover:bg-indigo-100 transition-colors"
+                  class="mt-8 px-8 py-4 bg-indigo-50 text-indigo-600 font-bold rounded-2xl hover:bg-indigo-100 transition-colors shadow-sm"
                 >
-                  ノートを作成する
+                  ノートを作成して共有する
                 </button>
               </div>
             {/if}
