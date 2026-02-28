@@ -59,6 +59,7 @@
     taskText,
   } from "$lib/stores/sessionStore";
   import { recognitionService } from "$lib/services/recognitionService";
+  import { streamingService } from "$lib/services/streamingService";
   import { page } from "$app/stores";
   import UpgradeModal from "$lib/components/UpgradeModal.svelte";
   import EnrollModal from "$lib/components/EnrollModal.svelte";
@@ -1182,7 +1183,7 @@
   }
 
   function toggleRecording() {
-    recognitionService.toggle(recordingMode);
+    streamingService.toggle(recordingMode);
   }
 
   function handleCancelAnalysis() {
@@ -1278,7 +1279,7 @@
   }
 
   function handleSelectSubject(subjectId: string | null) {
-    if ($isRecording) recognitionService.stop();
+    if ($isRecording) streamingService.stop();
     currentBinder.set(subjectId);
     currentLectureId = null; // Clear lecture selection
 
@@ -1813,6 +1814,7 @@
               <button
                 on:click={askQuestion}
                 disabled={!qaInput.trim() || isAskingQuestion}
+                aria-label="質問を送信"
                 class="absolute right-1.5 top-[calc(50%+12px)] -translate-y-1/2 w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
                 <svg
@@ -2333,12 +2335,12 @@
 
                     <!-- Desktop Dropdown -->
                     {#if isCourseDropdownOpen}
-                      <div
-                        class="fixed inset-0 z-40 hidden md:block"
+                      <button
+                        type="button"
+                        class="fixed inset-0 z-40 hidden md:block w-full h-full bg-transparent cursor-default border-none"
                         on:click={() => (isCourseDropdownOpen = false)}
-                        role="button"
-                        tabindex="0"
-                      ></div>
+                        aria-label="閉じる"
+                      ></button>
                       <div
                         class="absolute top-full left-0 w-full mt-3 bg-white border border-slate-100 rounded-[32px] shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 hidden md:block"
                       >
@@ -2402,15 +2404,18 @@
 
                     <!-- Mobile Bottom Sheet -->
                     {#if isMobileCourseViewOpen}
+                      <!-- svelte-ignore a11y_click_events_have_key_events -->
+                      <!-- svelte-ignore a11y_no_static_element_interactions -->
                       <div
                         class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] md:hidden"
                         on:click={() => (isMobileCourseViewOpen = false)}
-                        role="button"
-                        tabindex="0"
                       >
                         <div
                           class="absolute bottom-0 left-0 w-full bg-white rounded-t-[40px] shadow-2xl p-6 pb-12 animate-in slide-in-from-bottom duration-300 pointer-events-auto"
                           on:click|stopPropagation
+                          role="dialog"
+                          aria-modal="true"
+                          aria-label="講義選択"
                         >
                           <div
                             class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"
@@ -2733,6 +2738,7 @@
                                     stagedImages.update((current) =>
                                       current.filter((_, i) => i !== idx),
                                     )}
+                                  aria-label="画像を削除"
                                   class="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg transform scale-0 group-hover:scale-100 transition-transform"
                                   ><svg
                                     class="w-4 h-4"

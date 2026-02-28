@@ -1,0 +1,217 @@
+import { writable, get } from 'svelte/store';
+import { transcript, isRecording } from '../stores/sessionStore';
+import { user } from '../userStore';
+
+class StreamingService {
+    private mediaRecorder: MediaRecorder | null = null;
+    private stream: MediaStream | null = null;
+    private chunkInterval = 5000; // 5 seconds
+    private lastTranscribedText = '';
+    private isAnalyzing = writable(false);
+
+    // Web Audio API components
+    private audioContext: AudioContext | null = null;
+    private sourceNode: MediaStreamAudioSourceNode | null = null;
+    private destinationNode: MediaStreamAudioDestinationNode | null = null;
+    private gainNode: GainNode | null = null;
+    private lowCutFilter: BiquadFilterNode | null = null;
+    private voiceFilter: BiquadFilterNode | null = null;
+    private analyser: AnalyserNode | null = null;
+    private animationId: number | null = null;
+
+    public status = writable('idle'); // idle, recording, analyzing
+    public volumeLevel = writable(0); // 0.0 to 1.0 (normalized RMS)
+    public isVolumeTooLow = writable(false);
+
+    async start(recordingMode: 'lecture' | 'meeting' = 'lecture') {
+        if (get(isRecording)) return;
+
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: recordingMode === 'meeting',
+                    noiseSuppression: recordingMode === 'meeting',
+                    autoGainControl: true,
+                    sampleRate: 16000, // Whisper likes 16kHz
+                }
+            });
+
+            // Set up Web Audio API pipeline
+            this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
+
+            // 1. High-pass filter (cut below 100Hz)
+            this.lowCutFilter = this.audioContext.createBiquadFilter();
+            this.lowCutFilter.type = 'highpass';
+            this.lowCutFilter.frequency.value = 100;
+
+            // 2. Voice emphasis filter (boost 300Hz-3000Hz slightly)
+            this.voiceFilter = this.audioContext.createBiquadFilter();
+            this.voiceFilter.type = 'peaking';
+            this.voiceFilter.frequency.value = 1500;
+            this.voiceFilter.Q.value = 0.5;
+            this.voiceFilter.gain.value = 3; // +3dB boost
+
+            // 3. Gain node (Normalize/Boost)
+            this.gainNode = this.audioContext.createGain();
+            this.gainNode.gain.value = 1.0; // Initial
+
+            // 4. Analyser for volume monitoring
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 256;
+
+            // 5. Destination for MediaRecorder
+            this.destinationNode = this.audioContext.createMediaStreamDestination();
+
+            // Connect pipeline: Source -> lowCut -> voiceFilter -> Gain -> Analyser -> Destination
+            this.sourceNode.connect(this.lowCutFilter);
+            this.lowCutFilter.connect(this.voiceFilter);
+            this.voiceFilter.connect(this.gainNode);
+            this.gainNode.connect(this.analyser);
+            this.analyser.connect(this.destinationNode);
+
+            this.mediaRecorder = new MediaRecorder(this.destinationNode.stream, {
+                mimeType: 'audio/webm'
+            });
+
+            this.mediaRecorder.ondataavailable = async (event) => {
+                if (event.data.size > 0) {
+                    await this.processChunk(event.data);
+                }
+            };
+
+            this.startVolumeMonitoring();
+
+            this.mediaRecorder.start(this.chunkInterval);
+            isRecording.set(true);
+            this.status.set('recording');
+        } catch (error) {
+            console.error('Failed to start streaming recording:', error);
+            this.stop();
+            throw error;
+        }
+    }
+
+    private startVolumeMonitoring() {
+        if (!this.analyser || !this.gainNode) return;
+
+        const bufferLength = this.analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        let lowVolumeCount = 0;
+
+        const checkVolume = () => {
+            if (!get(isRecording)) return;
+
+            this.analyser!.getByteTimeDomainData(dataArray);
+
+            // Calculate RMS
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const val = (dataArray[i] - 128) / 128; // Normalize to -1 to 1
+                sum += val * val;
+            }
+            const rms = Math.sqrt(sum / bufferLength);
+
+            // Auto gain: if too quiet, boost gain (up to 3x)
+            if (rms < 0.05 && rms > 0) {
+                this.gainNode!.gain.value = Math.min(3.0, this.gainNode!.gain.value + 0.05);
+            } else if (rms > 0.2) {
+                this.gainNode!.gain.value = Math.max(1.0, this.gainNode!.gain.value - 0.05);
+            }
+
+            this.volumeLevel.set(rms * 5); // Scale for UI visibility
+
+            // Check if level is still too low after boost
+            if (rms < 0.01) {
+                lowVolumeCount++;
+                if (lowVolumeCount > 100) { // Approx 2-3 seconds of consistent silence/low volume
+                    this.isVolumeTooLow.set(true);
+                }
+            } else {
+                lowVolumeCount = 0;
+                this.isVolumeTooLow.set(false);
+            }
+
+            this.animationId = requestAnimationFrame(checkVolume);
+        };
+
+        checkVolume();
+    }
+
+    private async processChunk(blob: Blob) {
+        const currentUser = get(user);
+        if (!currentUser) return;
+
+        this.isAnalyzing.set(true);
+        this.status.set('analyzing');
+
+        try {
+            const idToken = await currentUser.getIdToken();
+            const formData = new FormData();
+            formData.append('audio', blob, 'chunk.webm');
+            formData.append('context', this.lastTranscribedText);
+
+            const response = await fetch('/api/transcribe-chunk', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${idToken}`
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.text) {
+                    const newText = data.text;
+                    transcript.update(prev => prev + ' ' + newText);
+                    this.lastTranscribedText = newText;
+                }
+            }
+        } catch (error) {
+            console.error('Chunk processing failed:', error);
+        } finally {
+            this.isAnalyzing.set(false);
+            this.status.set('recording');
+        }
+    }
+
+    stop() {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            this.mediaRecorder.stop();
+        }
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+        }
+
+        // Web Audio API cleanup
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            this.audioContext.close();
+        }
+        this.sourceNode = null;
+        this.destinationNode = null;
+        this.gainNode = null;
+        this.lowCutFilter = null;
+        this.voiceFilter = null;
+        this.analyser = null;
+        this.audioContext = null;
+
+        isRecording.set(false);
+        this.status.set('idle');
+        this.lastTranscribedText = '';
+        this.isVolumeTooLow.set(false);
+    }
+
+    toggle(recordingMode: 'lecture' | 'meeting' = 'lecture') {
+        if (get(isRecording)) {
+            this.stop();
+        } else {
+            this.start(recordingMode);
+        }
+    }
+}
+
+export const streamingService = new StreamingService();

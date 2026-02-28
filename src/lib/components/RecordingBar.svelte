@@ -6,6 +6,7 @@
         resetTranscript,
     } from "$lib/stores/recordingStore";
     import { recognitionService } from "$lib/services/recognitionService";
+    import { streamingService } from "$lib/services/streamingService";
 
     // Local state for UI expansion
     let expanded = false;
@@ -50,13 +51,12 @@
     }
 
     function stopRecording() {
-        recognitionService.stop();
-        // Maybe keep the bar open for a moment or confirm?
-        // User asked for "Spotify style", usually it just stops.
-        // If we stop, isRecording becomes false, and the bar might disappear.
-        // We should probably allow reviewing the text before closing?
-        // For now, follow the requirement: "Stop button".
+        streamingService.stop();
     }
+
+    const streamingStatus = streamingService.status;
+    const volumeLevel = streamingService.volumeLevel;
+    const isVolumeTooLow = streamingService.isVolumeTooLow;
 </script>
 
 {#if $isRecording || ($transcript && $transcript.length > 0)}
@@ -209,8 +209,41 @@
                         class="flex items-center gap-2 text-xs text-gray-400 font-mono"
                     >
                         {#if $isRecording}
-                            <span class="text-red-400 font-bold">● REC</span>
-                            <span>{formatTime(duration)}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-red-400 font-bold">● REC</span
+                                >
+                                <span>{formatTime(duration)}</span>
+                                <!-- Mini Volume Bar -->
+                                <div class="flex gap-0.5 h-2 items-end ml-1">
+                                    {#each Array(4) as _, i}
+                                        <div
+                                            class="w-0.5 rounded-full transition-all duration-75"
+                                            style="height: {Math.min(
+                                                100,
+                                                $volumeLevel * (i + 1) * 40,
+                                            )}%; background-color: {$volumeLevel >
+                                            0.05
+                                                ? '#f87171'
+                                                : '#4b5563'}"
+                                        ></div>
+                                    {/each}
+                                </div>
+                                {#if $isVolumeTooLow}
+                                    <span
+                                        class="text-amber-400 animate-pulse text-[10px] ml-1 flex items-center gap-1"
+                                    >
+                                        <svg
+                                            class="w-3 h-3"
+                                            fill="currentColor"
+                                            viewBox="0 0 20 20"
+                                            ><path
+                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                            /></svg
+                                        >
+                                        遠すぎます
+                                    </span>
+                                {/if}
+                            </div>
                         {:else}
                             <span class="text-blue-400">Analysis Ready</span>
                         {/if}

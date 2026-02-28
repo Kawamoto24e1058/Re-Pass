@@ -17,6 +17,7 @@
         selectedSyllabus,
     } from "$lib/stores/recordingStore";
     import { recognitionService } from "$lib/services/recognitionService";
+    import { streamingService } from "$lib/services/streamingService";
     import { user as userStore, userProfile } from "$lib/userStore";
     import { goto } from "$app/navigation";
     import { page } from "$app/stores";
@@ -122,12 +123,16 @@
     }
 
     function startRecording() {
-        recognitionService.start();
+        streamingService.start();
     }
 
     function stopRecording() {
-        recognitionService.stop();
+        streamingService.stop();
     }
+
+    const streamingStatus = streamingService.status;
+    const volumeLevel = streamingService.volumeLevel;
+    const isVolumeTooLow = streamingService.isVolumeTooLow;
 
     // --- Analysis Logic ---
 
@@ -639,8 +644,70 @@
                                 class="flex-1 p-3 overflow-y-auto text-sm text-slate-600 leading-relaxed font-mono whitespace-pre-wrap"
                             >
                                 {$transcript || "No transcript yet..."}
+                                {#if $streamingStatus === "analyzing"}
+                                    <span
+                                        class="inline-block w-2 h-4 bg-indigo-500 animate-pulse ml-1 align-middle"
+                                    ></span>
+                                {/if}
                             </div>
                         </div>
+                        {#if $isRecording}
+                            <div class="space-y-2 mt-2">
+                                <div
+                                    class="flex items-center gap-2 px-2 py-1 bg-indigo-50 rounded-lg w-fit animate-fade-in"
+                                >
+                                    <div class="relative flex h-2 w-2">
+                                        <span
+                                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"
+                                        ></span>
+                                        <span
+                                            class="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"
+                                        ></span>
+                                    </div>
+                                    <span
+                                        class="text-[10px] font-black text-indigo-700 tracking-wider"
+                                    >
+                                        {#if $streamingStatus === "analyzing"}
+                                            AIがリアルタイムで解析中...
+                                        {:else}
+                                            AI文字起こし待機中...
+                                        {/if}
+                                    </span>
+                                </div>
+
+                                <!-- Real-time Volume Meter -->
+                                <div class="flex items-center gap-2 px-2">
+                                    <div class="flex gap-0.5 h-3 items-end">
+                                        {#each Array(8) as _, i}
+                                            <div
+                                                class="w-1 rounded-full transition-all duration-75"
+                                                style="height: {Math.min(
+                                                    100,
+                                                    $volumeLevel * (i + 1) * 20,
+                                                )}%; background-color: {$volumeLevel >
+                                                0.05
+                                                    ? '#4f46e5'
+                                                    : '#cbd5e1'}"
+                                            ></div>
+                                        {/each}
+                                    </div>
+                                    <span
+                                        class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter"
+                                        >Mic Level</span
+                                    >
+                                </div>
+
+                                {#if $isVolumeTooLow}
+                                    <div
+                                        transition:slide
+                                        class="bg-amber-100 border border-amber-200 text-amber-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-pulse"
+                                    >
+                                        <span>⚠️</span>
+                                        マイクを先生に向けてください
+                                    </div>
+                                {/if}
+                            </div>
+                        {/if}
                     </div>
 
                     <!-- Footer Action -->
