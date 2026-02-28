@@ -84,7 +84,8 @@ class StreamingService {
             this.analyser.connect(this.destinationNode);
 
             this.mediaRecorder = new MediaRecorder(this.destinationNode.stream, {
-                mimeType: 'audio/webm;codecs=opus'
+                mimeType: 'audio/webm;codecs=opus',
+                audioBitsPerSecond: 32000 // 32kbps for stable, low-bandwidth transmission
             });
 
             this.mediaRecorder.ondataavailable = async (event) => {
@@ -94,8 +95,12 @@ class StreamingService {
                         this.chunkBuffer.push(event.data);
                         this.accumulatedSpeechDuration += this.chunkInterval;
 
-                        // Send when threshold reached
-                        if (this.accumulatedSpeechDuration >= this.SEND_THRESHOLD) {
+                        // Send when threshold reached (either 20s or 1MB)
+                        const currentBufferSize = this.chunkBuffer.reduce((acc, blob) => acc + blob.size, 0);
+                        if (this.accumulatedSpeechDuration >= this.SEND_THRESHOLD || currentBufferSize > 1000000) {
+                            if (currentBufferSize > 1000000) {
+                                console.log('[StreamingService] Buffer size limit (1MB) reached, forcing send early');
+                            }
                             const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm;codecs=opus' });
                             const success = await this.processChunk(combinedBlob);
                             if (success) {

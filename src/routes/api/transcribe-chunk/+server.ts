@@ -45,15 +45,22 @@ export const POST: RequestHandler = async ({ request }) => {
 【直前の文脈】
 ${context}`;
 
-        const result = await model.generateContent([
-            {
-                inlineData: {
-                    data: base64Audio,
-                    mimeType: audioFile.type || "audio/webm"
-                }
-            },
-            { text: prompt }
-        ]);
+        let result;
+        try {
+            result = await model.generateContent([
+                {
+                    inlineData: {
+                        data: base64Audio,
+                        mimeType: "audio/webm" // Explicitly specified as audio/webm for Gemini
+                    }
+                },
+                { text: prompt }
+            ]);
+        } catch (geminiError: any) {
+            console.error('[Transcription] Gemini API Call Failed:', geminiError.message);
+            // Return 200 with empty text to trigger frontend's buffer-retaining "retry"
+            return json({ text: "" });
+        }
 
         let text = "";
         try {
@@ -62,7 +69,7 @@ ${context}`;
             console.warn('[Transcription] Gemini response text failed or blocked:', e);
         }
 
-        console.log('[Transcription] Successful');
+        console.log(`[Transcription] Successful: ${text.length} chars generated`);
         return json({ text });
     } catch (error: any) {
         console.error('--- Transcription API Error ---');
