@@ -23,8 +23,8 @@ export const POST: RequestHandler = async ({ request }) => {
         const context = formData.get('context') as string || "";
 
         if (!audioFile || audioFile.size === 0) {
-            console.log('Skipping transcription: empty or missing audio file.');
-            return new Response(null, { status: 204 }); // No Content
+            console.log('[Transcription] Empty audio chunk received, skipping.');
+            return json({ text: "" }, { status: 200 });
         }
 
         console.log(`[Transcription] Processing chunk: ${audioFile.size} bytes, MIME: ${audioFile.type}`);
@@ -55,8 +55,14 @@ ${context}`;
             { text: prompt }
         ]);
 
-        const text = result.response.text().trim();
-        console.log('Transcription successful');
+        let text = "";
+        try {
+            text = result.response.text().trim();
+        } catch (e) {
+            console.warn('[Transcription] Gemini response text failed or blocked:', e);
+        }
+
+        console.log('[Transcription] Successful');
         return json({ text });
     } catch (error: any) {
         console.error('--- Transcription API Error ---');

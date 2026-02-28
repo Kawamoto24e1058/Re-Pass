@@ -97,10 +97,14 @@ class StreamingService {
                         // Send when threshold reached
                         if (this.accumulatedSpeechDuration >= this.SEND_THRESHOLD) {
                             const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm;codecs=opus' });
-                            this.chunkBuffer = [];
-                            this.accumulatedSpeechDuration = 0;
+                            const success = await this.processChunk(combinedBlob);
+                            if (success) {
+                                this.chunkBuffer = [];
+                                this.accumulatedSpeechDuration = 0;
+                            } else {
+                                console.warn('[StreamingService] Transcription failed, retaining buffer for next segment');
+                            }
                             analysisCountdown.set(20);
-                            await this.processChunk(combinedBlob);
                         }
                     } else {
                         console.log('Skipping silent chunk...');
@@ -179,9 +183,9 @@ class StreamingService {
         checkVolume();
     }
 
-    private async processChunk(blob: Blob) {
+    private async processChunk(blob: Blob): Promise<boolean> {
         const currentUser = get(user);
-        if (!currentUser) return;
+        if (!currentUser) return true;
 
         this.isAnalyzing.set(true);
         this.status.set('analyzing');
@@ -191,13 +195,13 @@ class StreamingService {
             // Frontend Guard: Ensure we actually have data to send
             if (blob.size < 1000) { // Approx 1KB is a very small Opus chunk
                 console.log('[StreamingService] Skipping chunk: blob too small');
-                return;
+                return true;
             }
 
             const now = Date.now();
             if (now - this.lastProcessedTimestamp < 1000) { // 1 second debounce
                 console.log('[StreamingService] Skipping duplicate chunk');
-                return;
+                return true;
             }
             this.lastProcessedTimestamp = now;
 
@@ -205,6 +209,8 @@ class StreamingService {
             const formData = new FormData();
             formData.append('audio', blob, 'chunk.webm');
             formData.append('context', this.lastTranscribedText);
+
+            console.log(`[StreamingService] Sending chunk to API: ${blob.size} bytes, MIME: ${blob.type}`);
 
             const response = await fetch('/api/transcribe-chunk', {
                 method: 'POST',
@@ -216,23 +222,28 @@ class StreamingService {
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.text) {
+                if (data.text !== undefined) {
                     const newText = data.text.trim();
                     // When Gemini provides high-quality text, we clear the interim Web Speech text
                     // and append the refined text to the main transcript with newlines.
-                    recognitionService.reset();
-                    interimTranscript.set('');
-                    transcript.update(prev => {
-                        const current = prev.trim();
-                        return current ? `${current}\n\n${newText}` : newText;
-                    });
-                    this.lastTranscribedText = newText;
+                    recognitionService.resetAccumulator();
+                    if (newText) {
+                        transcript.update(prev => {
+                            const current = prev.trim();
+                            return current ? `${current}\n\n${newText}` : newText;
+                        });
+                        this.lastTranscribedText = newText;
+                    }
+                    return true;
                 }
             } else if (response.status === 204) {
                 console.log('[StreamingService] API returned 204: No meaningful speech detected');
+                return true;
             }
+            return false;
         } catch (error) {
             console.error('Chunk processing failed:', error);
+            return false;
         } finally {
             this.isAnalyzing.set(false);
             this.status.set('recording');
@@ -252,9 +263,11 @@ class StreamingService {
         // Send remaining buffer if any
         if (this.chunkBuffer.length > 0) {
             const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm;codecs=opus' });
-            this.chunkBuffer = [];
-            this.accumulatedSpeechDuration = 0;
-            await this.processChunk(combinedBlob);
+            const success = await this.processChunk(combinedBlob);
+            if (success) {
+                this.chunkBuffer = [];
+                this.accumulatedSpeechDuration = 0;
+            }
         }
 
         if (this.stream) {

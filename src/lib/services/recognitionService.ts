@@ -5,6 +5,7 @@ class RecognitionService {
     private recognition: any = null;
     private silentAudio: HTMLAudioElement | null = null;
     private restartTimer: any = null;
+    private confirmedInterim: string = '';
 
     constructor() {
         if (typeof window !== 'undefined') {
@@ -20,11 +21,14 @@ class RecognitionService {
                     let currentInterim = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         const result = event.results[i];
-                        // In Hybrid mode, we used Web Speech ONLY for real-time feedback.
-                        // We do NOT update the main transcript here.
-                        currentInterim += result[0].transcript;
+                        if (result.isFinal) {
+                            this.confirmedInterim += result[0].transcript;
+                        } else {
+                            currentInterim += result[0].transcript;
+                        }
                     }
-                    interimTranscript.set(currentInterim);
+                    // Hybrid sync: interimTranscript = confirmed parts within this chunk + current active interim
+                    interimTranscript.set(this.confirmedInterim + currentInterim);
                 };
 
                 this.recognition.onerror = (event: any) => {
@@ -178,6 +182,11 @@ class RecognitionService {
         } catch (e) {
             console.warn('Recognition reset error:', e);
         }
+    }
+
+    resetAccumulator() {
+        this.confirmedInterim = '';
+        interimTranscript.set('');
     }
 
     toggle(recordingMode: 'lecture' | 'meeting' = 'lecture') {
