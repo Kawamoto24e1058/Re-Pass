@@ -182,6 +182,21 @@ class RecognitionService {
         }
     }
 
+    getConfirmedSnapshot() {
+        return this.confirmedInterim;
+    }
+
+    clearConfirmedPrefix(prefix: string) {
+        if (this.confirmedInterim.startsWith(prefix)) {
+            this.confirmedInterim = this.confirmedInterim.slice(prefix.length);
+        } else {
+            // Fallback: if sync is lost, we don't clear blindly
+            console.warn('[RecognitionService] Prefix mismatch during clear, keeping buffer');
+        }
+        // Update the reactive interimTranscript store
+        interimTranscript.set(this.confirmedInterim);
+    }
+
     resetAccumulator() {
         this.confirmedInterim = '';
         interimTranscript.set('');

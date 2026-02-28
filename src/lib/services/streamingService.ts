@@ -210,6 +210,14 @@ class StreamingService {
             }
             this.lastProcessedTimestamp = now;
 
+            // Phase 8: Capture interim snapshot BEFORE processing
+            // This allows us to clear only the specific prefix later, preserving
+            // words spoken DURING the API call.
+            const snapshot = recognitionService.getConfirmedSnapshot();
+
+            const currentUser = get(user);
+            if (!currentUser) return true;
+
             const idToken = await currentUser.getIdToken();
             const formData = new FormData();
             formData.append('audio', blob, 'chunk.webm');
@@ -229,13 +237,16 @@ class StreamingService {
                 const data = await response.json();
                 if (data.text !== undefined) {
                     const newText = data.text.trim();
-                    // When Gemini provides high-quality text, we clear the interim Web Speech text
-                    // and append the refined text to the main transcript with newlines.
-                    recognitionService.resetAccumulator();
+
+                    // Phase 8: Precise clearing of analyzed interim text
+                    recognitionService.clearConfirmedPrefix(snapshot);
+
                     if (newText) {
                         transcript.update(prev => {
                             const current = prev.trim();
-                            return current ? `${current}\n\n${newText}` : newText;
+                            const updated = current ? `${current}\n\n${newText}` : newText;
+                            console.log(`[StreamingService] APIから受信成功： ${newText.length}文字を末尾に追加しました`);
+                            return updated;
                         });
                         this.lastTranscribedText = newText;
                     }
@@ -243,6 +254,8 @@ class StreamingService {
                 }
             } else if (response.status === 204) {
                 console.log('[StreamingService] API returned 204: No meaningful speech detected');
+                // Even on 204, we clear the prefix as it was processed (as silence)
+                recognitionService.clearConfirmedPrefix(snapshot);
                 return true;
             }
             return false;
