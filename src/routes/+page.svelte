@@ -55,6 +55,8 @@
     videoFile,
     targetUrl,
     interimTranscript,
+    analysisCountdown,
+    analysisStatus,
     stagedImages,
     taskText,
   } from "$lib/stores/sessionStore";
@@ -190,7 +192,7 @@
   } | null = null;
 
   // Action for auto-scrolling textarea
-  function actionTextAreaAutoscroll(node: HTMLTextAreaElement) {
+  function actionTextAreaAutoscroll(node: HTMLElement) {
     function scroll() {
       node.scrollTop = node.scrollHeight;
     }
@@ -2796,13 +2798,69 @@
                           </button>
                         </div>
                       </div>
-                      <textarea
-                        value={$transcript + $interimTranscript}
-                        on:input={(e) => transcript.set(e.currentTarget.value)}
-                        use:actionTextAreaAutoscroll
-                        class="w-full h-40 p-5 bg-white rounded-3xl border border-slate-100 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none text-sm text-slate-700 font-medium leading-relaxed custom-scrollbar shadow-sm"
-                        placeholder="録音ボタンを押すと、自動的に文字起こしが始まります。"
-                      ></textarea>
+
+                      <!-- Analysis Progress & Status -->
+                      {#if $isRecording && $analysisStatus !== "idle"}
+                        <div
+                          class="mb-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300"
+                        >
+                          <div class="flex justify-between items-end px-2">
+                            <span
+                              class="text-[10px] font-black uppercase tracking-widest {$analysisStatus ===
+                              'processing'
+                                ? 'text-indigo-500 animate-pulse'
+                                : 'text-slate-400'}"
+                            >
+                              {$analysisStatus === "processing"
+                                ? "AIが高精度に清書中..."
+                                : `次の解析まであと ${$analysisCountdown}秒...`}
+                            </span>
+                            {#if $analysisStatus === "buffering"}
+                              <span
+                                class="text-[10px] font-bold text-slate-300"
+                              >
+                                {20 - $analysisCountdown}/20s
+                              </span>
+                            {/if}
+                          </div>
+                          <div
+                            class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-50"
+                          >
+                            <div
+                              class="h-full bg-indigo-500 transition-all duration-1000 ease-linear shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                              style="width: {$analysisStatus === 'processing'
+                                ? '100%'
+                                : `${((20 - $analysisCountdown) / 20) * 100}%`}"
+                            ></div>
+                          </div>
+                        </div>
+                      {/if}
+
+                      <div class="relative group">
+                        <!-- Display Div for Hybrid Text (Normal + Thin) -->
+                        <div
+                          class="w-full min-h-[160px] max-h-40 p-5 bg-white rounded-3xl border border-slate-100 overflow-y-auto text-sm text-slate-700 font-medium leading-relaxed custom-scrollbar shadow-sm whitespace-pre-wrap text-left group-focus-within:border-indigo-400 group-focus-within:ring-1 group-focus-within:ring-indigo-400 group-focus-within:ring-opacity-50"
+                          use:actionTextAreaAutoscroll
+                        >
+                          <span class="text-slate-700">{$transcript}</span>
+                          <span class="text-slate-400/60 transition-opacity"
+                            >{$interimTranscript}</span
+                          >
+                          {#if !$transcript && !$interimTranscript}
+                            <span class="text-slate-300 italic"
+                              >録音ボタンを押すと、自動的に文字起こしが始まります。</span
+                            >
+                          {/if}
+                        </div>
+
+                        <!-- Hidden Textarea for input sync if needed, or we can make the div contenteditable -->
+                        <textarea
+                          class="sr-only"
+                          value={$transcript}
+                          on:input={(e) =>
+                            transcript.set(e.currentTarget.value)}
+                        ></textarea>
+                      </div>
                     </div>
                   </div>
                 </div>

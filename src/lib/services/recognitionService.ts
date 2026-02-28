@@ -20,14 +20,9 @@ class RecognitionService {
                     let currentInterim = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
                         const result = event.results[i];
-                        if (result.isFinal) {
-                            // Use the first alternative (highest confidence) for final, 
-                            // but ensuring we don't accidentally drop it if confidence is low (rarely happens with isFinal).
-                            transcript.update(prev => prev + result[0].transcript);
-                        } else {
-                            // Accumulate interim results
-                            currentInterim += result[0].transcript;
-                        }
+                        // In Hybrid mode, we used Web Speech ONLY for real-time feedback.
+                        // We do NOT update the main transcript here.
+                        currentInterim += result[0].transcript;
                     }
                     interimTranscript.set(currentInterim);
                 };
@@ -47,16 +42,6 @@ class RecognitionService {
 
                 this.recognition.onend = () => {
                     console.log('Speech recognition ended. isRecording:', get(isRecording));
-
-                    // --- Fixed "Disappearing Text" Bug ---
-                    // If there was any pending interim text that didn't get finalized (e.g. cut off by silence),
-                    // force it into the final transcript now.
-                    const pendingInterim = get(interimTranscript);
-                    if (pendingInterim && pendingInterim.trim().length > 0) {
-                        console.log('Saving pending interim on stop:', pendingInterim);
-                        transcript.update(prev => prev + pendingInterim);
-                        interimTranscript.set('');
-                    }
 
                     // Continuous restart if isRecording is still true
                     if (get(isRecording)) {

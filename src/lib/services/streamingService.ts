@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
-import { transcript, isRecording } from '../stores/sessionStore';
+import { transcript, interimTranscript, isRecording, analysisCountdown, analysisStatus } from '../stores/sessionStore';
 import { user } from '../userStore';
+import { recognitionService } from './recognitionService';
 
 class StreamingService {
     private mediaRecorder: MediaRecorder | null = null;
@@ -18,21 +19,32 @@ class StreamingService {
     private voiceFilter: BiquadFilterNode | null = null;
     private analyser: AnalyserNode | null = null;
     private animationId: number | null = null;
+    private countdownInterval: any = null;
 
     public status = writable('idle'); // idle, recording, analyzing
     public volumeLevel = writable(0); // 0.0 to 1.0 (normalized RMS)
     public isVolumeTooLow = writable(false);
 
+    // Buffering and Optimization
+    private chunkBuffer: Blob[] = [];
+    private accumulatedSpeechDuration = 0;
+    private readonly SEND_THRESHOLD = 20000; // Reduced to 20 seconds
+    private currentRMS = 0;
+
     async start(recordingMode: 'lecture' | 'meeting' = 'lecture') {
         if (get(isRecording)) return;
 
         try {
+            // Start Web Speech API for real-time interim results
+            recognitionService.start(recordingMode);
+
             this.stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: recordingMode === 'meeting',
                     noiseSuppression: recordingMode === 'meeting',
                     autoGainControl: true,
-                    sampleRate: 16000, // Whisper likes 16kHz
+                    sampleRate: 16000,
+                    channelCount: 1, // Mono to save data/tokens
                 }
             });
 
@@ -76,20 +88,47 @@ class StreamingService {
 
             this.mediaRecorder.ondataavailable = async (event) => {
                 if (event.data.size > 0) {
-                    await this.processChunk(event.data);
+                    // Silence Cutting: Only buffer if current volume is above threshold
+                    if (this.currentRMS > 0.005) {
+                        this.chunkBuffer.push(event.data);
+                        this.accumulatedSpeechDuration += this.chunkInterval;
+
+                        // Send when threshold reached
+                        if (this.accumulatedSpeechDuration >= this.SEND_THRESHOLD) {
+                            const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm' });
+                            this.chunkBuffer = [];
+                            this.accumulatedSpeechDuration = 0;
+                            analysisCountdown.set(20);
+                            await this.processChunk(combinedBlob);
+                        }
+                    } else {
+                        console.log('Skipping silent chunk...');
+                    }
                 }
             };
 
             this.startVolumeMonitoring();
+            this.startCountdown();
 
             this.mediaRecorder.start(this.chunkInterval);
             isRecording.set(true);
             this.status.set('recording');
+            analysisStatus.set('buffering');
+            analysisCountdown.set(20);
         } catch (error) {
             console.error('Failed to start streaming recording:', error);
             this.stop();
             throw error;
         }
+    }
+
+    private startCountdown() {
+        if (this.countdownInterval) clearInterval(this.countdownInterval);
+        this.countdownInterval = setInterval(() => {
+            if (get(isRecording) && get(analysisStatus) === 'buffering') {
+                analysisCountdown.update(n => Math.max(0, n - 1));
+            }
+        }, 1000);
     }
 
     private startVolumeMonitoring() {
@@ -111,6 +150,7 @@ class StreamingService {
                 sum += val * val;
             }
             const rms = Math.sqrt(sum / bufferLength);
+            this.currentRMS = rms; // Store for silence cutting
 
             // Auto gain: if too quiet, boost gain (up to 3x)
             if (rms < 0.05 && rms > 0) {
@@ -144,6 +184,7 @@ class StreamingService {
 
         this.isAnalyzing.set(true);
         this.status.set('analyzing');
+        analysisStatus.set('processing');
 
         try {
             const idToken = await currentUser.getIdToken();
@@ -163,6 +204,9 @@ class StreamingService {
                 const data = await response.json();
                 if (data.text) {
                     const newText = data.text;
+                    // When Gemini provides high-quality text, we clear the interim Web Speech text
+                    // and append the refined text to the main transcript.
+                    interimTranscript.set('');
                     transcript.update(prev => prev + ' ' + newText);
                     this.lastTranscribedText = newText;
                 }
@@ -172,13 +216,27 @@ class StreamingService {
         } finally {
             this.isAnalyzing.set(false);
             this.status.set('recording');
+            analysisStatus.set('buffering');
+            analysisCountdown.set(20);
         }
     }
 
-    stop() {
+    async stop() {
+        // Stop Web Speech API
+        recognitionService.stop();
+
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             this.mediaRecorder.stop();
         }
+
+        // Send remaining buffer if any
+        if (this.chunkBuffer.length > 0) {
+            const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm' });
+            this.chunkBuffer = [];
+            this.accumulatedSpeechDuration = 0;
+            await this.processChunk(combinedBlob);
+        }
+
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
         }
@@ -187,6 +245,10 @@ class StreamingService {
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
+        }
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
         }
         if (this.audioContext && this.audioContext.state !== 'closed') {
             this.audioContext.close();
@@ -201,8 +263,10 @@ class StreamingService {
 
         isRecording.set(false);
         this.status.set('idle');
+        analysisStatus.set('idle');
         this.lastTranscribedText = '';
         this.isVolumeTooLow.set(false);
+        interimTranscript.set('');
     }
 
     toggle(recordingMode: 'lecture' | 'meeting' = 'lecture') {

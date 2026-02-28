@@ -22,29 +22,28 @@ export const POST: RequestHandler = async ({ request }) => {
         const audioFile = formData.get('audio') as File;
         const context = formData.get('context') as string || "";
 
-        if (!audioFile) {
-            return json({ error: 'No audio file' }, { status: 400 });
+        if (!audioFile || audioFile.size === 0) {
+            console.warn('Transcription request received with empty or missing audio file.');
+            return json({ error: 'No audio data received' }, { status: 400 });
+        }
+
+        console.log(`Processing transcription chunk: ${audioFile.size} bytes, type: ${audioFile.type}`);
+
+        if (!GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY is not defined in .env');
+            return json({ error: 'Server configuration error: Missing API Key' }, { status: 500 });
         }
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Use 1.5 flash for speed/cost or 2.0 if available
+        // Using gemini-2.0-flash-lite for minimum cost
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
         const arrayBuffer = await audioFile.arrayBuffer();
         const base64Audio = Buffer.from(arrayBuffer).toString('base64');
 
-        const prompt = `あなたは非常に精密な文字起こしアシスタントです。
-提供された5秒間の音声データを、文字に起こしてください。
-
-【重要な指示】
-1. この音声は広い講義室で遠くから録音されたものです。反響や環境ノイズが含まれますが、文脈から判断して、大学の講義内容として自然な日本語に補完して書き起こしてください。
-2. 直前の文脈（context）が提供されている場合、その文脈に続くように自然に文字起こしをしてください。
-3. 音声が途切れている場合や不明瞭な場合でも、文脈から推測して最も自然な日本語を生成してください。
-4. 余計な解説や、文末の句読点以外の記号は含めないでください。
-5. 文字起こしされたテキストのみを返却してください。
-
+        const prompt = `大学の講義の書き起こし担当です。一言一句正確に。要約不要。
 【直前の文脈】
-${context}
-`;
+${context}`;
 
         const result = await model.generateContent([
             {
@@ -57,10 +56,18 @@ ${context}
         ]);
 
         const text = result.response.text().trim();
-
+        console.log('Transcription successful');
         return json({ text });
     } catch (error: any) {
-        console.error('Transcription error:', error);
-        return json({ error: error.message }, { status: 500 });
+        console.error('--- Transcription API Error ---');
+        console.error('Message:', error.message);
+        console.error('Stack:', error.stack);
+        if (error.response) {
+            console.error('Response Data:', JSON.stringify(error.response, null, 2));
+        }
+        return json({
+            error: 'Transcription failed',
+            details: error.message
+        }, { status: 500 });
     }
 };

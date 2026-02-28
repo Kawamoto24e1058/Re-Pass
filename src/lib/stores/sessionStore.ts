@@ -14,6 +14,10 @@ export const courseName = writable<string>('');
 export const analysisMode = writable<"note" | "thoughts" | "report">("note");
 export const targetLength = writable<number>(500);
 
+// --- UX Progress State ---
+export const analysisCountdown = writable<number>(20);
+export const analysisStatus = writable<string>('idle'); // idle, buffering, processing
+
 // --- File Inputs ---
 export const pdfFile = writable<File | null>(null);
 export const txtFile = writable<File | null>(null);
@@ -35,6 +39,8 @@ export function resetSession() {
     courseName.set('');
     analysisMode.set('note');
     targetLength.set(500);
+    analysisCountdown.set(20);
+    analysisStatus.set('idle');
     pdfFile.set(null);
     txtFile.set(null);
     audioFile.set(null);
