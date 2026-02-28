@@ -2209,64 +2209,6 @@
         <!-- Input Section Only (History moved to /history) -->
         {#if viewMode === "create"}
           <div class="mb-10">
-            <!-- STEP UI: Descriptive Labels (Sticky) -->
-            <div
-              class="sticky top-0 z-50 bg-[#F9FAFB]/90 backdrop-blur-md py-4 px-6 md:px-8 -mx-4 md:mx-0 md:rounded-[32px] border-b border-slate-100 md:border md:shadow-sm mb-10 flex items-center justify-between transition-all"
-            >
-              <div class="flex items-center gap-4">
-                <div
-                  class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200"
-                >
-                  <span class="text-sm font-black">
-                    {#if analyzing}
-                      --
-                    {:else if !isStep4Locked}
-                      04
-                    {:else if !isStep3Locked}
-                      03
-                    {:else if !isStep2Locked}
-                      02
-                    {:else}
-                      01
-                    {/if}
-                  </span>
-                </div>
-                <div>
-                  <p
-                    class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5"
-                  >
-                    Current Task
-                  </p>
-                  <h2 class="text-sm font-black text-slate-900 leading-none">
-                    {#if analyzing}
-                      AIが音声を文字に変換しています (残り約30秒)...
-                    {:else if !isStep4Locked}
-                      STEP 4/4：解析を開始
-                    {:else if !isStep3Locked}
-                      STEP 3/4：授業スライド・音声を準備
-                    {:else if !isStep2Locked}
-                      STEP 2/4：出力形式を選択
-                    {:else}
-                      STEP 1/4：履修中の講義を選択
-                    {/if}
-                  </h2>
-                </div>
-              </div>
-
-              {#if analyzing}
-                <div
-                  class="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full"
-                >
-                  <div
-                    class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"
-                  ></div>
-                  <span class="text-[11px] font-black text-indigo-700"
-                    >{Math.floor(progressValue)}%</span
-                  >
-                </div>
-              {/if}
-            </div>
-
             <div class="space-y-8">
               <!-- STEP 1: Choose Course -->
               <div
@@ -2277,9 +2219,9 @@
                 <div class="p-8 md:p-12">
                   <div class="flex items-center gap-5 mb-8">
                     <div
-                      class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner"
+                      class="w-20 h-14 px-3 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner"
                     >
-                      <span class="text-2xl font-black">01</span>
+                      <span class="text-xs font-black">STEP 1/4</span>
                     </div>
                     <div>
                       <h2
@@ -2290,7 +2232,7 @@
                       <p
                         class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
                       >
-                        STEP 1: SELECT YOUR COURSE
+                        SELECT YOUR COURSE
                       </p>
                     </div>
                   </div>
@@ -2510,9 +2452,9 @@
                 <div class="p-8 md:p-12">
                   <div class="flex items-center gap-5 mb-10">
                     <div
-                      class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-inner"
+                      class="w-20 h-14 px-3 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-inner"
                     >
-                      <span class="text-2xl font-black">02</span>
+                      <span class="text-xs font-black">STEP 2/4</span>
                     </div>
                     <div>
                       <h2
@@ -2523,7 +2465,7 @@
                       <p
                         class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
                       >
-                        STEP 2: CHOOSE GENERATION MODE
+                        CHOOSE GENERATION MODE
                       </p>
                     </div>
                   </div>
@@ -2632,9 +2574,9 @@
                 <div class="p-8 md:p-12">
                   <div class="flex items-center gap-5 mb-10">
                     <div
-                      class="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-inner"
+                      class="w-20 h-14 px-3 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-inner"
                     >
-                      <span class="text-2xl font-black">03</span>
+                      <span class="text-xs font-black">STEP 3/4</span>
                     </div>
                     <div>
                       <h2
@@ -2645,7 +2587,7 @@
                       <p
                         class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2"
                       >
-                        STEP 3: UPLOAD LEARNING MATERIALS
+                        UPLOAD LEARNING MATERIALS
                       </p>
                     </div>
                   </div>
@@ -2883,9 +2825,9 @@
                 <div class="relative z-10 flex flex-col items-center gap-8">
                   <div class="flex items-center gap-5 mb-2">
                     <div
-                      class="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center text-white border border-white/10 shadow-xl"
+                      class="w-20 h-14 px-3 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center text-white border border-white/10 shadow-xl"
                     >
-                      <span class="text-2xl font-black">04</span>
+                      <span class="text-xs font-black">STEP 4/4</span>
                     </div>
                     <div class="text-left">
                       <h2 class="text-2xl font-black text-white leading-none">
@@ -2894,7 +2836,7 @@
                       <p
                         class="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mt-2"
                       >
-                        STEP 4: AUTO-GENERATE HIGH QUALITY NOTE
+                        AUTO-GENERATE HIGH QUALITY NOTE
                       </p>
                     </div>
                   </div>
@@ -3267,7 +3209,13 @@
                 mb-24 md:mb-0"
           >
             {#if $isRecording}
-              <div class="w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg"></div>
+              <div class="waveform-ring"></div>
+              <div class="waveform-ring"></div>
+              <div class="waveform-ring"></div>
+              <!-- Square stop icon -->
+              <div
+                class="w-8 h-8 md:w-10 md:h-10 bg-white rounded-sm shadow-inner relative z-10"
+              ></div>
             {:else}
               <svg
                 class="w-10 h-10 md:w-12 md:h-12"
@@ -3326,3 +3274,50 @@
     </main>
   </div>
 </div>
+
+<style>
+  @keyframes wave {
+    0% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1.8);
+      opacity: 0;
+    }
+  }
+
+  .waveform-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background-color: #ef4444; /* red-500 */
+    animation: wave 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .waveform-ring:nth-child(2) {
+    animation-delay: 0.6s;
+  }
+
+  .waveform-ring:nth-child(3) {
+    animation-delay: 1.2s;
+  }
+
+  /* Custom scrollbar for better UI */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+</style>
