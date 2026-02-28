@@ -304,7 +304,6 @@ class StreamingService {
         analysisStatus.set('idle');
         this.lastTranscribedText = '';
         this.isVolumeTooLow.set(false);
-        interimTranscript.set('');
     }
 
     toggle(recordingMode: 'lecture' | 'meeting' = 'lecture') {

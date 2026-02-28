@@ -170,8 +170,6 @@ class RecognitionService {
         } catch (e) {
             console.warn('Recognition stop error:', e);
         }
-
-        interimTranscript.set(''); // Clear interim result on stop
     }
 
     reset() {
