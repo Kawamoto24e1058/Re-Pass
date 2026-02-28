@@ -23,11 +23,11 @@ export const POST: RequestHandler = async ({ request }) => {
         const context = formData.get('context') as string || "";
 
         if (!audioFile || audioFile.size === 0) {
-            console.warn('Transcription request received with empty or missing audio file.');
-            return json({ error: 'No audio data received' }, { status: 400 });
+            console.log('Skipping transcription: empty or missing audio file.');
+            return new Response(null, { status: 204 }); // No Content
         }
 
-        console.log(`Processing transcription chunk: ${audioFile.size} bytes, type: ${audioFile.type}`);
+        console.log(`[Transcription] Processing chunk: ${audioFile.size} bytes, MIME: ${audioFile.type}`);
 
         if (!GEMINI_API_KEY) {
             console.error('GEMINI_API_KEY is not defined in .env');

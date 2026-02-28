@@ -170,6 +170,16 @@ class RecognitionService {
         interimTranscript.set(''); // Clear interim result on stop
     }
 
+    reset() {
+        if (!this.recognition || !get(isRecording)) return;
+        try {
+            this.recognition.stop();
+            // onend will handle the restart because isRecording is true
+        } catch (e) {
+            console.warn('Recognition reset error:', e);
+        }
+    }
+
     toggle(recordingMode: 'lecture' | 'meeting' = 'lecture') {
         if (get(isRecording)) {
             this.stop();

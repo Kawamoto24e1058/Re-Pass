@@ -191,13 +191,15 @@
     subjectName: string;
   } | null = null;
 
-  // Action for auto-scrolling textarea
-  function actionTextAreaAutoscroll(node: HTMLElement) {
-    function scroll() {
+  // Action for auto-scrolling element
+  function actionTextAreaAutoscroll(node: HTMLElement, value: string) {
+    const scroll = () => {
       node.scrollTop = node.scrollHeight;
-    }
+    };
 
-    // Scroll on update
+    // Scroll on mount
+    scroll();
+
     return {
       update() {
         scroll();
@@ -2813,7 +2815,7 @@
                             >
                               {$analysisStatus === "processing"
                                 ? "AIが高精度に清書中..."
-                                : `次の解析まであと ${$analysisCountdown}秒...`}
+                                : `AIが音声を蓄積中... (あと ${$analysisCountdown}秒)`}
                             </span>
                             {#if $analysisStatus === "buffering"}
                               <span
@@ -2840,7 +2842,8 @@
                         <!-- Display Div for Hybrid Text (Normal + Thin) -->
                         <div
                           class="w-full min-h-[160px] max-h-40 p-5 bg-white rounded-3xl border border-slate-100 overflow-y-auto text-sm text-slate-700 font-medium leading-relaxed custom-scrollbar shadow-sm whitespace-pre-wrap text-left group-focus-within:border-indigo-400 group-focus-within:ring-1 group-focus-within:ring-indigo-400 group-focus-within:ring-opacity-50"
-                          use:actionTextAreaAutoscroll
+                          use:actionTextAreaAutoscroll={$transcript +
+                            $interimTranscript}
                         >
                           <span class="text-slate-700">{$transcript}</span>
                           <span class="text-slate-400/60 transition-opacity"
