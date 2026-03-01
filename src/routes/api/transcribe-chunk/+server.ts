@@ -45,8 +45,8 @@ export const POST: RequestHandler = async ({ request }) => {
         }
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        // Using gemini-2.0-flash-lite for minimum cost
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+        // Using gemini-2.0-flash for high speed and reliability
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         let result;
         if (isFinalCleanup) {
