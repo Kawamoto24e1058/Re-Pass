@@ -63,34 +63,39 @@ ${textToClean}`;
 
             result = await model.generateContent(cleanupPrompt);
         } else {
+            // Phase 15: Block tiny chunks (headers only/silence) that cause 400 errors
+            if (audioFile!.size < 500) {
+                console.log(`[Transcription] Blocked tiny chunk: ${audioFile!.size} bytes`);
+                return json({ text: "" }, { status: 200 });
+            }
+
             console.log(`[Transcription] Processing chunk: ${audioFile!.size} bytes, MIME: ${audioFile!.type}`);
+
+            // Phase 15: Robust Node.js standard Base64 encoding
             const arrayBuffer = await audioFile!.arrayBuffer();
-            let base64Audio = Buffer.from(arrayBuffer).toString('base64');
+            const buffer = Buffer.from(arrayBuffer);
+            const base64Audio = buffer.toString('base64');
 
-            // Phase 14: Strip Base64 prefix if it exists (Gemini expects raw Base64)
-            base64Audio = base64Audio.replace(/^data:.*?;base64,/, '');
-
-            // Phase 14: Guard for empty data after sanitization
             if (!base64Audio) {
-                console.log('[Transcription] Empty Base64 after sanitization, skipping.');
+                console.log('[Transcription] Empty Base64 after conversion, skipping.');
                 return json({ text: "" });
             }
 
-            // Phase 14: Simplify MIME type (remove ;codecs=... component)
-            const baseMimeType = audioFile!.type.split(';')[0] || "audio/webm";
+            // Phase 15: Simplified MIME with fallback
+            const baseMimeType = (audioFile!.type && audioFile!.type.split(';')[0]) || "audio/webm";
 
-            const prompt = `大学の講義の書き起こし担当です。一言一句正確に。要約不要。
-【直前の文脈】
-${context}`;
+            // Phase 15: Formalized prompt + audio payload
+            const systemInstruction = "以下の講義音声を正確に文字起こししてください。無音やノイズのみの場合は空文字を返してください。要約は一切不要です。";
+            const contextPrompt = context ? `【直前の文脈】\n${context}` : "";
 
             result = await model.generateContent([
+                { text: `${systemInstruction}\n${contextPrompt}` },
                 {
                     inlineData: {
-                        data: base64Audio,
-                        mimeType: baseMimeType
+                        mimeType: baseMimeType,
+                        data: base64Audio
                     }
-                },
-                { text: prompt }
+                }
             ]);
         }
 
