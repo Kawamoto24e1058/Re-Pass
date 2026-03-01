@@ -257,9 +257,22 @@ class StreamingService {
                     }
                     return true;
                 }
-            } else if (response.status === 204) {
-                console.log('[StreamingService] API returned 204: No meaningful speech detected');
-                return true;
+            } else {
+                // Phase 12: Enhanced Error Logging
+                try {
+                    const data = await response.json();
+                    if (data.error) {
+                        console.error("サーバーエラー詳細:", data.error);
+                        if (data.stack) console.error("サーバースタックトレース (Debug):", data.stack);
+                    }
+                } catch (e) {
+                    console.error("サーバーエラー (JSON解析失敗):", response.status, response.statusText);
+                }
+
+                if (response.status === 204) {
+                    console.log('[StreamingService] API returned 204: No meaningful speech detected');
+                    return true;
+                }
             }
             return false;
         } catch (error) {

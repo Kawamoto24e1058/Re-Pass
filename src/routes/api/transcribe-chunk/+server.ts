@@ -92,15 +92,11 @@ ${context}`;
         console.log(`[Transcription] Successful: ${text.length} chars generated`);
         return json({ text });
     } catch (error: any) {
-        console.error('--- Transcription API Error ---');
-        console.error('Message:', error.message);
-        console.error('Stack:', error.stack);
-        if (error.response) {
-            console.error('Response Data:', JSON.stringify(error.response, null, 2));
-        }
+        console.error('[Server Error Details]:', error);
         return json({
-            error: 'Transcription failed',
-            details: error.message
+            text: "",
+            error: error.message || "Unknown error",
+            stack: error.stack
         }, { status: 500 });
     }
 };
