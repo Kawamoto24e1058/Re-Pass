@@ -92,54 +92,35 @@ class StreamingService {
             });
 
             this.mediaRecorder.ondataavailable = async (event) => {
+                const plan = get(userPlan);
+                if (plan === 'free') return;
+
                 if (event.data.size > 0) {
-                    const plan = get(userPlan);
+                    console.log(`[StreamingService] Standalone Chunk (Stop-and-Restart): ${event.data.size} bytes`);
+                    this.processChunk(event.data);
 
-                    // Always monitor volume and update duration/silence (Phase 11)
-                    if (this.currentRMS > 0.005) {
-                        this.silenceDuration = 0;
-                        this.accumulatedSpeechDuration += this.chunkInterval;
-                    } else {
-                        this.silenceDuration += this.chunkInterval;
-                    }
+                    // Reset logic trackers
+                    this.accumulatedSpeechDuration = 0;
+                    this.silenceDuration = 0;
+                }
+            };
 
-                    // Branching Logic (Phase 11)
-                    if (plan === 'free') {
-                        // Free Plan users only get Web Speech real-time.
-                        // We skip real-time Gemini processing to save cost.
-                        return;
-                    }
-
-                    // Premium/Ultimate: Real-time AI with Strict Silence/Buffer Logic
-                    this.chunkBuffer.push(event.data);
-
-                    const currentBufferSize = this.chunkBuffer.reduce((acc, blob) => acc + blob.size, 0);
-
-                    // Trigger Conditions:
-                    // 1. Force Send if Max Interval (40s) or Max Size (1MB) reached
-                    // 2. Trigger Send if Min Buffer (20s) reached AND person is silent for 2s
-                    const shouldForce = this.accumulatedSpeechDuration >= this.MAX_SEND_THRESHOLD || currentBufferSize > 1000000;
-                    const shouldTriggerBySilence = this.accumulatedSpeechDuration >= this.MIN_SEND_THRESHOLD && this.silenceDuration >= this.SILENCE_TRIGGER_THRESHOLD;
-
-                    if (shouldForce || shouldTriggerBySilence) {
-                        console.log(`[StreamingService] Triggering AI: Force=${shouldForce}, Silence=${shouldTriggerBySilence}, Duration=${this.accumulatedSpeechDuration}ms`);
-                        const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm;codecs=opus' });
-                        this.chunkBuffer = [];
-                        this.accumulatedSpeechDuration = 0;
-                        this.silenceDuration = 0;
-                        this.processChunk(combinedBlob);
-                    }
+            this.mediaRecorder.onstop = () => {
+                if (get(isRecording) && this.mediaRecorder) {
+                    console.log("[StreamingService] Restarting MediaRecorder for next chunk cycle...");
+                    this.mediaRecorder.start();
                 }
             };
 
             this.startVolumeMonitoring();
             this.startCountdown();
 
-            this.mediaRecorder.start(this.chunkInterval);
+            // Phase 16: Use stop-and-restart, so no chunkInterval here
+            this.mediaRecorder.start();
             isRecording.set(true);
             this.status.set('recording');
-            analysisStatus.set('buffering');
-            analysisCountdown.set(20);
+            analysisStatus.set('buffering'); // Keep this for initial state
+            analysisCountdown.set(20); // Keep this for initial state
         } catch (error) {
             console.error('Failed to start streaming recording:', error);
             this.stop();

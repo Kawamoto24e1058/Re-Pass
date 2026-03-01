@@ -81,11 +81,16 @@ ${textToClean}`;
                 return json({ text: "" });
             }
 
-            // Phase 15: Simplified MIME with fallback
+            // Phase 16: Simplified MIME strictly extracting the base format
             const baseMimeType = (audioFile!.type && audioFile!.type.split(';')[0]) || "audio/webm";
 
-            // Phase 15: Formalized prompt + audio payload
-            const systemInstruction = "以下の講義音声を正確に文字起こししてください。無音やノイズのみの場合は空文字を返してください。要約は一切不要です。";
+            // Phase 16: Strengthened prompt for high-quality transcription
+            const systemInstruction = `以下の講義音声を正確に文字起こししてください。
+【重要ルール】
+1. 単語間の不要な空白（スペース）はすべて削除してください。
+2. 句読点（、。）は自然な位置に打ち、過剰な連続（。。など）は修正してください。
+3. 無音やノイズのみの場合は空文字を返してください。
+要約は一切不要です。`;
             const contextPrompt = context ? `【直前の文脈】\n${context}` : "";
 
             result = await model.generateContent([
