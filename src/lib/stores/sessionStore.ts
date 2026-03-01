@@ -2,8 +2,9 @@ import { writable, derived } from 'svelte/store';
 
 // --- Recording State ---
 export const isRecording = writable<boolean>(false);
-// "transcript" is now the main writable store for the committed text (editable).
+// "transcript" is the "Vault" (金庫) - Persists finalized AI corrected text
 export const transcript = writable<string>('');
+// "interimTranscript" is the "Workspace" (作業場) - Volatile real-time interim results
 export const interimTranscript = writable<string>('');
 
 // --- Session/Input State ---

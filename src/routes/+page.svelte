@@ -2870,9 +2870,13 @@
                         <div
                           class="w-full min-h-[160px] max-h-40 p-5 bg-white rounded-3xl border border-slate-100 overflow-y-auto text-sm text-slate-700 font-medium leading-relaxed custom-scrollbar shadow-sm whitespace-pre-wrap text-left group-focus-within:border-indigo-400 group-focus-within:ring-1 group-focus-within:ring-indigo-400 group-focus-within:ring-opacity-50"
                           use:actionTextAreaAutoscroll={$transcript +
+                            ($transcript && $interimTranscript ? "\n\n" : "") +
                             $interimTranscript}
                         >
                           <span class="text-slate-700">{$transcript}</span>
+                          {#if $transcript && $interimTranscript}
+                            <div class="h-2"></div>
+                          {/if}
                           <span class="text-slate-400/60 transition-opacity"
                             >{$interimTranscript}</span
                           >

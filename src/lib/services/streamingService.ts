@@ -245,7 +245,8 @@ class StreamingService {
                         transcript.update(prev => {
                             const current = prev.trim();
                             const updated = current ? `${current}\n\n${newText}` : newText;
-                            console.log(`[StreamingService] APIから受信成功： ${newText.length}文字を末尾に追加しました`);
+                            // Requirement 4: Console log with total character count
+                            console.log(`[StreamingService] APIから受信成功： 現在の全文字数: ${updated.length}文字`);
                             return updated;
                         });
                         this.lastTranscribedText = newText;
