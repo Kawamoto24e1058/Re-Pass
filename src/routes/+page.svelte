@@ -59,6 +59,7 @@
     analysisStatus,
     stagedImages,
     taskText,
+    userPlan,
   } from "$lib/stores/sessionStore";
   import { recognitionService } from "$lib/services/recognitionService";
   import { streamingService } from "$lib/services/streamingService";
@@ -104,6 +105,11 @@
   $: {
     user = $userStore;
     userData = $userProfile; // Restore this for global data access
+    if (userData?.plan) {
+      userPlan.set(userData.plan);
+    } else {
+      userPlan.set("free");
+    }
   }
 
   // Handle subject change side effects
@@ -1186,8 +1192,14 @@
     }
   }
 
-  function toggleRecording() {
-    streamingService.toggle(recordingMode);
+  async function toggleRecording() {
+    if ($isRecording && isFree) {
+      // Free users: Trigger final AI cleanup on stop
+      streamingService.toggle(recordingMode);
+      await streamingService.finalizeFreeSession();
+    } else {
+      streamingService.toggle(recordingMode);
+    }
   }
 
   function handleCancelAnalysis() {
@@ -2873,6 +2885,18 @@
                             ($transcript && $interimTranscript ? "\n\n" : "") +
                             $interimTranscript}
                         >
+                          <!-- Mode Indicator (Phase 11) -->
+                          <div
+                            class="absolute bottom-3 left-5 text-[10px] font-bold tracking-wider uppercase opacity-30 pointer-events-none flex items-center gap-1.5"
+                          >
+                            <div
+                              class="w-1.5 h-1.5 rounded-full {isPremium
+                                ? 'bg-indigo-500 animate-pulse'
+                                : 'bg-slate-400'}"
+                            ></div>
+                            {isPremium ? "AI高精度モード" : "標準モード"}
+                          </div>
+
                           <span class="text-slate-700">{$transcript}</span>
                           {#if $transcript && $interimTranscript}
                             <div class="h-2"></div>

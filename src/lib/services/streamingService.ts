@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
-import { transcript, interimTranscript, isRecording, analysisCountdown, analysisStatus } from '../stores/sessionStore';
-import { user } from '../userStore';
+import { transcript, interimTranscript, isRecording, analysisCountdown, analysisStatus, userPlan } from '../stores/sessionStore';
+import { user, userProfile } from '../userStore';
 import { recognitionService } from './recognitionService';
 
 class StreamingService {
@@ -28,7 +28,10 @@ class StreamingService {
     // Buffering and Optimization
     private chunkBuffer: Blob[] = [];
     private accumulatedSpeechDuration = 0;
-    private readonly SEND_THRESHOLD = 20000; // 20 seconds
+    private silenceDuration = 0;
+    private readonly MIN_SEND_THRESHOLD = 20000; // 20 seconds
+    private readonly MAX_SEND_THRESHOLD = 40000; // 40 seconds
+    private readonly SILENCE_TRIGGER_THRESHOLD = 2000; // 2 seconds
     private currentRMS = 0;
     private lastProcessedTimestamp = 0;
 
@@ -90,29 +93,41 @@ class StreamingService {
 
             this.mediaRecorder.ondataavailable = async (event) => {
                 if (event.data.size > 0) {
-                    // Silence Cutting: Only buffer if current volume is above threshold
-                    if (this.currentRMS > 0.005) {
-                        this.chunkBuffer.push(event.data);
-                        this.accumulatedSpeechDuration += this.chunkInterval;
+                    const plan = get(userPlan);
 
-                        // Send when threshold reached (either 20s or 1MB)
-                        const currentBufferSize = this.chunkBuffer.reduce((acc, blob) => acc + blob.size, 0);
-                        if (this.accumulatedSpeechDuration >= this.SEND_THRESHOLD || currentBufferSize > 1000000) {
-                            if (currentBufferSize > 1000000) {
-                                console.log('[StreamingService] Buffer size limit (1MB) reached, forcing send early');
-                            }
-                            const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm;codecs=opus' });
-                            const success = await this.processChunk(combinedBlob);
-                            if (success) {
-                                this.chunkBuffer = [];
-                                this.accumulatedSpeechDuration = 0;
-                            } else {
-                                console.warn('[StreamingService] Transcription failed, retaining buffer for next segment');
-                            }
-                            analysisCountdown.set(20);
-                        }
+                    // Always monitor volume and update duration/silence (Phase 11)
+                    if (this.currentRMS > 0.005) {
+                        this.silenceDuration = 0;
+                        this.accumulatedSpeechDuration += this.chunkInterval;
                     } else {
-                        console.log('Skipping silent chunk...');
+                        this.silenceDuration += this.chunkInterval;
+                    }
+
+                    // Branching Logic (Phase 11)
+                    if (plan === 'free') {
+                        // Free Plan users only get Web Speech real-time.
+                        // We skip real-time Gemini processing to save cost.
+                        return;
+                    }
+
+                    // Premium/Ultimate: Real-time AI with Strict Silence/Buffer Logic
+                    this.chunkBuffer.push(event.data);
+
+                    const currentBufferSize = this.chunkBuffer.reduce((acc, blob) => acc + blob.size, 0);
+
+                    // Trigger Conditions:
+                    // 1. Force Send if Max Interval (40s) or Max Size (1MB) reached
+                    // 2. Trigger Send if Min Buffer (20s) reached AND person is silent for 2s
+                    const shouldForce = this.accumulatedSpeechDuration >= this.MAX_SEND_THRESHOLD || currentBufferSize > 1000000;
+                    const shouldTriggerBySilence = this.accumulatedSpeechDuration >= this.MIN_SEND_THRESHOLD && this.silenceDuration >= this.SILENCE_TRIGGER_THRESHOLD;
+
+                    if (shouldForce || shouldTriggerBySilence) {
+                        console.log(`[StreamingService] Triggering AI: Force=${shouldForce}, Silence=${shouldTriggerBySilence}, Duration=${this.accumulatedSpeechDuration}ms`);
+                        const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm;codecs=opus' });
+                        this.chunkBuffer = [];
+                        this.accumulatedSpeechDuration = 0;
+                        this.silenceDuration = 0;
+                        this.processChunk(combinedBlob);
                     }
                 }
             };
@@ -189,32 +204,24 @@ class StreamingService {
     }
 
     private async processChunk(blob: Blob): Promise<boolean> {
-        const currentUser = get(user);
-        if (!currentUser) return true;
-
         this.isAnalyzing.set(true);
         this.status.set('analyzing');
         analysisStatus.set('processing');
 
         try {
-            // Frontend Guard: Ensure we actually have data to send
-            if (blob.size < 1000) { // Approx 1KB is a very small Opus chunk
+            if (blob.size < 1000) {
                 console.log('[StreamingService] Skipping chunk: blob too small');
                 return true;
             }
 
             const now = Date.now();
-            if (now - this.lastProcessedTimestamp < 1000) { // 1 second debounce
+            if (now - this.lastProcessedTimestamp < 1000) {
                 console.log('[StreamingService] Skipping duplicate chunk');
                 return true;
             }
             this.lastProcessedTimestamp = now;
 
-            // Phase 8: Capture interim snapshot BEFORE processing
-            // This allows us to clear only the specific prefix later, preserving
-            // words spoken DURING the API call.
             const snapshot = recognitionService.getConfirmedSnapshot();
-
             const currentUser = get(user);
             if (!currentUser) return true;
 
@@ -223,13 +230,11 @@ class StreamingService {
             formData.append('audio', blob, 'chunk.webm');
             formData.append('context', this.lastTranscribedText);
 
-            console.log(`[StreamingService] Sending chunk to API: ${blob.size} bytes, MIME: ${blob.type}`);
+            console.log(`[StreamingService] Sending chunk to API: ${blob.size} bytes`);
 
             const response = await fetch('/api/transcribe-chunk', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${idToken}`
-                },
+                headers: { 'Authorization': `Bearer ${idToken}` },
                 body: formData
             });
 
@@ -237,26 +242,23 @@ class StreamingService {
                 const data = await response.json();
                 if (data.text !== undefined) {
                     const newText = data.text.trim();
-
-                    // Phase 8: Precise clearing of analyzed interim text
-                    recognitionService.clearConfirmedPrefix(snapshot);
-
+                    // Phase 10: Fail-Safe clearing - Only clear Workspace if newText is non-empty
                     if (newText) {
+                        recognitionService.clearConfirmedPrefix(snapshot);
                         transcript.update(prev => {
                             const current = prev.trim();
                             const updated = current ? `${current}\n\n${newText}` : newText;
-                            // Requirement 4: Console log with total character count
-                            console.log(`[StreamingService] APIから受信成功： 現在の全文字数: ${updated.length}文字`);
+                            console.log(`[StreamingService] 受信成功： 現在の全文字数: ${updated.length}文字`);
                             return updated;
                         });
                         this.lastTranscribedText = newText;
+                    } else {
+                        console.log('[StreamingService] API returned empty text, retaining Workspace');
                     }
                     return true;
                 }
             } else if (response.status === 204) {
                 console.log('[StreamingService] API returned 204: No meaningful speech detected');
-                // Even on 204, we clear the prefix as it was processed (as silence)
-                recognitionService.clearConfirmedPrefix(snapshot);
                 return true;
             }
             return false;
@@ -272,28 +274,23 @@ class StreamingService {
     }
 
     async stop() {
-        // Stop Web Speech API
         recognitionService.stop();
 
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
             this.mediaRecorder.stop();
         }
 
-        // Send remaining buffer if any
         if (this.chunkBuffer.length > 0) {
             const combinedBlob = new Blob(this.chunkBuffer, { type: 'audio/webm;codecs=opus' });
-            const success = await this.processChunk(combinedBlob);
-            if (success) {
-                this.chunkBuffer = [];
-                this.accumulatedSpeechDuration = 0;
-            }
+            await this.processChunk(combinedBlob);
+            this.chunkBuffer = [];
+            this.accumulatedSpeechDuration = 0;
         }
 
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
         }
 
-        // Web Audio API cleanup
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
@@ -305,6 +302,7 @@ class StreamingService {
         if (this.audioContext && this.audioContext.state !== 'closed') {
             this.audioContext.close();
         }
+
         this.sourceNode = null;
         this.destinationNode = null;
         this.gainNode = null;
@@ -325,6 +323,46 @@ class StreamingService {
             this.stop();
         } else {
             this.start(recordingMode);
+        }
+    }
+
+    async finalizeFreeSession() {
+        const text = get(transcript).trim();
+        if (!text) return;
+
+        console.log('[StreamingService] Finalizing Free Session: Sending full transcript for cleanup');
+        this.status.set('analyzing');
+        this.isAnalyzing.set(true);
+
+        try {
+            const currentUser = get(user);
+            if (!currentUser) return;
+
+            const idToken = await currentUser.getIdToken();
+            const response = await fetch('/api/transcribe-chunk', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: text,
+                    isFinalCleanup: true
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.text) {
+                    transcript.set(data.text);
+                    console.log(`[StreamingService] Freeプラン清書完了： 現在の全文字数: ${data.text.length}文字`);
+                }
+            }
+        } catch (error) {
+            console.error('[StreamingService] Final cleanup failed:', error);
+        } finally {
+            this.status.set('idle');
+            this.isAnalyzing.set(false);
         }
     }
 }

@@ -18,16 +18,26 @@ export const POST: RequestHandler = async ({ request }) => {
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         const uid = decodedToken.uid;
 
-        const formData = await request.formData();
-        const audioFile = formData.get('audio') as File;
-        const context = formData.get('context') as string || "";
+        const contentType = request.headers.get('content-type') || '';
+        let audioFile: File | null = null;
+        let context = "";
+        let isFinalCleanup = false;
+        let textToClean = "";
 
-        if (!audioFile || audioFile.size === 0) {
+        if (contentType.includes('application/json')) {
+            const body = await request.json();
+            isFinalCleanup = body.isFinalCleanup;
+            textToClean = body.text || "";
+        } else {
+            const formData = await request.formData();
+            audioFile = formData.get('audio') as File;
+            context = formData.get('context') as string || "";
+        }
+
+        if (!isFinalCleanup && (!audioFile || audioFile.size === 0)) {
             console.log('[Transcription] Empty audio chunk received, skipping.');
             return json({ text: "" }, { status: 200 });
         }
-
-        console.log(`[Transcription] Processing chunk: ${audioFile.size} bytes, MIME: ${audioFile.type}`);
 
         if (!GEMINI_API_KEY) {
             console.error('GEMINI_API_KEY is not defined in .env');
@@ -38,28 +48,38 @@ export const POST: RequestHandler = async ({ request }) => {
         // Using gemini-2.0-flash-lite for minimum cost
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
-        const arrayBuffer = await audioFile.arrayBuffer();
-        const base64Audio = Buffer.from(arrayBuffer).toString('base64');
+        let result;
+        if (isFinalCleanup) {
+            console.log(`[Transcription] Final Cleanup requested. Text length: ${textToClean.length}`);
+            const cleanupPrompt = `あなたは優秀なエディターです。以下の大学講義の書き起こし（低精度なWeb Speech APIによるもの）を読み、文脈から誤字脱字を修正し、読みやすい日本語に清書してください。
+【指示】
+1. 意味の通らない誤変換（例：「お腹」→「オーナー」）を文脈から推測して直してください。
+2. 句読点を適切に補い、読みやすくしてください。
+3. 内容の改変や要約は行わず、あくまで「清書」に留めてください。
+4. HTML形式ではなく、純粋なテキストのみを返してください。
 
-        const prompt = `大学の講義の書き起こし担当です。一言一句正確に。要約不要。
+【対象テキスト】
+${textToClean}`;
+
+            result = await model.generateContent(cleanupPrompt);
+        } else {
+            console.log(`[Transcription] Processing chunk: ${audioFile!.size} bytes, MIME: ${audioFile!.type}`);
+            const arrayBuffer = await audioFile!.arrayBuffer();
+            const base64Audio = Buffer.from(arrayBuffer).toString('base64');
+
+            const prompt = `大学の講義の書き起こし担当です。一言一句正確に。要約不要。
 【直前の文脈】
 ${context}`;
 
-        let result;
-        try {
             result = await model.generateContent([
                 {
                     inlineData: {
                         data: base64Audio,
-                        mimeType: "audio/webm" // Explicitly specified as audio/webm for Gemini
+                        mimeType: "audio/webm"
                     }
                 },
                 { text: prompt }
             ]);
-        } catch (geminiError: any) {
-            console.error('[Transcription] Gemini API Call Failed:', geminiError.message);
-            // Return 200 with empty text to trigger frontend's buffer-retaining "retry"
-            return json({ text: "" });
         }
 
         let text = "";

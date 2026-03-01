@@ -14,6 +14,8 @@ export const isShared = writable<boolean>(true); // Default to true
 export const courseName = writable<string>('');
 export const analysisMode = writable<"note" | "thoughts" | "report">("note");
 export const targetLength = writable<number>(500);
+// "userPlan" tracks the tier of the user to determine transcription logic (Phase 11)
+export const userPlan = writable<'free' | 'premium' | 'ultimate' | 'season' | 'pro'>('free');
 
 // --- UX Progress State ---
 export const analysisCountdown = writable<number>(20);
