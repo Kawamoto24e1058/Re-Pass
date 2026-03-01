@@ -65,7 +65,19 @@ ${textToClean}`;
         } else {
             console.log(`[Transcription] Processing chunk: ${audioFile!.size} bytes, MIME: ${audioFile!.type}`);
             const arrayBuffer = await audioFile!.arrayBuffer();
-            const base64Audio = Buffer.from(arrayBuffer).toString('base64');
+            let base64Audio = Buffer.from(arrayBuffer).toString('base64');
+
+            // Phase 14: Strip Base64 prefix if it exists (Gemini expects raw Base64)
+            base64Audio = base64Audio.replace(/^data:.*?;base64,/, '');
+
+            // Phase 14: Guard for empty data after sanitization
+            if (!base64Audio) {
+                console.log('[Transcription] Empty Base64 after sanitization, skipping.');
+                return json({ text: "" });
+            }
+
+            // Phase 14: Simplify MIME type (remove ;codecs=... component)
+            const baseMimeType = audioFile!.type.split(';')[0] || "audio/webm";
 
             const prompt = `大学の講義の書き起こし担当です。一言一句正確に。要約不要。
 【直前の文脈】
@@ -75,7 +87,7 @@ ${context}`;
                 {
                     inlineData: {
                         data: base64Audio,
-                        mimeType: "audio/webm"
+                        mimeType: baseMimeType
                     }
                 },
                 { text: prompt }
